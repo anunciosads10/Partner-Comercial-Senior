@@ -23,8 +23,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  const handleSignIn = async (e) => {
-    e.preventDefault();
+  const handleSignIn = async () => {
     setError('');
     if (!auth) {
       setError('Authentication service is not available.');
@@ -53,7 +52,7 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSignIn} className="grid gap-4">
+          <div className="grid gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -76,10 +75,10 @@ export default function LoginPage() {
               />
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full" onClick={handleSignIn}>
+            <Button onClick={handleSignIn} className="w-full">
               Sign In
             </Button>
-          </form>
+          </div>
           <div className="mt-4 text-center text-sm">
             Don&apos;t have an account?{' '}
             <Link href="/register" className="underline">

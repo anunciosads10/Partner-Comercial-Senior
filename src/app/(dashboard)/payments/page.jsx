@@ -8,6 +8,7 @@ import { DollarSign, Download, Clock, CreditCard } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { payments as allPayments } from "@/lib/data";
+import { useToast } from "@/hooks/use-toast";
 
 const PaymentStatusBadge = ({ status }) => {
   const getVariant = () => {
@@ -29,6 +30,7 @@ const PaymentStatusBadge = ({ status }) => {
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -46,6 +48,20 @@ export default function PaymentsPage() {
   const totalPaid = payments.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0);
   const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0);
 
+  const handleExport = () => {
+    toast({
+      title: "Función en desarrollo",
+      description: "La exportación de reportes estará disponible próximamente.",
+    });
+  };
+
+  const handleNewPayment = () => {
+    toast({
+      title: "Función en desarrollo",
+      description: "La creación de nuevos pagos estará disponible próximamente.",
+    });
+  };
+
   if (isRoleLoading) {
     return <div>Cargando datos de pago...</div>;
   }
@@ -62,11 +78,11 @@ export default function PaymentsPage() {
               </CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="outline">
+              <Button variant="outline" onClick={handleExport}>
                 <Download className="mr-2 h-4 w-4" />
                 Exportar Reporte
               </Button>
-              <Button>
+              <Button onClick={handleNewPayment}>
                  <CreditCard className="mr-2 h-4 w-4" />
                 Iniciar Nuevo Pago
               </Button>

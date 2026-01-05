@@ -27,7 +27,6 @@ export default function DashboardLayout({
 
   useEffect(() => {
     // If loading is finished and there's no authenticated user, redirect to login.
-    // This is a final check.
     if (!isLoading && !user) {
       router.push('/login');
     }
@@ -44,7 +43,7 @@ export default function DashboardLayout({
 
   // If loading is done, but we still have no user, render nothing.
   // The useEffect above will handle the redirection.
-  if (!user) {
+  if (!user || !userData) {
     return null;
   }
   
@@ -57,7 +56,7 @@ export default function DashboardLayout({
         <SidebarInset>
           <Header userData={userData} />
           <main className="p-4 sm:p-6 lg:p-8">
-            {children}
+            {React.cloneElement(children, { userData })}
           </main>
         </SidebarInset>
       </SidebarProvider>

@@ -8,14 +8,14 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata = {
   title: "PartnerVerse",
-  description: "SaaS platform for managing Senior Commercial Partners.",
+  description: "Plataforma SaaS para la gestión de Partners Comerciales Senior.",
 };
 
 export default function RootLayout({
   children,
 }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="es" suppressHydrationWarning>
       <body
         className={cn(
           "min-h-screen bg-background font-sans antialiased",

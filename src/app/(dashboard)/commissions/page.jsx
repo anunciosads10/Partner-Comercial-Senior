@@ -10,7 +10,7 @@ const CommissionsTable = ({ commissions }) => {
   if (!commissions || commissions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
-        <p className="text-muted-foreground">No commission data available.</p>
+        <p className="text-muted-foreground">No hay datos de comisiones disponibles.</p>
       </div>
     );
   }
@@ -19,12 +19,12 @@ const CommissionsTable = ({ commissions }) => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Sale ID</TableHead>
-          <TableHead>Product</TableHead>
-          <TableHead>Sale Amount</TableHead>
-          <TableHead>Commission Rate</TableHead>
-          <TableHead>Earning</TableHead>
-          <TableHead>Status</TableHead>
+          <TableHead>ID Venta</TableHead>
+          <TableHead>Producto</TableHead>
+          <TableHead>Monto Venta</TableHead>
+          <TableHead>Tasa Comisión</TableHead>
+          <TableHead>Ganancia</TableHead>
+          <TableHead>Estado</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -36,7 +36,7 @@ const CommissionsTable = ({ commissions }) => {
             <TableCell>{commission.commissionRate}%</TableCell>
             <TableCell className="font-semibold text-green-600">${commission.earning.toLocaleString()}</TableCell>
             <TableCell>
-              <Badge variant={commission.status === 'Paid' ? 'default' : 'secondary'}>{commission.status}</Badge>
+              <Badge variant={commission.status === 'Paid' ? 'default' : 'secondary'}>{commission.status === 'Paid' ? 'Pagada' : 'Pendiente'}</Badge>
             </TableCell>
           </TableRow>
         ))}
@@ -59,7 +59,7 @@ export default function CommissionsPage() {
 
   const { role, uid } = userData || {};
 
-  // Filter commissions based on user role
+  // Filtrar comisiones basado en el rol del usuario
   const commissions = role === 'superadmin' 
     ? allCommissions 
     : allCommissions.filter(c => c.partnerId === uid);
@@ -67,18 +67,18 @@ export default function CommissionsPage() {
   const totalEarnings = commissions.reduce((acc, curr) => acc + curr.earning, 0);
 
   if (isRoleLoading) {
-    return <div>Loading commissions...</div>;
+    return <div>Cargando comisiones...</div>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <Card>
         <CardHeader>
-          <CardTitle>Your Commissions</CardTitle>
+          <CardTitle>Tus Comisiones</CardTitle>
           <CardDescription>
             {role === 'superadmin' 
-              ? "A complete overview of all partner commissions." 
-              : "Here's a detailed breakdown of your earnings."}
+              ? "Un resumen completo de todas las comisiones de los partners." 
+              : "Aquí tienes un desglose detallado de tus ganancias."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -87,12 +87,12 @@ export default function CommissionsPage() {
       </Card>
       <Card className="w-full md:w-1/3 self-end">
           <CardHeader className="pb-2">
-              <CardDescription>Total Earnings</CardDescription>
+              <CardDescription>Ganancias Totales</CardDescription>
               <CardTitle className="text-4xl">${totalEarnings.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
               <div className="text-xs text-muted-foreground">
-                  This is the sum of all your paid and pending commissions.
+                  Esta es la suma de todas tus comisiones pagadas y pendientes.
               </div>
           </CardContent>
       </Card>

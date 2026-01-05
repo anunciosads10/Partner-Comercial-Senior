@@ -29,7 +29,7 @@ export function AtRiskPartners({ partners }) {
       const output = await identifyAtRiskPartners({ historicalData });
       setResult(output);
     } catch (e) {
-      setError(e.message || "An unexpected error occurred.");
+      setError(e.message || "Ocurrió un error inesperado.");
     } finally {
       setLoading(false);
     }
@@ -40,22 +40,22 @@ export function AtRiskPartners({ partners }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShieldAlert className="w-6 h-6 text-destructive" />
-          Identify At-Risk Partners
+          Identificar Partners en Riesgo
         </CardTitle>
         <CardDescription>
-          Use GenAI to analyze historical data and identify partners who are at risk of churning.
+          Usa GenAI para analizar datos históricos e identificar partners en riesgo de abandono.
         </CardDescription>
       </CardHeader>
       <CardContent className="grid gap-6">
         {loading && (
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <p className="ml-4 text-muted-foreground">Analyzing partner data...</p>
+            <p className="ml-4 text-muted-foreground">Analizando datos de partners...</p>
           </div>
         )}
         {error && (
           <Alert variant="destructive">
-            <AlertTitle>Analysis Failed</AlertTitle>
+            <AlertTitle>Análisis Fallido</AlertTitle>
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
@@ -63,7 +63,7 @@ export function AtRiskPartners({ partners }) {
           <div>
             {result.atRiskPartners.length > 0 ? (
               <>
-                <h3 className="font-semibold mb-2">{result.atRiskPartners.length} Partner(s) Identified as At-Risk:</h3>
+                <h3 className="font-semibold mb-2">{result.atRiskPartners.length} Partner(s) Identificados en Riesgo:</h3>
                 <ScrollArea className="h-72 w-full rounded-md border">
                   <div className="p-4">
                     {result.atRiskPartners.map((partnerId, index) => {
@@ -84,9 +84,9 @@ export function AtRiskPartners({ partners }) {
             ) : (
               <div className="flex flex-col items-center justify-center p-8 text-center bg-secondary rounded-lg">
                  <UserX className="w-12 h-12 text-green-500 mb-4"/>
-                <h3 className="text-lg font-semibold">No At-Risk Partners Found</h3>
+                <h3 className="text-lg font-semibold">No se encontraron Partners en Riesgo</h3>
                 <p className="text-muted-foreground">
-                  The analysis did not identify any partners at risk of churning based on the provided data.
+                  El análisis no identificó partners en riesgo de abandono basado en los datos proporcionados.
                 </p>
               </div>
             )}
@@ -98,10 +98,10 @@ export function AtRiskPartners({ partners }) {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Analyzing...
+              Analizando...
             </>
           ) : (
-            "Run AI Analysis"
+            "Ejecutar Análisis con IA"
           )}
         </Button>
       </CardFooter>

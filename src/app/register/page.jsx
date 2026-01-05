@@ -29,7 +29,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
     if (!auth || !firestore) {
-      setError('Authentication or Database service is not available.');
+      setError('El servicio de autenticación o de base de datos no está disponible.');
       return;
     }
     try {
@@ -46,17 +46,17 @@ export default function RegisterPage() {
           role: role,
         });
         
-        // AuthProvider will handle the redirect
+        // AuthProvider se encargará de la redirección
       } else {
-        throw new Error("User creation failed, no user credential returned.");
+        throw new Error("La creación del usuario falló, no se devolvieron credenciales de usuario.");
       }
 
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
-        setError('This email address is already in use.');
+        setError('Esta dirección de email ya está en uso.');
       } else {
-        setError('Failed to sign up. Please try again.');
-        console.error("Sign-up Error:", err);
+        setError('Error al registrarse. Por favor, inténtalo de nuevo.');
+        console.error("Error de registro:", err);
       }
     }
   };
@@ -65,9 +65,9 @@ export default function RegisterPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Sign Up</CardTitle>
+          <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
           <CardDescription>
-            Enter your information to create an account.
+            Introduce tu información para crear una cuenta.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -77,14 +77,14 @@ export default function RegisterPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="m@ejemplo.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -95,13 +95,13 @@ export default function RegisterPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button type="submit" className="w-full">
-              Create Account
+              Crear Cuenta
             </Button>
           </form>
           <div className="mt-4 text-center text-sm">
-            Already have an account?{' '}
+            ¿Ya tienes una cuenta?{' '}
             <Link href="/login" className="underline">
-              Sign in
+              Inicia sesión
             </Link>
           </div>
         </CardContent>

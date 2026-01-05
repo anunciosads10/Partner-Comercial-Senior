@@ -39,9 +39,9 @@ export function PartnerRankings({ partners }) {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
-        <CardTitle>Top Performing Partners</CardTitle>
+        <CardTitle>Partners con Mejor Desempeño</CardTitle>
         <CardDescription>
-          Ranking of partners based on revenue generated.
+          Clasificación de partners basada en los ingresos generados.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -49,8 +49,8 @@ export function PartnerRankings({ partners }) {
           <TableHeader>
             <TableRow>
               <TableHead>Partner</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
+              <TableHead>Nivel</TableHead>
+              <TableHead className="text-right">Ingresos</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -29,7 +29,7 @@ export default function LoginPage() {
     
     if (!auth) {
       console.log("Error: auth es null"); // LOG 2
-      setError('Authentication service is not available.');
+      setError('El servicio de autenticación no está disponible.');
       return;
     }
 
@@ -41,9 +41,9 @@ export default function LoginPage() {
     } catch (err) {
       console.log("Error detectado:", err.code); // LOG 5
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
-        setError('Invalid credentials. Please check your email and password.');
+        setError('Credenciales inválidas. Por favor, revisa tu email y contraseña.');
       } else {
-        setError('Failed to sign in. Please try again.');
+        setError('Error al iniciar sesión. Por favor, inténtalo de nuevo.');
         console.error(err);
       }
     }
@@ -54,9 +54,9 @@ export default function LoginPage() {
     <div className="flex items-center justify-center min-h-screen bg-background">
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle className="text-2xl">Login</CardTitle>
+          <CardTitle className="text-2xl">Iniciar Sesión</CardTitle>
           <CardDescription>
-            Enter your email below to login to your account.
+            Introduce tu email para acceder a tu cuenta.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -66,14 +66,14 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder="m@ejemplo.com"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Contraseña</Label>
               <Input
                 id="password"
                 type="password"
@@ -84,13 +84,13 @@ export default function LoginPage() {
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
             <Button onClick={handleSignIn} className="w-full">
-              Sign In
+              Iniciar Sesión
             </Button>
           </div>
           <div className="mt-4 text-center text-sm">
-            Don&apos;t have an account?{' '}
+            ¿No tienes una cuenta?{' '}
             <Link href="/register" className="underline">
-              Sign up
+              Regístrate
             </Link>
           </div>
         </CardContent>

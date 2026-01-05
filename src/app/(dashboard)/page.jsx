@@ -20,7 +20,7 @@ import { Button } from "@/components/ui/button";
 
 const SuperAdminDashboard = ({ partners, isLoading }) => {
   if (isLoading) {
-    return <div>Loading Dashboard...</div>;
+    return <div>Cargando Panel de Super Admin...</div>;
   }
 
   const totalRevenue = partners?.reduce((acc, partner) => acc + (partner.revenue || 0), 0) || 0;
@@ -31,27 +31,27 @@ const SuperAdminDashboard = ({ partners, isLoading }) => {
     <>
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
-          title="Total Revenue"
+          title="Ingresos Totales"
           value={`$${(totalRevenue / 1000).toFixed(1)}k`}
-          change="+20.1% from last month"
+          change="+20.1% desde el mes pasado"
           Icon={DollarSign}
         />
         <KpiCard
-          title="Total Sales"
+          title="Ventas Totales"
           value={`$${(totalSales / 1000).toFixed(1)}k`}
-          change="+180.1% from last month"
+          change="+180.1% desde el mes pasado"
           Icon={CreditCard}
         />
         <KpiCard
-          title="Active Partners"
+          title="Partners Activos"
           value={`+${activePartners}`}
-          change="+19% from last month"
+          change="+19% desde el mes pasado"
           Icon={Users}
         />
         <KpiCard
-          title="Commissions Paid"
+          title="Comisiones Pagadas"
           value="$12,234"
-          change="+5% from last month"
+          change="+5% desde el mes pasado"
           Icon={Activity}
         />
       </div>
@@ -68,7 +68,7 @@ const SuperAdminDashboard = ({ partners, isLoading }) => {
 
 const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
   if (isLoading) {
-    return <div>Loading Partner Dashboard...</div>;
+    return <div>Cargando Panel de Partner...</div>;
   }
 
   const handleCreateProfile = async () => {
@@ -76,18 +76,18 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
     const partnerRef = doc(firestore, 'partners', user.uid);
     const newPartnerData = {
       id: user.uid,
-      name: user.email?.split('@')[0] || 'New Partner',
+      name: user.email?.split('@')[0] || 'Nuevo Partner',
       email: user.email,
       tier: 'Silver',
       status: 'Active',
-      territory: 'Unassigned',
+      territory: 'Sin asignar',
       joinDate: new Date().toISOString(),
       totalSales: 0,
       revenue: 0,
       avatarUrl: '',
     };
     await setDoc(partnerRef, newPartnerData);
-    // The useDoc hook will automatically refresh the data
+    // El hook useDoc actualizará los datos automáticamente
   };
 
 
@@ -95,14 +95,14 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Partner Profile Not Found</CardTitle>
+          <CardTitle>Perfil de Partner no encontrado</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>Your user is authenticated, but we couldn't find a corresponding partner profile in our database.</p>
-          <p className="mt-2 text-muted-foreground">Click the button below to create a sample profile and get started.</p>
+          <p>Tu usuario está autenticado, pero no pudimos encontrar un perfil de partner correspondiente en nuestra base de datos.</p>
+          <p className="mt-2 text-muted-foreground">Haz clic en el botón de abajo para crear un perfil de ejemplo y comenzar.</p>
         </CardContent>
         <CardFooter>
-            <Button onClick={handleCreateProfile}>Create My Partner Profile</Button>
+            <Button onClick={handleCreateProfile}>Crear Mi Perfil de Partner</Button>
         </CardFooter>
       </Card>
     );
@@ -126,32 +126,32 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
     <>
       <div className="flex justify-between items-center mb-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Partner Dashboard</h1>
-          <p className="text-muted-foreground">Welcome, {name}</p>
+          <h1 className="text-3xl font-bold tracking-tight">Panel de Partner</h1>
+          <p className="text-muted-foreground">Bienvenido, {name}</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Your Tier:</span>
+          <span className="text-sm text-muted-foreground">Tu Nivel:</span>
           <Badge variant={getTierBadgeVariant(tier)} className="text-lg px-4 py-1">{tier}</Badge>
         </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <KpiCard
-          title="Your Total Sales"
+          title="Tus Ventas Totales"
           value={`$${(totalSales / 1000).toFixed(1)}k`}
-          change="+12% this quarter"
+          change="+12% este trimestre"
           Icon={TrendingUp}
         />
         <KpiCard
-          title="Your Revenue Share"
+          title="Tus Ingresos Compartidos"
           value={`$${(revenue / 1000).toFixed(1)}k`}
-          change="+8% this quarter"
+          change="+8% este trimestre"
           Icon={DollarSign}
         />
         <KpiCard
-          title="Your Commissions"
+          title="Tus Comisiones"
           value="$8,450"
-          change="Next payout in 15 days"
+          change="Próximo pago en 15 días"
           Icon={Award}
         />
       </div>
@@ -175,14 +175,14 @@ export default function DashboardPage() {
   const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
   const { role } = userData || {};
 
-  // Data fetching for SuperAdmin
+  // Obtención de datos para SuperAdmin
   const partnersCollection = useMemoFirebase(() => {
     if (!firestore || role !== 'superadmin') return null;
     return collection(firestore, 'partners');
   }, [firestore, role]);
   const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
   
-  // Data fetching for Admin (Partner)
+  // Obtención de datos para Admin (Partner)
   const partnerDocRef = useMemoFirebase(() => {
     if (!firestore || role !== 'admin' || !user) return null;
     return doc(firestore, 'partners', user.uid);
@@ -192,7 +192,7 @@ export default function DashboardPage() {
   const isLoading = isAuthLoading || isRoleLoading;
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <div>Cargando...</div>;
   }
 
   return (

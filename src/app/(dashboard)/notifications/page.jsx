@@ -4,14 +4,14 @@ export default function NotificationsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Automated Notifications</CardTitle>
+        <CardTitle>Notificaciones Automáticas</CardTitle>
         <CardDescription>
-          Set up alerts and notifications for partners.
+          Configura alertas y notificaciones para los partners.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
-          <p className="text-muted-foreground">Notification settings coming soon.</p>
+          <p className="text-muted-foreground">Configuración de notificaciones próximamente.</p>
         </div>
       </CardContent>
     </Card>

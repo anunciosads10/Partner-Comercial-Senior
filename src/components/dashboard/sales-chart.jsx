@@ -8,8 +8,8 @@ export function SalesChart() {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
-        <CardTitle>Sales Performance</CardTitle>
-        <CardDescription>Total sales vs. sub-partner sales over the last year.</CardDescription>
+        <CardTitle>Rendimiento de Ventas</CardTitle>
+        <CardDescription>Ventas totales vs. ventas de sub-partners en el último año.</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
@@ -38,8 +38,8 @@ export function SalesChart() {
               }}
             />
             <Legend wrapperStyle={{fontSize: "14px", paddingTop: '10px'}}/>
-            <Bar dataKey="totalSales" fill="hsl(var(--primary))" name="Total Sales" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="subPartnerSales" fill="hsl(var(--accent))" name="Sub-Partner Sales" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="totalSales" fill="hsl(var(--primary))" name="Ventas Totales" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="subPartnerSales" fill="hsl(var(--accent))" name="Ventas de Sub-Partners" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </CardContent>

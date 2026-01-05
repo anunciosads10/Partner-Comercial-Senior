@@ -4,14 +4,14 @@ export default function SettingsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Settings</CardTitle>
+        <CardTitle>Configuración</CardTitle>
         <CardDescription>
-          Manage your account and application settings.
+          Gestiona tu cuenta y la configuración de la aplicación.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
-          <p className="text-muted-foreground">Application settings coming soon.</p>
+          <p className="text-muted-foreground">Configuración de la aplicación próximamente.</p>
         </div>
       </CardContent>
     </Card>

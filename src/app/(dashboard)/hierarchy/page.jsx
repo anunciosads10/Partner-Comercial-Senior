@@ -4,14 +4,14 @@ export default function HierarchyPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Partner Hierarchy</CardTitle>
+        <CardTitle>Jerarquía de Partners</CardTitle>
         <CardDescription>
-          Visualize partner hierarchies and commission distribution.
+          Visualiza las jerarquías de partners y la distribución de comisiones.
         </CardDescription>
       </CardHeader>
       <CardContent>
         <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg bg-secondary">
-          <p className="text-muted-foreground">Partner tree visualization coming soon.</p>
+          <p className="text-muted-foreground">Visualización del árbol de partners próximamente.</p>
         </div>
       </CardContent>
     </Card>

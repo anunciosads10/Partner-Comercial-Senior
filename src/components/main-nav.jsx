@@ -25,19 +25,19 @@ import {
 import { cn } from "@/lib/utils";
 
 const allMenuItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "superadmin"] },
+  { href: "/", label: "Panel Principal", icon: LayoutDashboard, roles: ["admin", "superadmin"] },
   { href: "/partners", label: "Partners", icon: Users, roles: ["admin", "superadmin"] },
-  { href: "/commissions", label: "Commissions", icon: Percent, roles: ["superadmin"] },
-  { href: "/hierarchy", label: "Hierarchy", icon: GitFork, roles: ["admin", "superadmin"] },
-  { href: "/payments", label: "Payments", icon: CreditCard, roles: ["admin", "superadmin"] },
-  { href: "/rules", label: "Rules", icon: Gavel, roles: ["superadmin"] },
-  { href: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "superadmin"] },
+  { href: "/commissions", label: "Comisiones", icon: Percent, roles: ["superadmin"] },
+  { href: "/hierarchy", label: "Jerarquía", icon: GitFork, roles: ["admin", "superadmin"] },
+  { href: "/payments", label: "Pagos", icon: CreditCard, roles: ["admin", "superadmin"] },
+  { href: "/rules", label: "Reglas", icon: Gavel, roles: ["superadmin"] },
+  { href: "/notifications", label: "Notificaciones", icon: Bell, roles: ["admin", "superadmin"] },
 ];
 
 export function MainNav({ userData }) {
   const pathname = usePathname();
   const { state } = useSidebar();
-  const userRole = userData?.role || 'admin'; // Default to 'admin' if role is not yet loaded
+  const userRole = userData?.role || 'admin'; // Por defecto 'admin' si el rol aún no está cargado
 
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
@@ -106,10 +106,10 @@ export function MainNav({ userData }) {
             <Link href="/settings">
               <SidebarMenuButton
                 isActive={pathname === "/settings"}
-                tooltip="Settings"
+                tooltip="Configuración"
               >
                 <Settings />
-                <span>Settings</span>
+                <span>Configuración</span>
               </SidebarMenuButton>
             </Link>
           </SidebarMenuItem>

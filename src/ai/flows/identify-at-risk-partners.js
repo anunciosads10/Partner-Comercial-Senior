@@ -1,11 +1,11 @@
 'use server';
 
 /**
- * @fileOverview A flow that identifies partners at risk of churning using historical data and GenAI.
+ * @fileOverview Un flujo que identifica a los partners en riesgo de abandono utilizando datos históricos y GenAI.
  *
- * - identifyAtRiskPartners - A function that analyzes partner data and predicts churn risk.
- * - IdentifyAtRiskPartnersInput - The input type for the identifyAtRiskPartners function.
- * - IdentifyAtRiskPartnersOutput - The return type for the identifyAtRiskPartners function.
+ * - identifyAtRiskPartners - Una función que analiza los datos de los partners y predice el riesgo de abandono.
+ * - IdentifyAtRiskPartnersInput - El tipo de entrada para la función identifyAtRiskPartners.
+ * - IdentifyAtRiskPartnersOutput - El tipo de retorno para la función identifyAtRiskPartners.
  */
 
 import {ai} from '@/ai/genkit';
@@ -15,7 +15,7 @@ const IdentifyAtRiskPartnersInputSchema = z.object({
   historicalData: z
     .string()
     .describe(
-      'Historical data of partners, including sales performance, engagement metrics, and other relevant data.'
+      'Datos históricos de los partners, incluyendo rendimiento de ventas, métricas de participación y otros datos relevantes.'
     ),
 });
 
@@ -23,10 +23,10 @@ const IdentifyAtRiskPartnersInputSchema = z.object({
 const IdentifyAtRiskPartnersOutputSchema = z.object({
   atRiskPartners: z
     .array(z.string())
-    .describe('A list of partner IDs who are identified as at risk of churning.'),
+    .describe('Una lista de IDs de partners que se identifican como en riesgo de abandono.'),
   reasons: z
     .array(z.string())
-    .describe('Reasons for each partner being identified as at risk.'),
+    .describe('Razones por las que cada partner ha sido identificado como en riesgo.'),
 });
 
 
@@ -40,18 +40,18 @@ const prompt = ai.definePrompt({
   name: 'identifyAtRiskPartnersPrompt',
   input: {schema: IdentifyAtRiskPartnersInputSchema},
   output: {schema: IdentifyAtRiskPartnersOutputSchema},
-  prompt: `You are an expert in partner relationship management and churn prediction.
+  prompt: `Eres un experto en gestión de relaciones con partners y predicción de abandono.
 
-  Analyze the following historical data of our partners and identify those who are at risk of churning.
+  Analiza los siguientes datos históricos de nuestros partners e identifica a aquellos que están en riesgo de abandonar.
 
-  Historical Data: {{{historicalData}}}
+  Datos Históricos: {{{historicalData}}}
 
-  Provide a list of partner IDs who are at risk of churning and the reasons for each partner being identified as at risk.
+  Proporciona una lista de IDs de partners que están en riesgo de abandonar y las razones de cada uno.
 
-  Format your response as a JSON object with the following structure:
+  Formatea tu respuesta como un objeto JSON con la siguiente estructura:
   {
     "atRiskPartners": ["partnerId1", "partnerId2", ...],
-    "reasons": ["Reason for partnerId1", "Reason for partnerId2", ...]
+    "reasons": ["Razón para partnerId1", "Razón para partnerId2", ...]
   }
   `,
 });

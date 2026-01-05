@@ -73,13 +73,13 @@ export default function PartnersPage() {
       batch.set(docRef, partner);
     });
     await batch.commit();
-    console.log("Mock data seeded successfully!");
-    // You might want to refresh the data here or rely on the real-time listener
+    console.log("Datos de prueba sembrados exitosamente!");
+    // Puede que quieras refrescar los datos aquí o confiar en el listener en tiempo real
   };
 
 
   if (isLoading) {
-    return <p>Loading partners...</p>;
+    return <p>Cargando partners...</p>;
   }
 
   return (
@@ -87,16 +87,16 @@ export default function PartnersPage() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Partner Management</CardTitle>
+            <CardTitle>Gestión de Partners</CardTitle>
             <CardDescription>
-              Create, edit, activate, and suspend partners.
+              Crea, edita, activa y suspende partners.
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button onClick={seedData} variant="outline" disabled={!firestore}>Seed Mock Data</Button>
+            <Button onClick={seedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
             <Button>
               <PlusCircle className="mr-2 h-4 w-4" />
-              Create Partner
+              Crear Partner
             </Button>
           </div>
         </div>
@@ -106,11 +106,11 @@ export default function PartnersPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Partner</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Territory</TableHead>
-              <TableHead>Status</TableHead>
+              <TableHead>Nivel</TableHead>
+              <TableHead>Territorio</TableHead>
+              <TableHead>Estado</TableHead>
               <TableHead>
-                <span className="sr-only">Actions</span>
+                <span className="sr-only">Acciones</span>
               </TableHead>
             </TableRow>
           </TableHeader>
@@ -151,9 +151,9 @@ export default function PartnersPage() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
-                      <DropdownMenuItem>Suspend</DropdownMenuItem>
+                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                      <DropdownMenuItem>Editar</DropdownMenuItem>
+                      <DropdownMenuItem>Suspender</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

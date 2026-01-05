@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function Header({ userData }) { // Receive userData as a prop
+export function Header({ userData }) { // Recibe userData como prop
   const auth = useAuth();
   const { user } = useAuth() || {};
   const [isClient, setIsClient] = useState(false);
@@ -42,7 +42,7 @@ export function Header({ userData }) { // Receive userData as a prop
         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
         <Input
           type="search"
-          placeholder="Search..."
+          placeholder="Buscar..."
           className="w-full rounded-lg bg-secondary pl-8 md:w-[200px] lg:w-[336px]"
         />
       </div>
@@ -61,14 +61,14 @@ export function Header({ userData }) { // Receive userData as a prop
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
                 <div>
                   <div>{user?.email}</div>
                   {userData && (
                     <div className="text-xs text-muted-foreground capitalize">
-                      Role: {userData.role}
+                      Rol: {userData.role}
                     </div>
                   )}
                 </div>
@@ -76,7 +76,7 @@ export function Header({ userData }) { // Receive userData as a prop
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
-                Logout
+                Cerrar Sesión
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

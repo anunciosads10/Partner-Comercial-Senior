@@ -68,9 +68,12 @@ service cloud.firestore {
       // SuperAdmin puede leer y escribir cualquier pago.
       allow read, write: if isSuperAdmin();
       
-      // Los partners (admin) pueden leer sus propios pagos, pero no escribirlos.
+      // Los partners (admin) pueden leer sus propios pagos
       allow get: if isAdmin() && resource.data.partnerId == request.auth.uid;
       allow list: if isAdmin(); // La query en la app debe filtrar por partnerId
+
+      // Los partners (admin) pueden crear sus propios pagos, pero no modificarlos ni borrarlos.
+      allow create: if isAdmin() && request.resource.data.partnerId == request.auth.uid;
     }
 
     // -------------------------------------------------------------------------

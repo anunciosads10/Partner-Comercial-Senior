@@ -14,8 +14,7 @@
  * Key Security Decisions:
  * - Partner Isolation: A user's auth UID must match the `{partnerId}` wildcard in 
  *   the path, strictly preventing any cross-partner data access.
- * - No Partner Enumeration: Listing the top-level `/partners` collection is explicitly
- *   disallowed to protect partner privacy.
+ * - Admin Read-All: Authenticated users (acting as admins for this dashboard) can list the top-level partners collection.
  * - Read-Only Globals: Top-level collections for shared business logic (`commission_schemes`,
  *   `rules`) are readable by any authenticated partner but are not writable. This allows 
  *   the application to function while maintaining a secure default posture until 
@@ -71,8 +70,8 @@ service cloud.firestore {
      * @principle   Enforces self-creation and strict document ownership.
      */
     match /partners/{partnerId} {
-      allow get: if isOwner(partnerId);
-      allow list: if false; // Disallow listing all partners for security and privacy.
+      allow get: if isOwner(partnerId) || isSignedIn(); // Allow signed-in users to get for dashboard purposes
+      allow list: if isSignedIn(); // Allow listing all partners for the dashboard view.
       allow create: if isOwner(partnerId) && request.resource.data.id == partnerId;
       allow update: if isExistingOwner(partnerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(partnerId);

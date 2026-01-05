@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, PlusCircle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, BellRing, Eye, Trash2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,8 +14,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
-// Datos de ejemplo para las reglas de notificación
+// --- Datos de ejemplo para las reglas de notificación (para SuperAdmin) ---
 const mockNotificationRules = [
   {
     id: "rule-1",
@@ -38,108 +40,224 @@ const mockNotificationRules = [
     type: "Inactividad",
     status: "inactive",
   },
-  {
-    id: "rule-4",
-    name: "Mensaje de Bienvenida",
-    description: "Enviar un correo de bienvenida a los nuevos partners que se unen al programa.",
-    type: "Bienvenida",
-    status: "active",
-  },
+];
+
+// --- Datos de ejemplo para notificaciones recibidas (para Admin/Partner) ---
+const mockReceivedNotifications = [
+    {
+        id: "notif-1",
+        title: "¡Felicitaciones por alcanzar el nivel Oro!",
+        message: "Tu arduo trabajo ha dado sus frutos. Has sido ascendido a Partner de nivel Oro, con acceso a comisiones más altas y soporte prioritario.",
+        timestamp: "2024-07-15T10:00:00Z",
+        isRead: false,
+        type: "Hito",
+    },
+    {
+        id: "notif-2",
+        title: "Pago Procesado",
+        message: "Tu pago de comisiones de $1,250.00 ha sido procesado y será depositado en tu cuenta en las próximas 48 horas.",
+        timestamp: "2024-07-14T15:30:00Z",
+        isRead: true,
+        type: "Pagos",
+    },
+    {
+        id: "notif-3",
+        title: "Alerta de Rendimiento",
+        message: "Hemos notado una disminución en tu actividad de ventas esta semana. Contáctanos si necesitas ayuda o recursos adicionales.",
+        timestamp: "2024-07-12T09:00:00Z",
+        isRead: true,
+        type: "Rendimiento",
+    }
 ];
 
 const getStatusBadgeVariant = (status) => {
   return status === 'active' ? 'default' : 'secondary';
 };
 
-export default function NotificationsPage() {
-  const [rules, setRules] = React.useState(mockNotificationRules);
+// ======================= VISTA PARA SUPERADMIN =======================
+const SuperAdminNotificationsView = () => {
+    const [rules, setRules] = React.useState(mockNotificationRules);
 
-  const handleStatusChange = (ruleId) => {
-    setRules(prevRules => 
-      prevRules.map(rule => 
-        rule.id === ruleId 
-          ? { ...rule, status: rule.status === 'active' ? 'inactive' : 'active' }
-          : rule
-      )
+    const handleStatusChange = (ruleId) => {
+        setRules(prevRules =>
+            prevRules.map(rule =>
+                rule.id === ruleId
+                    ? { ...rule, status: rule.status === 'active' ? 'inactive' : 'active' }
+                    : rule
+            )
+        );
+    };
+
+    return (
+        <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Notificaciones Automáticas</CardTitle>
+                        <CardDescription>
+                            Configura alertas y notificaciones automáticas para mantener a los partners informados y comprometidos.
+                        </CardDescription>
+                    </div>
+                    <Button>
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Crear Nueva Regla
+                    </Button>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead>Regla de Notificación</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Estado</TableHead>
+                            <TableHead className="w-[100px]">Activada</TableHead>
+                            <TableHead>
+                                <span className="sr-only">Acciones</span>
+                            </TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {rules.map((rule) => (
+                            <TableRow key={rule.id}>
+                                <TableCell>
+                                    <div className="font-medium">{rule.name}</div>
+                                    <div className="text-sm text-muted-foreground">{rule.description}</div>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant="outline">{rule.type}</Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Badge variant={getStatusBadgeVariant(rule.status)}>
+                                        {rule.status === 'active' ? 'Activa' : 'Inactiva'}
+                                    </Badge>
+                                </TableCell>
+                                <TableCell>
+                                    <Switch
+                                        checked={rule.status === 'active'}
+                                        onCheckedChange={() => handleStatusChange(rule.id)}
+                                        aria-label={`Activar o desactivar la regla ${rule.name}`}
+                                    />
+                                </TableCell>
+                                <TableCell>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                                                <MoreHorizontal className="h-4 w-4" />
+                                                <span className="sr-only">Toggle menu</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                            <DropdownMenuItem>Editar</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+                {rules.length === 0 && (
+                    <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
+                        <p className="text-muted-foreground">No hay reglas de notificación configuradas.</p>
+                    </div>
+                )}
+            </CardContent>
+        </Card>
     );
-  };
+};
 
-  return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Notificaciones Automáticas</CardTitle>
-            <CardDescription>
-              Configura alertas y notificaciones automáticas para mantener a los partners informados y comprometidos.
-            </CardDescription>
-          </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Crear Nueva Regla
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Regla de Notificación</TableHead>
-              <TableHead>Tipo</TableHead>
-              <TableHead>Estado</TableHead>
-              <TableHead className="w-[100px]">Activada</TableHead>
-              <TableHead>
-                <span className="sr-only">Acciones</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rules.map((rule) => (
-              <TableRow key={rule.id}>
-                <TableCell>
-                  <div className="font-medium">{rule.name}</div>
-                  <div className="text-sm text-muted-foreground">{rule.description}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant="outline">{rule.type}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={getStatusBadgeVariant(rule.status)}>
-                    {rule.status === 'active' ? 'Activa' : 'Inactiva'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Switch
-                    checked={rule.status === 'active'}
-                    onCheckedChange={() => handleStatusChange(rule.id)}
-                    aria-label={`Activar o desactivar la regla ${rule.name}`}
-                  />
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-         {rules.length === 0 && (
-            <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                <p className="text-muted-foreground">No hay reglas de notificación configuradas.</p>
-            </div>
-        )}
-      </CardContent>
-    </Card>
-  );
+
+// ======================= VISTA PARA ADMIN (PARTNER) =======================
+const AdminNotificationsView = () => {
+    const [notifications, setNotifications] = React.useState(mockReceivedNotifications);
+
+    const handleMarkAsRead = (notifId) => {
+        setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+    };
+
+     const handleMarkAllAsRead = () => {
+        setNotifications(prev => prev.map(n => ({...n, isRead: true })));
+    };
+
+    const handleDeleteAll = () => {
+        setNotifications([]);
+    };
+    
+    return (
+         <Card>
+            <CardHeader>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <CardTitle>Bandeja de Entrada de Notificaciones</CardTitle>
+                        <CardDescription>
+                            Aquí encontrarás todas las alertas, hitos y actualizaciones importantes sobre tu cuenta.
+                        </CardDescription>
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Button variant="outline" size="sm" onClick={handleMarkAllAsRead}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            Marcar todo como leído
+                        </Button>
+                         <Button variant="destructive" size="sm" onClick={handleDeleteAll}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Limpiar bandeja
+                        </Button>
+                    </div>
+                </div>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                 {notifications.length === 0 ? (
+                     <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
+                        <BellRing className="h-12 w-12 text-muted-foreground" />
+                        <p className="mt-4 text-muted-foreground">Tu bandeja de entrada está vacía.</p>
+                    </div>
+                 ) : (
+                    notifications.map(notif => (
+                        <div key={notif.id} className={`p-4 rounded-lg flex items-start gap-4 transition-colors ${notif.isRead ? 'bg-secondary' : 'bg-card border'}`}>
+                            {!notif.isRead && <div className="h-2 w-2 mt-1.5 rounded-full bg-primary animate-pulse" />}
+                            <div className="flex-grow ml-2">
+                                <p className={`font-semibold ${notif.isRead ? 'text-muted-foreground' : ''}`}>{notif.title}</p>
+                                <p className="text-sm text-muted-foreground">{notif.message}</p>
+                                <p className="text-xs text-muted-foreground mt-2">{new Date(notif.timestamp).toLocaleString()}</p>
+                            </div>
+                             {!notif.isRead && (
+                                <Button variant="ghost" size="sm" onClick={() => handleMarkAsRead(notif.id)}>
+                                    Marcar como leído
+                                </Button>
+                            )}
+                        </div>
+                    ))
+                 )}
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
+// ======================= COMPONENTE PRINCIPAL DE LA PÁGINA =======================
+export default function NotificationsPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading } = useDoc(userDocRef);
+
+  if (isLoading) {
+    return <p>Cargando notificaciones...</p>;
+  }
+
+  // Renderiza la vista correcta según el rol del usuario
+  if (userData?.role === 'superadmin') {
+    return <SuperAdminNotificationsView />;
+  }
+  
+  // Por defecto, o si es 'admin', muestra la vista del partner
+  return <AdminNotificationsView />;
 }

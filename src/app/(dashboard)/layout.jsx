@@ -43,7 +43,7 @@ export default function DashboardLayout({
 
   // If loading is done, but we still have no user, render nothing.
   // The useEffect above will handle the redirection.
-  if (!user || !userData) {
+  if (!user) {
     return null;
   }
   

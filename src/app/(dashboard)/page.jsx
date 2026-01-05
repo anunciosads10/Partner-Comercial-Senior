@@ -1,3 +1,4 @@
+'use client';
 import {
   DollarSign,
   Users,
@@ -8,12 +9,26 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { SalesChart } from "@/components/dashboard/sales-chart";
 import { PartnerRankings } from "@/components/dashboard/partner-rankings";
 import { AtRiskPartners } from "@/components/dashboard/at-risk-partners";
-import { partners } from "@/lib/data";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
 
 export default function DashboardPage() {
-  const totalRevenue = partners.reduce((acc, partner) => acc + partner.revenue, 0);
-  const totalSales = partners.reduce((acc, partner) => acc + partner.totalSales, 0);
-  const activePartners = partners.filter(p => p.status === 'Active').length;
+  const firestore = useFirestore();
+  const partnersCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'partners');
+  }, [firestore]);
+
+  const { data: partners, isLoading } = useCollection(partnersCollection);
+
+  if (isLoading) {
+    // You can return a loading skeleton here
+    return <div>Loading...</div>;
+  }
+
+  const totalRevenue = partners?.reduce((acc, partner) => acc + (partner.revenue || 0), 0) || 0;
+  const totalSales = partners?.reduce((acc, partner) => acc + (partner.totalSales || 0), 0) || 0;
+  const activePartners = partners?.filter(p => p.status === 'Active').length || 0;
 
   return (
     <div className="flex flex-col gap-8">
@@ -47,10 +62,10 @@ export default function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-4">
         <SalesChart />
-        <PartnerRankings />
+        <PartnerRankings partners={partners} />
       </div>
 
-      <AtRiskPartners />
+      <AtRiskPartners partners={partners} />
     </div>
   );
 }

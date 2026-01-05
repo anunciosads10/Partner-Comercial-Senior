@@ -1,3 +1,4 @@
+'use client';
 import {
   Table,
   TableBody,
@@ -14,11 +15,10 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { partners } from "@/lib/data";
 import { Badge } from "../ui/badge";
 
-export function PartnerRankings() {
-  const rankedPartners = [...partners]
+export function PartnerRankings({ partners }) {
+  const rankedPartners = [...(partners || [])]
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 5);
 
@@ -60,7 +60,7 @@ export function PartnerRankings() {
                   <div className="flex items-center gap-4">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={partner.avatarUrl} alt={partner.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{partner.name.slice(0,2)}</AvatarFallback>
+                      <AvatarFallback>{partner.name?.slice(0,2)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">{partner.name}</div>
@@ -74,7 +74,7 @@ export function PartnerRankings() {
                   <Badge variant={getTierVariant(partner.tier)}>{partner.tier}</Badge>
                 </TableCell>
                 <TableCell className="text-right font-medium">
-                  ${partner.revenue.toLocaleString()}
+                  ${partner.revenue?.toLocaleString()}
                 </TableCell>
               </TableRow>
             ))}

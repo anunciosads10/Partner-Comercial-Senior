@@ -1,5 +1,4 @@
-"use client";
-
+'use client';
 import { useState } from "react";
 import {
   Card,
@@ -11,13 +10,12 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { identifyAtRiskPartners } from "@/ai/flows/identify-at-risk-partners";
-import { partners } from "@/lib/data";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, UserX, ShieldAlert } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 
-export function AtRiskPartners() {
+export function AtRiskPartners({ partners }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -96,7 +94,7 @@ export function AtRiskPartners() {
         )}
       </CardContent>
       <CardFooter>
-        <Button onClick={handleAnalysis} disabled={loading}>
+        <Button onClick={handleAnalysis} disabled={loading || !partners}>
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />

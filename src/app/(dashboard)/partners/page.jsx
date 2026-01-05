@@ -1,3 +1,4 @@
+'use client';
 import {
   Table,
   TableBody,
@@ -14,7 +15,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { partners } from "@/lib/data";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MoreHorizontal, PlusCircle } from "lucide-react";
@@ -25,6 +25,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection, writeBatch, doc } from "firebase/firestore";
+import { partners as mockPartners } from "@/lib/data";
 
 function getTierBadgeVariant(tier) {
   switch (tier) {
@@ -53,6 +56,32 @@ function getStatusBadgeVariant(status) {
 }
 
 export default function PartnersPage() {
+  const firestore = useFirestore();
+
+  const partnersCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'partners');
+  }, [firestore]);
+
+  const { data: partners, isLoading } = useCollection(partnersCollection);
+
+  const seedData = async () => {
+    if (!firestore) return;
+    const batch = writeBatch(firestore);
+    mockPartners.forEach((partner) => {
+      const docRef = doc(firestore, "partners", partner.id);
+      batch.set(docRef, partner);
+    });
+    await batch.commit();
+    console.log("Mock data seeded successfully!");
+    // You might want to refresh the data here or rely on the real-time listener
+  };
+
+
+  if (isLoading) {
+    return <p>Loading partners...</p>;
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -63,10 +92,13 @@ export default function PartnersPage() {
               Create, edit, activate, and suspend partners.
             </CardDescription>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Create Partner
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={seedData} variant="outline" disabled={!firestore}>Seed Mock Data</Button>
+            <Button>
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Create Partner
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -83,13 +115,13 @@ export default function PartnersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {partners.map((partner) => (
+            {partners?.map((partner) => (
               <TableRow key={partner.id}>
                 <TableCell>
                   <div className="flex items-center gap-4">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={partner.avatarUrl} alt={partner.name} />
-                      <AvatarFallback>{partner.name.slice(0,2)}</AvatarFallback>
+                      <AvatarFallback>{partner.name?.slice(0,2)}</AvatarFallback>
                     </Avatar>
                     <div>
                       <div className="font-medium">{partner.name}</div>

@@ -70,15 +70,13 @@ export default function PaymentsPage() {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = role === 'superadmin' 
-      ? ["ID Transacción", "Partner", "Fecha", "Monto", "Estado"]
-      : ["ID Transacción", "Fecha", "Monto", "Estado"];
+    const headers = ["ID Transacción", "Partner", "Fecha", "Monto", "Estado"];
     csvContent += headers.join(",") + "\r\n";
 
     payments.forEach(payment => {
       const row = [
         payment.id,
-        ...(role === 'superadmin' ? [payment.partnerName || 'N/A'] : []),
+        payment.partnerName || 'N/A',
         new Date(payment.paymentDate).toLocaleDateString(),
         payment.amount,
         payment.status
@@ -102,30 +100,20 @@ export default function PaymentsPage() {
   };
 
   const handleNewPayment = async () => {
-    if (!firestore) {
-        toast({ variant: "destructive", title: "Error", description: "La base de datos no está disponible." });
+    if (!firestore || role !== 'superadmin') {
+        toast({ variant: "destructive", title: "Acción no permitida" });
         return;
     }
 
     try {
-        let targetPartnerId = uid;
-        let partnerName = userData?.email || "Partner";
-
-        if (role === 'superadmin') {
-            const partnersSnapshot = await getDocs(collection(firestore, 'partners'));
-            if (partnersSnapshot.empty) {
-                toast({ variant: "destructive", title: "Error", description: "No hay partners para asignar el pago." });
-                return;
-            }
-            const firstPartner = partnersSnapshot.docs[0].data();
-            targetPartnerId = firstPartner.id;
-            partnerName = firstPartner.name;
-        }
-
-        if (!targetPartnerId) {
-            toast({ variant: "destructive", title: "Error", description: "No se pudo determinar el partner para el pago." });
+        const partnersSnapshot = await getDocs(collection(firestore, 'partners'));
+        if (partnersSnapshot.empty) {
+            toast({ variant: "destructive", title: "Error", description: "No hay partners para asignar el pago." });
             return;
         }
+        const firstPartner = partnersSnapshot.docs[0].data();
+        const targetPartnerId = firstPartner.id;
+        const partnerName = firstPartner.name;
         
         const newPayment = {
             amount: Math.floor(Math.random() * (2000 - 100 + 1)) + 100,
@@ -163,19 +151,23 @@ export default function PaymentsPage() {
             <div>
               <CardTitle>Pagos y Facturación</CardTitle>
               <CardDescription>
-                Configura ciclos de pago y visualiza el historial de pagos.
+                {role === 'superadmin' 
+                  ? "Configura ciclos de pago y visualiza el historial de pagos."
+                  : "Consulta tu historial de comisiones pagadas y pendientes."}
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={handleExport}>
-                <Download className="mr-2 h-4 w-4" />
-                Exportar Reporte
-              </Button>
-              <Button onClick={handleNewPayment}>
-                 <CreditCard className="mr-2 h-4 w-4" />
-                Iniciar Nuevo Pago
-              </Button>
-            </div>
+            {role === 'superadmin' && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" onClick={handleExport}>
+                  <Download className="mr-2 h-4 w-4" />
+                  Exportar Reporte
+                </Button>
+                <Button onClick={handleNewPayment}>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Iniciar Nuevo Pago
+                </Button>
+              </div>
+            )}
           </div>
         </CardHeader>
         <CardContent>

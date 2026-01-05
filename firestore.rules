@@ -2,8 +2,10 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- FUNCIONES DE APOYO (Sintaxis correcta para Firebase) ---
-    
+    // -------------------------------------------------------------------------
+    // Funciones de Ayuda (Sintaxis corregida para Firebase CEL)
+    // -------------------------------------------------------------------------
+
     function isSignedIn() {
       return request.auth != null;
     }
@@ -12,7 +14,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Función directa para obtener el rol sin usar 'let' o 'if'
+    // Obtiene el rol directamente. Si el documento no existe, la regla fallará (comportamiento deseado)
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
@@ -24,35 +26,51 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (getUserRole() == 'admin' || getUserRole() == 'superadmin');
     }
-
-    // --- REGLAS DE COLECCIONES ---
-
+    
+    // -------------------------------------------------------------------------
+    // Reglas para la colección de Usuarios (Roles)
+    // -------------------------------------------------------------------------
+    
     match /users/{userId} {
-      // Importante: El usuario debe poder leer su propio documento para que la app funcione
+      // El usuario DEBE poder leer su propio documento para que la app cargue el rol
       allow get: if isOwner(userId) || isAdmin();
+      
+      // Permitir crear su propio perfil durante el registro
       allow create: if isOwner(userId);
+      
+      // Solo el superadmin gestiona permisos
       allow update, delete: if isSuperAdmin();
       allow list: if isAdmin();
     }
 
+    // -------------------------------------------------------------------------
+    // Reglas para Partners y sus Subcolecciones (Silos de datos)
+    // -------------------------------------------------------------------------
+
     match /partners/{partnerId} {
+      // Acceso al documento principal del partner
       allow get: if isOwner(partnerId) || isAdmin();
       allow list: if isAdmin();
       allow create, update, delete: if isOwner(partnerId) || isSuperAdmin();
 
-      // Reglas para subcolecciones (Comisiones, Pagos, Notificaciones)
+      // Regla recursiva para todas las subcolecciones (commissions, payments, notifications)
+      // Esto simplifica el código y mantiene la seguridad por partnerId
       match /{allSubcollections=**} {
-        allow read: if isOwner(partnerId) || isAdmin();
+        allow read: if isOwner(partneId) || isAdmin();
         allow write: if isOwner(partnerId) || isSuperAdmin();
       }
     }
     
-    match /commission_schemes/{id} {
+    // -------------------------------------------------------------------------
+    // Configuraciones Globales (Solo lectura para usuarios, escritura para Admin)
+    // -------------------------------------------------------------------------
+
+    match /commission_schemes/{schemeId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }
 
-    match /rules/{id} {
+    match /rules/{ruleId} {
       allow read: if isSignedIn();
       allow write: if isSuperAdmin();
     }

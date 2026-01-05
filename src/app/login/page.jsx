@@ -32,7 +32,8 @@ export default function LoginPage() {
     }
     try {
       await initiateEmailSignIn(auth, email, password);
-      // The auth state listener in AuthProvider will handle the redirect
+      // Force redirect after successful login
+      router.push('/');
     } catch (err) {
        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Invalid credentials. Please check your email and password.');

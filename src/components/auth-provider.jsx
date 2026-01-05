@@ -8,30 +8,33 @@ const PROTECTED_DASHBOARD_PREFIX = '/';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export function AuthProvider({ children }) {
-  const auth = useAuth();
-  const { user, isUserLoading } = auth || {};
+  const { user, isUserLoading } = useAuth() || {};
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isUserLoading) return; // Wait until the auth state is determined
+    // Wait until the auth state is determined before running any redirect logic.
+    if (isUserLoading) {
+      return;
+    }
 
     const isProtectedRoute = !PUBLIC_ROUTES.includes(pathname);
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
+    // If there's no user and they're trying to access a protected route, redirect to login.
     if (!user && isProtectedRoute) {
-      // If no user and trying to access a protected route, redirect to login
       router.push('/login');
     }
 
+    // If a user is logged in and tries to access a public route (like login/register),
+    // redirect them to the main dashboard.
     if (user && isPublicRoute) {
-      // If user is logged in and tries to access login/register, redirect to dashboard
       router.push(PROTECTED_DASHBOARD_PREFIX);
     }
-
   }, [user, isUserLoading, router, pathname]);
 
-  // While checking auth state, you might want to show a loader on protected routes
+  // While authentication is loading, show a loader for protected routes
+  // to prevent flashing the content.
   if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -39,14 +42,13 @@ export function AuthProvider({ children }) {
       </div>
     );
   }
-  
-  // If the user is not authenticated and trying to access a protected route,
-  // we render null to prevent flashing the protected content.
-  // The useEffect above will handle the redirection.
+
+  // If there's no user and they are on a protected route, render nothing.
+  // The useEffect above has already triggered the redirection.
   if (!user && !PUBLIC_ROUTES.includes(pathname)) {
     return null;
   }
 
-  // Once sign-in process is complete, render the children
+  // If checks pass, render the children components.
   return children;
 }

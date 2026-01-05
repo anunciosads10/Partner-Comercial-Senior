@@ -61,22 +61,27 @@ service cloud.firestore {
      * Gets the user's role document from the /users collection.
      */
     function getRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      // Use exists() to handle cases where the document might not exist yet.
+      if (exists(/databases/$(database)/documents/users/$(request.auth.uid))) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      }
+      return null; // Return null if the user document doesn't exist
     }
 
     /**
      * Returns true if the user has the 'superadmin' role.
      */
     function isSuperAdmin() {
-      return isSignedIn() && getRole().role == 'superadmin';
+      let roleData = getRole();
+      return isSignedIn() && roleData != null && roleData.role == 'superadmin';
     }
 
     /**
      * Returns true if the user has the 'admin' or 'superadmin' role.
      */
     function isAdmin() {
-      let userRole = getRole().role;
-      return isSignedIn() && (userRole == 'admin' || userRole == 'superadmin');
+      let roleData = getRole();
+      return isSignedIn() && roleData != null && (roleData.role == 'admin' || roleData.role == 'superadmin');
     }
     
     // -------------------------------------------------------------------------
@@ -89,10 +94,21 @@ service cloud.firestore {
      * @path        /users/{userId}
      */
      match /users/{userId} {
-       allow get: if isOwner(userId);
+       // A user can read their own document. Admins can read any user document.
+       allow get: if isOwner(userId) || isAdmin();
+       
+       // A user can create their own user document. This is crucial for registration.
+       // The rule ensures the document UID matches the authenticated user's UID.
        allow create: if isOwner(userId);
+       
+       // Only a superadmin can update a user document.
        allow update: if isSuperAdmin();
+       
+       // Only a superadmin can delete a user document.
        allow delete: if isSuperAdmin();
+       
+       // Admins can list users.
+       allow list: if isAdmin();
      }
 
 
@@ -123,11 +139,8 @@ service cloud.firestore {
        * @principle   Restricts access to a user's own data tree and validates relational integrity.
        */
       match /commissions/{partnerCommissionId} {
-        allow get: if isOwner(partnerId);
-        allow list: if isOwner(partnerId);
-        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
-        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
-        allow delete: if isExistingOwner(partnerId);
+        allow read: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isAdmin();
       }
 
       /**
@@ -138,11 +151,8 @@ service cloud.firestore {
        * @principle   Restricts access to a user's own data tree and validates relational integrity.
        */
       match /payments/{paymentId} {
-        allow get: if isOwner(partnerId);
-        allow list: if isOwner(partnerId);
-        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
-        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
-        allow delete: if isExistingOwner(partnerId);
+        allow read: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isAdmin();
       }
 
       /**
@@ -153,11 +163,8 @@ service cloud.firestore {
        * @principle   Restricts access to a user's own data tree and validates relational integrity.
        */
       match /notifications/{notificationId} {
-        allow get: if isOwner(partnerId);
-        allow list: if isOwner(partnerId);
-        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
-        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
-        allow delete: if isExistingOwner(partnerId);
+        allow read: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isAdmin();
       }
     }
     
@@ -198,5 +205,3 @@ service cloud.firestore {
     }
   }
 }
-
-    

@@ -24,23 +24,31 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const handleSignIn = async () => {
+    console.log("Intentando iniciar sesión con:", email); // LOG 1
     setError('');
+    
     if (!auth) {
+      console.log("Error: auth es null"); // LOG 2
       setError('Authentication service is not available.');
       return;
     }
+
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      console.log("Llamando a Firebase..."); // LOG 3
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      console.log("¡Éxito! Usuario logueado:", userCredential.user.uid); // LOG 4
       router.push('/');
     } catch (err) {
-       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+      console.log("Error detectado:", err.code); // LOG 5
+      if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Invalid credentials. Please check your email and password.');
       } else {
         setError('Failed to sign in. Please try again.');
+        console.error(err);
       }
-      console.error(err);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">

@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useFirestore } from '@/firebase';
-import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 
@@ -33,26 +33,20 @@ export default function RegisterPage() {
       return;
     }
     try {
-      // Correctly await the promise from initiateEmailSignUp
-      const userCredential = await initiateEmailSignUp(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       
-      // Check if userCredential and user exist before proceeding
       if (userCredential && userCredential.user) {
         const user = userCredential.user;
-
-        // Assign role based on email
         const role = email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
         
-        // Create a user document in Firestore
         const userRef = doc(firestore, 'users', user.uid);
         await setDoc(userRef, {
           uid: user.uid,
           email: user.email,
           role: role,
         });
-
-        // The auth state listener in AuthProvider will handle the redirect.
-        // Or you can force a redirect here if needed: router.push('/');
+        
+        // AuthProvider will handle the redirect
       } else {
         throw new Error("User creation failed, no user credential returned.");
       }

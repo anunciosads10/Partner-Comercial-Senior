@@ -13,7 +13,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/firebase';
-import { initiateEmailSignIn } from '@/firebase/non-blocking-login';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import Link from 'next/link';
 
 export default function LoginPage() {
@@ -31,8 +31,7 @@ export default function LoginPage() {
       return;
     }
     try {
-      await initiateEmailSignIn(auth, email, password);
-      // Force redirect after successful login
+      await signInWithEmailAndPassword(auth, email, password);
       router.push('/');
     } catch (err) {
        if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {

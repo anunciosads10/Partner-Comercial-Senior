@@ -24,19 +24,22 @@ import {
 } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
 
-const menuItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/partners", label: "Partners", icon: Users },
-  { href: "/commissions", label: "Commissions", icon: Percent },
-  { href: "/hierarchy", label: "Hierarchy", icon: GitFork },
-  { href: "/payments", label: "Payments", icon: CreditCard },
-  { href: "/rules", label: "Rules", icon: Gavel },
-  { href: "/notifications", label: "Notifications", icon: Bell },
+const allMenuItems = [
+  { href: "/", label: "Dashboard", icon: LayoutDashboard, roles: ["admin", "superadmin"] },
+  { href: "/partners", label: "Partners", icon: Users, roles: ["admin", "superadmin"] },
+  { href: "/commissions", label: "Commissions", icon: Percent, roles: ["superadmin"] },
+  { href: "/hierarchy", label: "Hierarchy", icon: GitFork, roles: ["admin", "superadmin"] },
+  { href: "/payments", label: "Payments", icon: CreditCard, roles: ["admin", "superadmin"] },
+  { href: "/rules", label: "Rules", icon: Gavel, roles: ["superadmin"] },
+  { href: "/notifications", label: "Notifications", icon: Bell, roles: ["admin", "superadmin"] },
 ];
 
-export function MainNav() {
+export function MainNav({ userData }) {
   const pathname = usePathname();
   const { state } = useSidebar();
+  const userRole = userData?.role || 'admin'; // Default to 'admin' if role is not yet loaded
+
+  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 
   return (
     <>

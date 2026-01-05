@@ -52,7 +52,7 @@ export default function DashboardLayout({
     <AuthProvider>
       <SidebarProvider>
         <Sidebar>
-          <MainNav />
+          <MainNav userData={userData} />
         </Sidebar>
         <SidebarInset>
           <Header userData={userData} />

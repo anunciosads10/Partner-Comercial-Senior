@@ -1,0 +1,358 @@
+{
+  "entities": {
+    "Partner": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Partner",
+      "type": "object",
+      "description": "Represents a commercial partner in the PartnerVerse system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Partner entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the partner."
+        },
+        "email": {
+          "type": "string",
+          "description": "The email address of the partner.",
+          "format": "email"
+        },
+        "tier": {
+          "type": "string",
+          "description": "The tier of the partner (e.g., Silver, Gold, Platinum)."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the partner (e.g., Active, Suspended)."
+        },
+        "territory": {
+          "type": "string",
+          "description": "The territory or segment the partner is assigned to."
+        },
+        "joinDate": {
+          "type": "string",
+          "description": "The date and time the partner joined the program.",
+          "format": "date-time"
+        },
+        "parentId": {
+          "type": "string",
+          "description": "Reference to the parent Partner. (Relationship: Partner 1:N Partner)"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "email",
+        "tier",
+        "status",
+        "territory",
+        "joinDate"
+      ]
+    },
+    "CommissionScheme": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CommissionScheme",
+      "type": "object",
+      "description": "Defines a commission scheme for partners.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CommissionScheme entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the commission scheme."
+        },
+        "type": {
+          "type": "string",
+          "description": "Type of commission (e.g., percentage, fixed, tiered)."
+        },
+        "rate": {
+          "type": "number",
+          "description": "The commission rate."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the commision scheme"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "type",
+        "rate"
+      ]
+    },
+    "PartnerCommission": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "PartnerCommission",
+      "type": "object",
+      "description": "Represents the commission settings for a specific partner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the PartnerCommission entity."
+        },
+        "partnerId": {
+          "type": "string",
+          "description": "Reference to Partner. (Relationship: Partner 1:N PartnerCommission)"
+        },
+        "commissionSchemeId": {
+          "type": "string",
+          "description": "Reference to CommissionScheme. (Relationship: CommissionScheme 1:N PartnerCommission)"
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date and time the commission scheme starts.",
+          "format": "date-time"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The date and time the commission scheme ends.",
+          "format": "date-time"
+        },
+        "isSubPartnerCommission": {
+          "type": "boolean",
+          "description": "If the commission are from sales of subpartners"
+        }
+      },
+      "required": [
+        "id",
+        "partnerId",
+        "commissionSchemeId",
+        "startDate"
+      ]
+    },
+    "Payment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Payment",
+      "type": "object",
+      "description": "Represents a payment made to a partner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Payment entity."
+        },
+        "partnerId": {
+          "type": "string",
+          "description": "Reference to Partner. (Relationship: Partner 1:N Payment)"
+        },
+        "amount": {
+          "type": "number",
+          "description": "The amount paid to the partner."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The date and time the payment was made.",
+          "format": "date-time"
+        },
+        "description": {
+          "type": "string",
+          "description": "Payment description"
+        }
+      },
+      "required": [
+        "id",
+        "partnerId",
+        "amount",
+        "paymentDate"
+      ]
+    },
+    "Rule": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Rule",
+      "type": "object",
+      "description": "Represents a rule or policy within the partner program.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Rule entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the rule."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description of the rule."
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of rule (e.g., anti-fraud, terms of service)."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content or text of the rule."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "description",
+        "type",
+        "content"
+      ]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification sent to a partner.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Notification entity."
+        },
+        "partnerId": {
+          "type": "string",
+          "description": "Reference to Partner. (Relationship: Partner 1:N Notification)"
+        },
+        "type": {
+          "type": "string",
+          "description": "The type of notification (e.g., low performance, milestone achieved)."
+        },
+        "message": {
+          "type": "string",
+          "description": "The message content of the notification."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The date and time the notification was sent.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "If the notification was read."
+        }
+      },
+      "required": [
+        "id",
+        "partnerId",
+        "type",
+        "message",
+        "timestamp"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/partners/{partnerId}",
+        "definition": {
+          "entityName": "Partner",
+          "schema": {
+            "$ref": "#/backend/entities/Partner"
+          },
+          "description": "Stores partner information. Includes denormalized fields from parent Partner if applicable for authorization independence.",
+          "params": [
+            {
+              "name": "partnerId",
+              "description": "The unique identifier of the partner."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/commissions/{partnerCommissionId}",
+        "definition": {
+          "entityName": "PartnerCommission",
+          "schema": {
+            "$ref": "#/backend/entities/PartnerCommission"
+          },
+          "description": "Stores commission settings for each partner. Contains `partnerId` for authorization independence.",
+          "params": [
+            {
+              "name": "partnerId",
+              "description": "The unique identifier of the partner."
+            },
+            {
+              "name": "partnerCommissionId",
+              "description": "The unique identifier of the partner commission."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores payment information for each partner. Contains `partnerId` for authorization independence.",
+          "params": [
+            {
+              "name": "partnerId",
+              "description": "The unique identifier of the partner."
+            },
+            {
+              "name": "paymentId",
+              "description": "The unique identifier of the payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/partners/{partnerId}/notifications/{notificationId}",
+        "definition": {
+          "entityName": "Notification",
+          "schema": {
+            "$ref": "#/backend/entities/Notification"
+          },
+          "description": "Stores notifications for each partner. Contains `partnerId` for authorization independence.",
+          "params": [
+            {
+              "name": "partnerId",
+              "description": "The unique identifier of the partner."
+            },
+            {
+              "name": "notificationId",
+              "description": "The unique identifier of the notification."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/commission_schemes/{commissionSchemeId}",
+        "definition": {
+          "entityName": "CommissionScheme",
+          "schema": {
+            "$ref": "#/backend/entities/CommissionScheme"
+          },
+          "description": "Stores global commission scheme definitions.",
+          "params": [
+            {
+              "name": "commissionSchemeId",
+              "description": "The unique identifier of the commission scheme."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/rules/{ruleId}",
+        "definition": {
+          "entityName": "Rule",
+          "schema": {
+            "$ref": "#/backend/entities/Rule"
+          },
+          "description": "Stores global rules and policies for the partner program.",
+          "params": [
+            {
+              "name": "ruleId",
+              "description": "The unique identifier of the rule."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to support the PartnerVerse application, focusing on the Partner Comercial Senior management panel. Key considerations include authorization independence, clarity, and scalability. The structure avoids hierarchical `get()` calls in security rules by denormalizing authorization data where necessary. \n\nAuthorization Independence is achieved primarily through denormalization. For example, any subcollections related to a Partner, such as `PartnerCommission` or `Payment`, will store a copy of the relevant partner data (e.g., `partnerId`, `tier`, `status`). This eliminates the need to fetch parent Partner data in security rules.\n\nStructural Segregation ensures that each collection has a homogeneous security posture. This means sensitive data (e.g., partner-specific settings) are stored separately from global configurations (e.g., commission schemes).\n\nQAPs (Rules Are Not Filters) are supported via structural segregation. Listing operations can be secured at the collection level without needing to filter based on document data. For example, listing payments will only return payments that the current user is authorized to see, based on their role or membership in the partner's `members` map (if applicable). The structure also enables secure list operations because authorization data (like `partnerId`) is embedded within the documents, eliminating the need for complex filtering in the rules.\n\nConsistent access modeling is implemented using path-based ownership for user-owned data (e.g., `/partners/{partnerId}`). For collaborative data, a membership map could be used (though not explicitly required by the current schema). Global roles are managed by dedicated collections.\n\nExplicit state modeling is encouraged within the entities, for example, the `Partner.status` field, for managing the partner lifecycle states.\n\nInvariants, such as ownership and timestamp integrity, can be enforced through Firestore rules that validate these fields upon document creation or modification."
+  }
+}

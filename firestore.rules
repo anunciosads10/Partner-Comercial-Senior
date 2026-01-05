@@ -1,0 +1,162 @@
+/**
+ * Core Philosophy: This ruleset enforces a strict, partner-centric ownership model. 
+ * A signed-in user, representing a partner, has full control over their own data 
+ * tree but cannot see or modify the data of any other partner. Global configuration 
+ * data, such as commission schemes and program rules, is read-only for all 
+ * authenticated partners, with writes reserved for a future admin role.
+ *
+ * Data Structure: All partner-specific data (commissions, payments, notifications) 
+ * is logically nested under the `/partners/{partnerId}` path, where the `partnerId` 
+ * directly corresponds to the authenticated user's UID. This creates a secure, 
+ * isolated data silo for each partner. Global data is stored in separate top-level 
+ * collections like `/commission_schemes` and `/rules`.
+ *
+ * Key Security Decisions:
+ * - Partner Isolation: A user's auth UID must match the `{partnerId}` wildcard in 
+ *   the path, strictly preventing any cross-partner data access.
+ * - No Partner Enumeration: Listing the top-level `/partners` collection is explicitly
+ *   disallowed to protect partner privacy.
+ * - Read-Only Globals: Top-level collections for shared business logic (`commission_schemes`,
+ *   `rules`) are readable by any authenticated partner but are not writable. This allows 
+ *   the application to function while maintaining a secure default posture until 
+ *   administrative roles are formally defined.
+ * - Denormalization for Authorization: Subcollection documents (e.g., Payment, Notification)
+ *   are expected to contain a `partnerId` field. The rules enforce that this field matches
+ *   the document's path upon creation and remains immutable, ensuring a permanent and
+ *   verifiable link to the owner. This avoids costly and slow `get()` calls in rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // -------------------------------------------------------------------------
+    // Helper Functions
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the authenticated user's UID matches the provided userId.
+     * This is the foundation of the ownership model.
+     * @param userId The user ID to check against the authenticated user.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Returns true if the document exists and the user is the owner.
+     * Used for safe update and delete operations.
+     * @param userId The user ID to check for ownership.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+    
+    // -------------------------------------------------------------------------
+    // Partner Data Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to a partner's primary document. Only the
+     *              partner themselves can create, view, or modify their own record.
+     * @path        /partners/{partnerId}
+     * @allow       (create) A new user with UID 'partner123' creating their own document at `/partners/partner123`.
+     * @deny        (get) User 'partner456' trying to read the document at `/partners/partner123`.
+     * @principle   Enforces self-creation and strict document ownership.
+     */
+    match /partners/{partnerId} {
+      allow get: if isOwner(partnerId);
+      allow list: if false; // Disallow listing all partners for security and privacy.
+      allow create: if isOwner(partnerId) && request.resource.data.id == partnerId;
+      allow update: if isExistingOwner(partnerId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(partnerId);
+
+      /**
+       * @description Controls access to a partner's specific commission settings. Inherits ownership from the parent partner.
+       * @path        /partners/{partnerId}/commissions/{partnerCommissionId}
+       * @allow       (list) User 'partner123' listing all documents in their own `/partners/partner123/commissions` subcollection.
+       * @deny        (get) User 'partner456' trying to read a document from `/partners/partner123/commissions/{id}`.
+       * @principle   Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /commissions/{partnerCommissionId} {
+        allow get: if isOwner(partnerId);
+        allow list: if isOwner(partnerId);
+        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
+        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
+        allow delete: if isExistingOwner(partnerId);
+      }
+
+      /**
+       * @description Controls access to a partner's payment history. Inherits ownership from the parent partner.
+       * @path        /partners/{partnerId}/payments/{paymentId}
+       * @allow       (create) User 'partner123' creating a new payment document within `/partners/partner123/payments`.
+       * @deny        (update) User 'partner456' trying to modify a payment for 'partner123'.
+       * @principle   Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /payments/{paymentId} {
+        allow get: if isOwner(partnerId);
+        allow list: if isOwner(partnerId);
+        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
+        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
+        allow delete: if isExistingOwner(partnerId);
+      }
+
+      /**
+       * @description Controls access to a partner's notifications. Inherits ownership from the parent partner.
+       * @path        /partners/{partnerId}/notifications/{notificationId}
+       * @allow       (delete) User 'partner123' deleting their own notification at `/partners/partner123/notifications/{id}`.
+       * @deny        (list) User 'partner456' trying to list notifications for 'partner123'.
+       * @principle   Restricts access to a user's own data tree and validates relational integrity.
+       */
+      match /notifications/{notificationId} {
+        allow get: if isOwner(partnerId);
+        allow list: if isOwner(partnerId);
+        allow create: if isOwner(partnerId) && request.resource.data.partnerId == partnerId;
+        allow update: if isExistingOwner(partnerId) && request.resource.data.partnerId == resource.data.partnerId;
+        allow delete: if isExistingOwner(partnerId);
+      }
+    }
+    
+    // -------------------------------------------------------------------------
+    // Global Configuration Rules
+    // -------------------------------------------------------------------------
+
+    /**
+     * @description Controls access to global commission schemes. These are readable
+     *              by any authenticated partner but not writable.
+     * @path        /commission_schemes/{commissionSchemeId}
+     * @allow       (get, list) Any authenticated user reading the commission schemes.
+     * @deny        (create, update, delete) Any user trying to modify the schemes.
+     * @principle   Provides read-only access to global data for all authenticated users.
+     */
+    match /commission_schemes/{commissionSchemeId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false; // TODO: Implement admin-only write access.
+      allow update: if false; // TODO: Implement admin-only write access.
+      allow delete: if false; // TODO: Implement admin-only write access.
+    }
+
+    /**
+     * @description Controls access to global program rules and policies. These are
+     *              readable by any authenticated partner but not writable.
+     * @path        /rules/{ruleId}
+     * @allow       (get, list) Any authenticated user reading the program rules.
+     * @deny        (create, update, delete) Any user trying to modify the rules.
+     * @principle   Provides read-only access to global data for all authenticated users.
+     */
+    match /rules/{ruleId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if false; // TODO: Implement admin-only write access.
+      allow update: if false; // TODO: Implement admin-only write access.
+      allow delete: if false; // TODO: Implement admin-only write access.
+    }
+  }
+}

@@ -53,15 +53,26 @@ service cloud.firestore {
       allow list: if isAdmin();
       allow create, update, delete: if isOwner(partnerId) || isSuperAdmin();
 
-      // Regla recursiva para todas las subcolecciones (commissions, payments, notifications)
+      // Regla recursiva para todas las subcolecciones (commissions, notifications)
       // Esto simplifica el código y mantiene la seguridad por partnerId
       match /{allSubcollections=**} {
-        // En la regla original había un typo: partneId en vez de partnerId
         allow read: if isOwner(partnerId) || isAdmin();
         allow write: if isOwner(partnerId) || isSuperAdmin();
       }
     }
     
+    // -------------------------------------------------------------------------
+    // Colección Global de Pagos
+    // -------------------------------------------------------------------------
+    match /payments/{paymentId} {
+      // SuperAdmin puede leer y escribir cualquier pago.
+      allow read, write: if isSuperAdmin();
+      
+      // Los partners (admin) pueden leer sus propios pagos, pero no escribirlos.
+      allow get: if isAdmin() && resource.data.partnerId == request.auth.uid;
+      allow list: if isAdmin(); // La query en la app debe filtrar por partnerId
+    }
+
     // -------------------------------------------------------------------------
     // Configuraciones Globales (Solo lectura para usuarios, escritura para Admin)
     // -------------------------------------------------------------------------

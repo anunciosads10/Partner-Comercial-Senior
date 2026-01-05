@@ -390,10 +390,24 @@
             }
           ]
         }
+      },
+      {
+        "path": "/payments/{paymentId}",
+        "definition": {
+          "entityName": "Payment",
+          "schema": {
+            "$ref": "#/backend/entities/Payment"
+          },
+          "description": "Stores all payment information for all partners. Contains `partnerId` for authorization independence.",
+          "params": [
+            {
+              "name": "paymentId",
+              "description": "The unique identifier of the payment."
+            }
+          ]
+        }
       }
     ],
     "reasoning": "The Firestore structure is designed to support the PartnerVerse application, focusing on the Partner Comercial Senior management panel. Key considerations include authorization independence, clarity, and scalability. The structure avoids hierarchical `get()` calls in security rules by denormalizing authorization data where necessary. \n\nAuthorization Independence is achieved primarily through denormalization. For example, any subcollections related to a Partner, such as `PartnerCommission` or `Payment`, will store a copy of the relevant partner data (e.g., `partnerId`, `tier`, `status`). This eliminates the need to fetch parent Partner data in security rules.\n\nStructural Segregation ensures that each collection has a homogeneous security posture. This means sensitive data (e.g., partner-specific settings) are stored separately from global configurations (e.g., commission schemes).\n\nQAPs (Rules Are Not Filters) are supported via structural segregation. Listing operations can be secured at the collection level without needing to filter based on document data. For example, listing payments will only return payments that the current user is authorized to see, based on their role or membership in the partner's `members` map (if applicable). The structure also enables secure list operations because authorization data (like `partnerId`) is embedded within the documents, eliminating the need for complex filtering in the rules.\n\nConsistent access modeling is implemented using path-based ownership for user-owned data (e.g., `/partners/{partnerId}`). For collaborative data, a membership map could be used (though not explicitly required by the current schema). Global roles are managed by dedicated collections.\n\nExplicit state modeling is encouraged within the entities, for example, the `Partner.status` field, for managing the partner lifecycle states.\n\nInvariants, such as ownership and timestamp integrity, can be enforced through Firestore rules that validate these fields upon document creation or modification."
   }
 }
-
-    

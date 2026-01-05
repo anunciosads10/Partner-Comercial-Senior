@@ -4,11 +4,11 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Download, Clock, CreditCard } from "lucide-react";
-import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
-import { payments as allPayments } from "@/lib/data";
+import { DollarSign, Download, Clock, CreditCard, Loader2 } from "lucide-react";
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
+import { collection, doc, addDoc, query, where, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import React from "react";
 
 const PaymentStatusBadge = ({ status }) => {
   const getVariant = () => {
@@ -41,13 +41,24 @@ export default function PaymentsPage() {
 
   const { role, uid } = userData || {};
 
-  const payments = role === 'superadmin' 
-    ? allPayments 
-    : allPayments.filter(p => p.partnerId === uid);
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // Superadmin ve todos los pagos de todos los partners
+    if (role === 'superadmin') {
+        return collection(firestore, 'payments');
+    }
+    // Admin (partner) solo ve sus propios pagos
+    if (role === 'admin' && uid) {
+        return query(collection(firestore, 'payments'), where('partnerId', '==', uid));
+    }
+    return null;
+  }, [firestore, role, uid]);
+  
+  const { data: payments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
-  const totalPaid = payments.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0);
-  const totalPending = payments.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0);
-
+  const totalPaid = payments?.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0) || 0;
+  const totalPending = payments?.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0) || 0;
+  
   const handleExport = () => {
     toast({
       title: "Función en desarrollo",
@@ -55,16 +66,61 @@ export default function PaymentsPage() {
     });
   };
 
-  const handleNewPayment = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La creación de nuevos pagos estará disponible próximamente.",
-    });
+  const handleNewPayment = async () => {
+    if (!firestore) {
+        toast({ variant: "destructive", title: "Error", description: "La base de datos no está disponible." });
+        return;
+    }
+
+    try {
+        // Para la demo, crearemos un pago para el primer partner que encontremos si es superadmin
+        // o para el propio partner si es admin.
+        let targetPartnerId = uid;
+        let partnerName = userData?.email || "Partner";
+
+        if (role === 'superadmin') {
+            const partnersSnapshot = await getDocs(collection(firestore, 'partners'));
+            if (partnersSnapshot.empty) {
+                toast({ variant: "destructive", title: "Error", description: "No hay partners para asignar el pago." });
+                return;
+            }
+            const firstPartner = partnersSnapshot.docs[0].data();
+            targetPartnerId = firstPartner.id;
+            partnerName = firstPartner.name;
+        }
+
+        if (!targetPartnerId) {
+            toast({ variant: "destructive", title: "Error", description: "No se pudo determinar el partner para el pago." });
+            return;
+        }
+        
+        const newPayment = {
+            amount: Math.floor(Math.random() * (2000 - 100 + 1)) + 100, // Random amount between 100 and 2000
+            paymentDate: new Date().toISOString(),
+            status: 'Pendiente',
+            partnerId: targetPartnerId,
+            partnerName: partnerName,
+        };
+
+        const paymentCollection = collection(firestore, 'payments');
+        await addDoc(paymentCollection, newPayment);
+        
+        toast({
+            title: "Pago Iniciado",
+            description: `Se ha creado un nuevo pago pendiente para ${partnerName}.`,
+        });
+
+    } catch (error) {
+        console.error("Error al crear el pago:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al crear pago",
+            description: error.message || "Ocurrió un error inesperado.",
+        });
+    }
   };
 
-  if (isRoleLoading) {
-    return <div>Cargando datos de pago...</div>;
-  }
+  const isLoading = isRoleLoading || arePaymentsLoading;
 
   return (
     <div className="flex flex-col gap-8">
@@ -91,15 +147,15 @@ export default function PaymentsPage() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3 mb-8">
-            <KpiCard
-              title="Total Pagado"
-              value={`$${totalPaid.toLocaleString()}`}
-              Icon={DollarSign}
+             <KpiCard
+                title="Total Pagado"
+                value={isLoading ? <Loader2 className="animate-spin" /> : `$${totalPaid.toLocaleString()}`}
+                Icon={DollarSign}
             />
             <KpiCard
-              title="Pagos Pendientes"
-              value={`$${totalPending.toLocaleString()}`}
-              Icon={Clock}
+                title="Pagos Pendientes"
+                value={isLoading ? <Loader2 className="animate-spin" /> : `$${totalPending.toLocaleString()}`}
+                Icon={Clock}
             />
             <KpiCard
               title="Próximo Ciclo de Pago"
@@ -113,34 +169,42 @@ export default function PaymentsPage() {
               <CardTitle>Historial de Pagos</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID Transacción</TableHead>
-                    {role === 'superadmin' && <TableHead>Partner</TableHead>}
-                    <TableHead>Fecha</TableHead>
-                    <TableHead>Monto</TableHead>
-                    <TableHead>Estado</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {payments.map((payment) => (
-                    <TableRow key={payment.id}>
-                      <TableCell className="font-mono">{payment.id}</TableCell>
-                      {role === 'superadmin' && <TableCell className="font-medium">{payment.partnerName}</TableCell>}
-                      <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
-                      <TableCell className="font-semibold">${payment.amount.toLocaleString()}</TableCell>
-                      <TableCell>
-                        <PaymentStatusBadge status={payment.status} />
-                      </TableCell>
+               {isLoading ? (
+                 <div className="flex items-center justify-center h-48">
+                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                 </div>
+               ) : (
+                <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>ID Transacción</TableHead>
+                      {role === 'superadmin' && <TableHead>Partner</TableHead>}
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Monto</TableHead>
+                      <TableHead>Estado</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-               {payments.length === 0 && (
-                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                  <p className="text-muted-foreground">No hay historial de pagos disponible.</p>
-                </div>
+                  </TableHeader>
+                  <TableBody>
+                    {payments?.map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-mono">{payment.id}</TableCell>
+                        {role === 'superadmin' && <TableCell className="font-medium">{payment.partnerName}</TableCell>}
+                        <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
+                        <TableCell className="font-semibold">${payment.amount.toLocaleString()}</TableCell>
+                        <TableCell>
+                          <PaymentStatusBadge status={payment.status} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                 {payments?.length === 0 && (
+                  <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
+                    <p className="text-muted-foreground">No hay historial de pagos disponible.</p>
+                  </div>
+                )}
+                </>
               )}
             </CardContent>
           </Card>

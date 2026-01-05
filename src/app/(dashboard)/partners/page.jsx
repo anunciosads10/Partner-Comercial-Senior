@@ -79,11 +79,26 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) 
     }
   };
 
-  const handleEdit = () => {
-    toast({
-      title: "Función en desarrollo",
-      description: "La edición de perfiles de partner estará disponible próximamente.",
-    });
+  const handleCycleTier = async (partner) => {
+    if (!firestore || !partner) return;
+    const partnerRef = doc(firestore, "partners", partner.id);
+    const tiers = ['Silver', 'Gold', 'Platinum'];
+    const currentTierIndex = tiers.indexOf(partner.tier);
+    const nextTier = tiers[(currentTierIndex + 1) % tiers.length];
+    try {
+      await updateDoc(partnerRef, { tier: nextTier });
+      toast({
+        title: "Nivel del Partner Actualizado",
+        description: `${partner.name} ahora es nivel ${nextTier}.`,
+      });
+    } catch (error) {
+      console.error("Error al actualizar el nivel del partner:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al editar",
+        description: "No se pudo cambiar el nivel del partner.",
+      });
+    }
   };
 
   return (
@@ -156,7 +171,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                          <DropdownMenuItem onSelect={handleEdit}>Editar</DropdownMenuItem>
+                          <DropdownMenuItem onSelect={() => handleCycleTier(partner)}>Editar (Cambiar Nivel)</DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
                             {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
                           </DropdownMenuItem>

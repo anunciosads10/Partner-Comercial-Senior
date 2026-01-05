@@ -25,7 +25,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
 import { collection, writeBatch, doc } from "firebase/firestore";
 import { partners as mockPartners } from "@/lib/data";
 
@@ -57,13 +57,21 @@ function getStatusBadgeVariant(status) {
 
 export default function PartnersPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
+  const { role } = userData || {};
 
   const partnersCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'partners');
   }, [firestore]);
 
-  const { data: partners, isLoading } = useCollection(partnersCollection);
+  const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollection);
 
   const seedData = async () => {
     if (!firestore) return;
@@ -74,9 +82,9 @@ export default function PartnersPage() {
     });
     await batch.commit();
     console.log("Datos de prueba sembrados exitosamente!");
-    // Puede que quieras refrescar los datos aquí o confiar en el listener en tiempo real
   };
 
+  const isLoading = isRoleLoading || arePartnersLoading;
 
   if (isLoading) {
     return <p>Cargando partners...</p>;
@@ -87,18 +95,25 @@ export default function PartnersPage() {
       <CardHeader>
         <div className="flex items-center justify-between">
           <div>
-            <CardTitle>Gestión de Partners</CardTitle>
+            <CardTitle>
+              {role === 'superadmin' ? "Gestión de Partners" : "Directorio de Partners"}
+            </CardTitle>
             <CardDescription>
-              Crea, edita, activa y suspende partners.
+              {role === 'superadmin' 
+                ? "Crea, edita, activa y suspende partners."
+                : "Visualiza todos los partners activos en el programa."
+              }
             </CardDescription>
           </div>
-          <div className="flex items-center gap-2">
-            <Button onClick={seedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Crear Partner
-            </Button>
-          </div>
+          {role === 'superadmin' && (
+            <div className="flex items-center gap-2">
+              <Button onClick={seedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
+              <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Crear Partner
+              </Button>
+            </div>
+          )}
         </div>
       </CardHeader>
       <CardContent>
@@ -109,9 +124,11 @@ export default function PartnersPage() {
               <TableHead>Nivel</TableHead>
               <TableHead>Territorio</TableHead>
               <TableHead>Estado</TableHead>
-              <TableHead>
-                <span className="sr-only">Acciones</span>
-              </TableHead>
+              {role === 'superadmin' && (
+                <TableHead>
+                  <span className="sr-only">Acciones</span>
+                </TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -142,25 +159,32 @@ export default function PartnersPage() {
                     {partner.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                      <DropdownMenuItem>Editar</DropdownMenuItem>
-                      <DropdownMenuItem>Suspender</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
+                {role === 'superadmin' && (
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                        <DropdownMenuItem>Editar</DropdownMenuItem>
+                        <DropdownMenuItem>Suspender</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                )}
               </TableRow>
             ))}
           </TableBody>
         </Table>
+        {partners?.length === 0 && (
+          <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
+            <p className="text-muted-foreground">No hay partners en la base de datos.</p>
+          </div>
+        )}
       </CardContent>
     </Card>
   );

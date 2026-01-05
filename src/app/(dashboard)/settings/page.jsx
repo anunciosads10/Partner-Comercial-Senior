@@ -9,9 +9,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Upload } from 'lucide-react';
 
 const ProfileSettings = () => {
   const { toast } = useToast();
+  const fileInputRef = React.useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -19,6 +21,18 @@ const ProfileSettings = () => {
       title: "Función en desarrollo",
       description: "La actualización de perfiles estará disponible próximamente.",
     });
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      console.log("Archivo seleccionado:", file.name);
+      toast({
+        title: "Imagen Seleccionada",
+        description: `${file.name}`,
+      });
+      // Lógica para previsualizar y subir el archivo aquí
+    }
   };
 
   return (
@@ -46,10 +60,24 @@ const ProfileSettings = () => {
                 <AvatarImage src="https://picsum.photos/seed/1/200" alt="Avatar" />
                 <AvatarFallback>AL</AvatarFallback>
               </Avatar>
-              <Input id="avatar-url" placeholder="https://example.com/avatar.png" defaultValue="https://picsum.photos/seed/1/200"/>
+              <div className="grid w-full gap-2">
+                <Input id="avatar-url" placeholder="https://example.com/avatar.png" defaultValue="https://picsum.photos/seed/1/200"/>
+                 <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()}>
+                    <Upload className="mr-2 h-4 w-4" />
+                    Subir Imagen
+                </Button>
+                <Input 
+                    id="file-upload" 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleFileChange}
+                />
+              </div>
             </div>
             <p className="text-sm text-muted-foreground">
-              Pega la URL de una imagen para actualizar tu avatar.
+              Pega una URL o sube una imagen para actualizar tu avatar.
             </p>
           </div>
         </CardContent>

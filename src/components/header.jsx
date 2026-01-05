@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, LogOut, User } from "lucide-react";
@@ -21,6 +22,7 @@ export function Header() {
   const auth = useAuth();
   const { user } = useAuth() || {};
   const [isClient, setIsClient] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     setIsClient(true);
@@ -29,6 +31,7 @@ export function Header() {
   const handleLogout = async () => {
     if (auth) {
       await signOut(auth);
+      router.push('/login');
     }
   };
 

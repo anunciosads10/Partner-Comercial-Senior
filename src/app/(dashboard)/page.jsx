@@ -137,9 +137,15 @@ const AdminDashboard = ({ partnerData, isLoading }) => {
 }
 
 
-export default function DashboardPage({ userData }) {
+export default function DashboardPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+  const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
   const { role } = userData || {};
 
   // Data fetching for SuperAdmin
@@ -156,6 +162,10 @@ export default function DashboardPage({ userData }) {
     return doc(firestore, 'partners', user.uid);
   }, [firestore, role, user]);
   const { data: partnerData, isLoading: isLoadingPartnerData } = useDoc(partnerDocRef);
+
+  if (isRoleLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-8">

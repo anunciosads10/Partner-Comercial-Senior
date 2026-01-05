@@ -3,6 +3,8 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { commissions as allCommissions } from "@/lib/data";
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 const CommissionsTable = ({ commissions }) => {
   if (!commissions || commissions.length === 0) {
@@ -44,7 +46,17 @@ const CommissionsTable = ({ commissions }) => {
 };
 
 
-export default function CommissionsPage({ userData }) {
+export default function CommissionsPage() {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
+
   const { role, uid } = userData || {};
 
   // Filter commissions based on user role
@@ -53,6 +65,10 @@ export default function CommissionsPage({ userData }) {
     : allCommissions.filter(c => c.partnerId === uid);
 
   const totalEarnings = commissions.reduce((acc, curr) => acc + curr.earning, 0);
+
+  if (isRoleLoading) {
+    return <div>Loading commissions...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-4">

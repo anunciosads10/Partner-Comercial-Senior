@@ -56,7 +56,7 @@ export default function DashboardLayout({
         <SidebarInset>
           <Header userData={userData} />
           <main className="p-4 sm:p-6 lg:p-8">
-            {React.cloneElement(children, { userData })}
+            {children}
           </main>
         </SidebarInset>
       </SidebarProvider>

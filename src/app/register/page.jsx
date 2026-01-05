@@ -33,27 +33,36 @@ export default function RegisterPage() {
       return;
     }
     try {
+      // Correctly await the promise from initiateEmailSignUp
       const userCredential = await initiateEmailSignUp(auth, email, password);
-      const user = userCredential.user;
-
-      // Assign role based on email
-      const role = email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
       
-      // Create a user document in Firestore
-      const userRef = doc(firestore, 'users', user.uid);
-      await setDoc(userRef, {
-        uid: user.uid,
-        email: user.email,
-        role: role,
-      });
+      // Check if userCredential and user exist before proceeding
+      if (userCredential && userCredential.user) {
+        const user = userCredential.user;
 
-      // The auth state listener in AuthProvider will handle the redirect to the dashboard
+        // Assign role based on email
+        const role = email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
+        
+        // Create a user document in Firestore
+        const userRef = doc(firestore, 'users', user.uid);
+        await setDoc(userRef, {
+          uid: user.uid,
+          email: user.email,
+          role: role,
+        });
+
+        // The auth state listener in AuthProvider will handle the redirect.
+        // Or you can force a redirect here if needed: router.push('/');
+      } else {
+        throw new Error("User creation failed, no user credential returned.");
+      }
+
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');
       } else {
         setError('Failed to sign up. Please try again.');
-        console.error(err);
+        console.error("Sign-up Error:", err);
       }
     }
   };
@@ -106,5 +115,3 @@ export default function RegisterPage() {
     </div>
   );
 }
-
-    

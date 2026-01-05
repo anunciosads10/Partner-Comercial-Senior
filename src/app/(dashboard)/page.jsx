@@ -13,9 +13,10 @@ import { SalesChart } from "@/components/dashboard/sales-chart";
 import { PartnerRankings } from "@/components/dashboard/partner-rankings";
 import { AtRiskPartners } from "@/components/dashboard/at-risk-partners";
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc } from "firebase/firestore";
+import { collection, doc, setDoc } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const SuperAdminDashboard = ({ partners, isLoading }) => {
   if (isLoading) {
@@ -65,19 +66,44 @@ const SuperAdminDashboard = ({ partners, isLoading }) => {
   );
 };
 
-const AdminDashboard = ({ partnerData, isLoading }) => {
+const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
   if (isLoading) {
     return <div>Loading Partner Dashboard...</div>;
   }
+
+  const handleCreateProfile = async () => {
+    if (!user || !firestore) return;
+    const partnerRef = doc(firestore, 'partners', user.uid);
+    const newPartnerData = {
+      id: user.uid,
+      name: user.email?.split('@')[0] || 'New Partner',
+      email: user.email,
+      tier: 'Silver',
+      status: 'Active',
+      territory: 'Unassigned',
+      joinDate: new Date().toISOString(),
+      totalSales: 0,
+      revenue: 0,
+      avatarUrl: '',
+    };
+    await setDoc(partnerRef, newPartnerData);
+    // The useDoc hook will automatically refresh the data
+  };
+
+
   if (!partnerData) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>Partner Data Not Found</CardTitle>
+          <CardTitle>Partner Profile Not Found</CardTitle>
         </CardHeader>
         <CardContent>
-          <p>We couldn't find the specific data for your partner account. Please contact support.</p>
+          <p>Your user is authenticated, but we couldn't find a corresponding partner profile in our database.</p>
+          <p className="mt-2 text-muted-foreground">Click the button below to create a sample profile and get started.</p>
         </CardContent>
+        <CardFooter>
+            <Button onClick={handleCreateProfile}>Create My Partner Profile</Button>
+        </CardFooter>
       </Card>
     );
   }
@@ -139,12 +165,13 @@ const AdminDashboard = ({ partnerData, isLoading }) => {
 
 export default function DashboardPage() {
   const firestore = useFirestore();
-  const { user } = useUser();
+  const { user, isUserLoading: isAuthLoading } = useUser();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
+
   const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
   const { role } = userData || {};
 
@@ -158,19 +185,20 @@ export default function DashboardPage() {
   // Data fetching for Admin (Partner)
   const partnerDocRef = useMemoFirebase(() => {
     if (!firestore || role !== 'admin' || !user) return null;
-    // Assuming the partner document ID is the same as the user's UID
     return doc(firestore, 'partners', user.uid);
   }, [firestore, role, user]);
   const { data: partnerData, isLoading: isLoadingPartnerData } = useDoc(partnerDocRef);
 
-  if (isRoleLoading) {
+  const isLoading = isAuthLoading || isRoleLoading;
+
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
   return (
     <div className="flex flex-col gap-8">
       {role === 'superadmin' && <SuperAdminDashboard partners={partners} isLoading={isLoadingPartners} />}
-      {role === 'admin' && <AdminDashboard partnerData={partnerData} isLoading={isLoadingPartnerData} />}
+      {role === 'admin' && <AdminDashboard partnerData={partnerData} isLoading={isLoadingPartnerData} user={user} firestore={firestore} />}
     </div>
   );
 }

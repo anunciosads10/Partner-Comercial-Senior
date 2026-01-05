@@ -34,7 +34,11 @@ export default function LoginPage() {
       await initiateEmailSignIn(auth, email, password);
       // The auth state listener in AuthProvider will handle the redirect
     } catch (err) {
-      setError('Failed to sign in. Please check your credentials.');
+       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
+        setError('Invalid credentials. Please check your email and password.');
+      } else {
+        setError('Failed to sign in. Please try again.');
+      }
       console.error(err);
     }
   };

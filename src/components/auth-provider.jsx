@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuth } from "@/firebase";
+import { useUser } from "@/firebase";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -8,45 +8,43 @@ const PROTECTED_DASHBOARD_PREFIX = '/';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export function AuthProvider({ children }) {
-  const { user, isUserLoading } = useAuth() || {};
+  const { user, isUserLoading } = useUser() || {};
   const router = useRouter();
   const pathname = usePathname();
 
   useEffect(() => {
-    // Wait until the auth state is determined before running any redirect logic.
+    // This provider now only handles the simple case:
+    // 1. A logged-in user trying to access a public page (login/register).
+    // The DashboardLayout handles protecting the dashboard routes.
+    
     if (isUserLoading) {
-      return;
+      return; // Do nothing while loading
     }
-
-    const isProtectedRoute = !PUBLIC_ROUTES.includes(pathname);
+    
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-
-    // If there's no user and they're trying to access a protected route, redirect to login.
-    if (!user && isProtectedRoute) {
-      router.push('/login');
-    }
 
     // If a user is logged in and tries to access a public route (like login/register),
     // redirect them to the main dashboard.
     if (user && isPublicRoute) {
       router.push(PROTECTED_DASHBOARD_PREFIX);
     }
+    
+    // If there is no user and they are on a protected route, redirect.
+    // This is a fallback, but the main protection is in the layout.
+    if (!user && !isPublicRoute) {
+      router.push('/login');
+    }
+
   }, [user, isUserLoading, router, pathname]);
 
-  // While authentication is loading, show a loader for protected routes
-  // to prevent flashing the content.
-  if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading...</p>
-      </div>
-    );
+  // If loading and on a public route, just render the children (e.g., Login form)
+  if (isUserLoading && PUBLIC_ROUTES.includes(pathname)) {
+    return children;
   }
 
-  // If there's no user and they are on a protected route, render nothing.
-  // The useEffect above has already triggered the redirection.
+  // This prevents flashing a protected page's content before redirection.
   if (!user && !PUBLIC_ROUTES.includes(pathname)) {
-    return null;
+      return null;
   }
 
   // If checks pass, render the children components.

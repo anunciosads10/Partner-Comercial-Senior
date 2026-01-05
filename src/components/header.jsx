@@ -6,9 +6,8 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, LogOut, User } from "lucide-react";
 import { Input } from "./ui/input";
-import { useAuth, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
+import { useAuth } from "@/firebase";
 import { signOut } from "firebase/auth";
-import { doc } from "firebase/firestore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,19 +18,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export function Header() {
+export function Header({ userData }) { // Receive userData as a prop
   const auth = useAuth();
-  const firestore = useFirestore();
   const { user } = useAuth() || {};
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
-
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, "users", user.uid);
-  }, [firestore, user]);
-
-  const { data: userData } = useDoc(userDocRef);
 
   useEffect(() => {
     setIsClient(true);
@@ -94,5 +85,3 @@ export function Header() {
     </header>
   );
 }
-
-    

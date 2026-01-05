@@ -56,7 +56,8 @@ service cloud.firestore {
       // Regla recursiva para todas las subcolecciones (commissions, payments, notifications)
       // Esto simplifica el código y mantiene la seguridad por partnerId
       match /{allSubcollections=**} {
-        allow read: if isOwner(partneId) || isAdmin();
+        // En la regla original había un typo: partneId en vez de partnerId
+        allow read: if isOwner(partnerId) || isAdmin();
         allow write: if isOwner(partnerId) || isSuperAdmin();
       }
     }

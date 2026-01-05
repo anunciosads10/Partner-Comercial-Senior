@@ -60,9 +60,44 @@ export default function PaymentsPage() {
   const totalPending = payments?.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0) || 0;
   
   const handleExport = () => {
+    if (!payments || payments.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No hay datos para exportar",
+        description: "El historial de pagos está vacío.",
+      });
+      return;
+    }
+
+    let csvContent = "data:text/csv;charset=utf-8,";
+    const headers = role === 'superadmin' 
+      ? ["ID Transacción", "Partner", "Fecha", "Monto", "Estado"]
+      : ["ID Transacción", "Fecha", "Monto", "Estado"];
+    csvContent += headers.join(",") + "\r\n";
+
+    payments.forEach(payment => {
+      const row = [
+        payment.id,
+        ...(role === 'superadmin' ? [payment.partnerName || 'N/A'] : []),
+        new Date(payment.paymentDate).toLocaleDateString(),
+        payment.amount,
+        payment.status
+      ];
+      csvContent += row.join(",") + "\r\n";
+    });
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "reporte_de_pagos.csv");
+    document.body.appendChild(link);
+    
+    link.click();
+    document.body.removeChild(link);
+    
     toast({
-      title: "Función en desarrollo",
-      description: "La exportación de reportes estará disponible próximamente.",
+        title: "Reporte Generado",
+        description: "La descarga de tu reporte de pagos ha comenzado.",
     });
   };
 
@@ -73,8 +108,6 @@ export default function PaymentsPage() {
     }
 
     try {
-        // Para la demo, crearemos un pago para el primer partner que encontremos si es superadmin
-        // o para el propio partner si es admin.
         let targetPartnerId = uid;
         let partnerName = userData?.email || "Partner";
 
@@ -95,7 +128,7 @@ export default function PaymentsPage() {
         }
         
         const newPayment = {
-            amount: Math.floor(Math.random() * (2000 - 100 + 1)) + 100, // Random amount between 100 and 2000
+            amount: Math.floor(Math.random() * (2000 - 100 + 1)) + 100,
             paymentDate: new Date().toISOString(),
             status: 'Pendiente',
             partnerId: targetPartnerId,

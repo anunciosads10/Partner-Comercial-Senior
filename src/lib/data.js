@@ -1,4 +1,5 @@
 import { PlaceHolderImages } from './placeholder-images';
+import { mockCommissions } from './commission-data';
 
 export const partners = [
   {
@@ -89,3 +90,5 @@ export const salesData = [
     { month: 'Nov', totalSales: 4900, subPartnerSales: 6100 },
     { month: 'Dec', totalSales: 5200, subPartnerSales: 6800 },
   ];
+
+export const commissions = mockCommissions;

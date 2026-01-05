@@ -49,15 +49,6 @@ service cloud.firestore {
     }
 
     /**
-     * Returns true if the document exists and the user is the owner.
-     * Used for safe update and delete operations.
-     * @param userId The user ID to check for ownership.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
      * Gets the user's role document from the /users collection.
      */
     function getRole() {

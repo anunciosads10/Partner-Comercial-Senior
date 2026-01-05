@@ -127,9 +127,9 @@ service cloud.firestore {
     match /partners/{partnerId} {
       allow get: if isOwner(partnerId) || isAdmin(); // Allow admins to get for dashboard purposes
       allow list: if isAdmin(); // Allow listing all partners for the dashboard view.
-      allow create: if isOwner(partnerId) && request.resource.data.id == partnerId;
-      allow update: if isExistingOwner(partnerId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(partnerId);
+      allow create: if isOwner(partnerId) || isSuperAdmin();
+      allow update: if isOwner(partnerId) || isSuperAdmin();
+      allow delete: if isOwner(partnerId) || isSuperAdmin();
 
       /**
        * @description Controls access to a partner's specific commission settings. Inherits ownership from the parent partner.
@@ -140,7 +140,7 @@ service cloud.firestore {
        */
       match /commissions/{partnerCommissionId} {
         allow read: if isOwner(partnerId) || isAdmin();
-        allow write: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isSuperAdmin();
       }
 
       /**
@@ -152,7 +152,7 @@ service cloud.firestore {
        */
       match /payments/{paymentId} {
         allow read: if isOwner(partnerId) || isAdmin();
-        allow write: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isSuperAdmin();
       }
 
       /**
@@ -164,7 +164,7 @@ service cloud.firestore {
        */
       match /notifications/{notificationId} {
         allow read: if isOwner(partnerId) || isAdmin();
-        allow write: if isOwner(partnerId) || isAdmin();
+        allow write: if isOwner(partnerId) || isSuperAdmin();
       }
     }
     
@@ -181,11 +181,8 @@ service cloud.firestore {
      * @principle   Provides read-only access to global data for all authenticated users.
      */
     match /commission_schemes/{commissionSchemeId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
 
     /**
@@ -197,11 +194,8 @@ service cloud.firestore {
      * @principle   Provides read-only access to global data for all authenticated users.
      */
     match /rules/{ruleId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSuperAdmin();
-      allow update: if isSuperAdmin();
-      allow delete: if isSuperAdmin();
+      allow read: if isSignedIn();
+      allow write: if isSuperAdmin();
     }
   }
 }

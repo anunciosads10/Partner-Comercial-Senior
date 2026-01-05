@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 const ProfileSettings = () => {
   const { toast } = useToast();
@@ -37,6 +38,19 @@ const ProfileSettings = () => {
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" type="email" defaultValue="alex@example.com" />
+          </div>
+           <div className="space-y-2">
+            <Label>Avatar</Label>
+            <div className="flex items-center gap-4">
+              <Avatar className="h-16 w-16">
+                <AvatarImage src="https://picsum.photos/seed/1/200" alt="Avatar" />
+                <AvatarFallback>AL</AvatarFallback>
+              </Avatar>
+              <Input id="avatar-url" placeholder="https://example.com/avatar.png" defaultValue="https://picsum.photos/seed/1/200"/>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Pega la URL de una imagen para actualizar tu avatar.
+            </p>
           </div>
         </CardContent>
         <CardFooter>

@@ -23,8 +23,26 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,7 +56,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, writeBatch, doc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, writeBatch, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { partners as mockPartners } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -72,7 +90,13 @@ function getStatusBadgeVariant(status) {
 const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) => {
   const { toast } = useToast();
   const [partnerToDelete, setPartnerToDelete] = React.useState(null);
-
+  const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const [newPartner, setNewPartner] = React.useState({
+    name: '',
+    email: '',
+    tier: 'Silver',
+    territory: ''
+  });
 
   const handleToggleSuspend = async (partner) => {
     if (!firestore || !partner) return;
@@ -137,120 +161,231 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) 
     }
   };
 
+  const handleCreatePartner = async (e) => {
+    e.preventDefault();
+    if (!firestore) return;
+
+    try {
+        await addDoc(collection(firestore, 'partners'), {
+            ...newPartner,
+            status: 'Active',
+            joinDate: new Date().toISOString(),
+            totalSales: 0,
+            revenue: 0,
+            avatarUrl: `https://picsum.photos/seed/${Math.random()}/200`,
+        });
+        toast({
+            title: "Partner Creado",
+            description: `El partner ${newPartner.name} ha sido añadido exitosamente.`,
+        });
+        setCreateDialogOpen(false); // Cierra el diálogo
+        setNewPartner({ name: '', email: '', tier: 'Silver', territory: '' }); // Resetea el formulario
+    } catch (error) {
+        console.error("Error al crear el partner:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al crear",
+            description: "No se pudo crear el nuevo partner.",
+        });
+    }
+};
+
+
   return (
-    <AlertDialog>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Gestión de Partners</CardTitle>
-              <CardDescription>Crea, edita, activa y suspende partners.</CardDescription>
+    <>
+      <AlertDialog>
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Gestión de Partners</CardTitle>
+                <CardDescription>Crea, edita, activa y suspende partners.</CardDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button onClick={onSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
+                <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Crear Partner
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleCreatePartner}>
+                      <DialogHeader>
+                        <DialogTitle>Crear Nuevo Partner</DialogTitle>
+                        <DialogDescription>
+                          Completa los detalles para añadir un nuevo partner al programa.
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="name" className="text-right">
+                            Nombre
+                          </Label>
+                          <Input
+                            id="name"
+                            value={newPartner.name}
+                            onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="email" className="text-right">
+                            Email
+                          </Label>
+                          <Input
+                            id="email"
+                            type="email"
+                            value={newPartner.email}
+                            onChange={(e) => setNewPartner({ ...newPartner, email: e.target.value })}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                         <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="territory" className="text-right">
+                            Territorio
+                          </Label>
+                          <Input
+                            id="territory"
+                            value={newPartner.territory}
+                            onChange={(e) => setNewPartner({ ...newPartner, territory: e.target.value })}
+                            className="col-span-3"
+                            required
+                          />
+                        </div>
+                        <div className="grid grid-cols-4 items-center gap-4">
+                            <Label htmlFor="tier" className="text-right">
+                                Nivel
+                            </Label>
+                             <Select
+                                value={newPartner.tier}
+                                onValueChange={(value) => setNewPartner({ ...newPartner, tier: value })}
+                            >
+                                <SelectTrigger className="col-span-3">
+                                    <SelectValue placeholder="Selecciona un nivel" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="Silver">Silver</SelectItem>
+                                    <SelectItem value="Gold">Gold</SelectItem>
+                                    <SelectItem value="Platinum">Platinum</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button type="button" variant="secondary">
+                            Cancelar
+                          </Button>
+                        </DialogClose>
+                        <Button type="submit">Guardar Partner</Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={onSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
-              <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Crear Partner
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? <p>Cargando partners...</p> : (
-            <>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Partner</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead>Territorio</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>
-                      <span className="sr-only">Acciones</span>
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {partners?.map((partner) => (
-                    <TableRow key={partner.id}>
-                      <TableCell>
-                        <div className="flex items-center gap-4">
-                          <Avatar className="h-9 w-9">
-                            <AvatarImage src={partner.avatarUrl} alt={partner.name} />
-                            <AvatarFallback>{partner.name?.slice(0, 2)}</AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <div className="font-medium">{partner.name}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {partner.email}
+          </CardHeader>
+          <CardContent>
+            {isLoading ? <p>Cargando partners...</p> : (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Partner</TableHead>
+                      <TableHead>Nivel</TableHead>
+                      <TableHead>Territorio</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>
+                        <span className="sr-only">Acciones</span>
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {partners?.map((partner) => (
+                      <TableRow key={partner.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-4">
+                            <Avatar className="h-9 w-9">
+                              <AvatarImage src={partner.avatarUrl} alt={partner.name} />
+                              <AvatarFallback>{partner.name?.slice(0, 2)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="font-medium">{partner.name}</div>
+                              <div className="text-sm text-muted-foreground">
+                                {partner.email}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={getTierBadgeVariant(partner.tier)}>
-                          {partner.tier}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{partner.territory}</TableCell>
-                      <TableCell>
-                        <Badge variant={getStatusBadgeVariant(partner.status)}>
-                          {partner.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Toggle menu</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                            <DropdownMenuItem onSelect={() => handleCycleTier(partner)}>Editar (Cambiar Nivel)</DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
-                              {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                             <AlertDialogTrigger asChild>
-                                <DropdownMenuItem className="text-destructive" onSelect={() => setPartnerToDelete(partner)}>
-                                  <Trash2 className="mr-2 h-4 w-4" />
-                                  Eliminar
-                                </DropdownMenuItem>
-                            </AlertDialogTrigger>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-              {partners?.length === 0 && (
-                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                  <p className="text-muted-foreground">No hay partners en la base de datos.</p>
-                </div>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
-          <AlertDialogDescription>
-            Esta acción no se puede deshacer. Esto eliminará permanentemente al partner
-            <span className="font-bold"> {partnerToDelete?.name}</span> y borrará sus datos de nuestros servidores.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => setPartnerToDelete(null)}>Cancelar</AlertDialogCancel>
-          <AlertDialogAction onClick={confirmDeletePartner}>
-            Continuar
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={getTierBadgeVariant(partner.tier)}>
+                            {partner.tier}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{partner.territory}</TableCell>
+                        <TableCell>
+                          <Badge variant={getStatusBadgeVariant(partner.status)}>
+                            {partner.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button aria-haspopup="true" size="icon" variant="ghost">
+                                <MoreHorizontal className="h-4 w-4" />
+                                <span className="sr-only">Toggle menu</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                              <DropdownMenuItem onSelect={() => handleCycleTier(partner)}>Editar (Cambiar Nivel)</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
+                                {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
+                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                               <AlertDialogTrigger asChild>
+                                  <DropdownMenuItem className="text-destructive" onSelect={() => setPartnerToDelete(partner)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Eliminar
+                                  </DropdownMenuItem>
+                              </AlertDialogTrigger>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                {partners?.length === 0 && (
+                  <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
+                    <p className="text-muted-foreground">No hay partners en la base de datos.</p>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        </Card>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente al partner
+              <span className="font-bold"> {partnerToDelete?.name}</span> y borrará sus datos de nuestros servidores.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPartnerToDelete(null)}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDeletePartner}>
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 };
 

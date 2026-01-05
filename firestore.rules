@@ -9,7 +9,7 @@
  * is logically nested under the `/partners/{partnerId}` path, where the `partnerId` 
  * directly corresponds to the authenticated user's UID. This creates a secure, 
  * isolated data silo for each partner. Global data is stored in separate top-level 
- * collections like `/commission_schemes` and `/rules`.
+ * collections like `/commission_schemes` and `/rules`. User roles are stored in the `/users` collection.
  *
  * Key Security Decisions:
  * - Partner Isolation: A user's auth UID must match the `{partnerId}` wildcard in 
@@ -56,7 +56,46 @@ service cloud.firestore {
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
+
+    /**
+     * Gets the user's role document from the /users collection.
+     */
+    function getRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    /**
+     * Returns true if the user has the 'superadmin' role.
+     */
+    function isSuperAdmin() {
+      return isSignedIn() && getRole().role == 'superadmin';
+    }
+
+    /**
+     * Returns true if the user has the 'admin' or 'superadmin' role.
+     */
+    function isAdmin() {
+      let userRole = getRole().role;
+      return isSignedIn() && (userRole == 'admin' || userRole == 'superadmin');
+    }
     
+    // -------------------------------------------------------------------------
+    // User Data Rules
+    // -------------------------------------------------------------------------
+    /**
+     * @description Controls access to user role data. A user can read their
+     *              own role, and can create their own user/role document.
+     *              Only superadmins can modify roles.
+     * @path        /users/{userId}
+     */
+     match /users/{userId} {
+       allow get: if isOwner(userId);
+       allow create: if isOwner(userId);
+       allow update: if isSuperAdmin();
+       allow delete: if isSuperAdmin();
+     }
+
+
     // -------------------------------------------------------------------------
     // Partner Data Rules
     // -------------------------------------------------------------------------
@@ -70,8 +109,8 @@ service cloud.firestore {
      * @principle   Enforces self-creation and strict document ownership.
      */
     match /partners/{partnerId} {
-      allow get: if isOwner(partnerId) || isSignedIn(); // Allow signed-in users to get for dashboard purposes
-      allow list: if isSignedIn(); // Allow listing all partners for the dashboard view.
+      allow get: if isOwner(partnerId) || isAdmin(); // Allow admins to get for dashboard purposes
+      allow list: if isAdmin(); // Allow listing all partners for the dashboard view.
       allow create: if isOwner(partnerId) && request.resource.data.id == partnerId;
       allow update: if isExistingOwner(partnerId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(partnerId);
@@ -137,9 +176,9 @@ service cloud.firestore {
     match /commission_schemes/{commissionSchemeId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if false; // TODO: Implement admin-only write access.
-      allow update: if false; // TODO: Implement admin-only write access.
-      allow delete: if false; // TODO: Implement admin-only write access.
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     /**
@@ -153,9 +192,11 @@ service cloud.firestore {
     match /rules/{ruleId} {
       allow get: if isSignedIn();
       allow list: if isSignedIn();
-      allow create: if false; // TODO: Implement admin-only write access.
-      allow update: if false; // TODO: Implement admin-only write access.
-      allow delete: if false; // TODO: Implement admin-only write access.
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin();
+      allow delete: if isSuperAdmin();
     }
   }
 }
+
+    

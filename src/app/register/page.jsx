@@ -12,12 +12,14 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { initiateEmailSignUp } from '@/firebase/non-blocking-login';
+import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function RegisterPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -26,20 +28,33 @@ export default function RegisterPage() {
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError('');
-    if (!auth) {
-      setError('Authentication service is not available.');
+    if (!auth || !firestore) {
+      setError('Authentication or Database service is not available.');
       return;
     }
     try {
-      await initiateEmailSignUp(auth, email, password);
+      const userCredential = await initiateEmailSignUp(auth, email, password);
+      const user = userCredential.user;
+
+      // Assign role based on email
+      const role = email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
+      
+      // Create a user document in Firestore
+      const userRef = doc(firestore, 'users', user.uid);
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        role: role,
+      });
+
       // The auth state listener in AuthProvider will handle the redirect to the dashboard
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');
       } else {
         setError('Failed to sign up. Please try again.');
+        console.error(err);
       }
-      console.error(err);
     }
   };
 
@@ -91,3 +106,5 @@ export default function RegisterPage() {
     </div>
   );
 }
+
+    

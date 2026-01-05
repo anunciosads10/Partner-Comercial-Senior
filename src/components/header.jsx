@@ -6,8 +6,9 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { Search, LogOut, User } from "lucide-react";
 import { Input } from "./ui/input";
-import { useAuth } from "@/firebase";
+import { useAuth, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { signOut } from "firebase/auth";
+import { doc } from "firebase/firestore";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +21,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export function Header() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user } = useAuth() || {};
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, "users", user.uid);
+  }, [firestore, user]);
+
+  const { data: userData } = useDoc(userDocRef);
 
   useEffect(() => {
     setIsClient(true);
@@ -63,7 +72,16 @@ export function Header() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>My Account</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem disabled>{user?.email}</DropdownMenuItem>
+              <DropdownMenuItem disabled>
+                <div>
+                  <div>{user?.email}</div>
+                  {userData && (
+                    <div className="text-xs text-muted-foreground capitalize">
+                      Role: {userData.role}
+                    </div>
+                  )}
+                </div>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={handleLogout}>
                 <LogOut className="mr-2 h-4 w-4" />
@@ -76,3 +94,5 @@ export function Header() {
     </header>
   );
 }
+
+    

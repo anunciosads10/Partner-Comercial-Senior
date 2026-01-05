@@ -1,5 +1,28 @@
 {
   "entities": {
+    "User": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "User",
+      "type": "object",
+      "description": "Represents an application user.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The user's unique ID from Firebase Auth."
+        },
+        "email": {
+          "type": "string",
+          "description": "The user's email address.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The role of the user (e.g., superadmin, admin).",
+          "enum": ["superadmin", "admin"]
+        }
+      },
+      "required": ["uid", "email", "role"]
+    },
     "Partner": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Partner",
@@ -245,6 +268,22 @@
   "firestore": {
     "structure": [
       {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "User",
+          "schema": {
+            "$ref": "#/entities/User"
+          },
+          "description": "Stores application user data, including roles.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user (matches auth UID)."
+            }
+          ]
+        }
+      },
+      {
         "path": "/partners/{partnerId}",
         "definition": {
           "entityName": "Partner",
@@ -356,3 +395,5 @@
     "reasoning": "The Firestore structure is designed to support the PartnerVerse application, focusing on the Partner Comercial Senior management panel. Key considerations include authorization independence, clarity, and scalability. The structure avoids hierarchical `get()` calls in security rules by denormalizing authorization data where necessary. \n\nAuthorization Independence is achieved primarily through denormalization. For example, any subcollections related to a Partner, such as `PartnerCommission` or `Payment`, will store a copy of the relevant partner data (e.g., `partnerId`, `tier`, `status`). This eliminates the need to fetch parent Partner data in security rules.\n\nStructural Segregation ensures that each collection has a homogeneous security posture. This means sensitive data (e.g., partner-specific settings) are stored separately from global configurations (e.g., commission schemes).\n\nQAPs (Rules Are Not Filters) are supported via structural segregation. Listing operations can be secured at the collection level without needing to filter based on document data. For example, listing payments will only return payments that the current user is authorized to see, based on their role or membership in the partner's `members` map (if applicable). The structure also enables secure list operations because authorization data (like `partnerId`) is embedded within the documents, eliminating the need for complex filtering in the rules.\n\nConsistent access modeling is implemented using path-based ownership for user-owned data (e.g., `/partners/{partnerId}`). For collaborative data, a membership map could be used (though not explicitly required by the current schema). Global roles are managed by dedicated collections.\n\nExplicit state modeling is encouraged within the entities, for example, the `Partner.status` field, for managing the partner lifecycle states.\n\nInvariants, such as ownership and timestamp integrity, can be enforced through Firestore rules that validate these fields upon document creation or modification."
   }
 }
+
+    

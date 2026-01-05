@@ -32,7 +32,7 @@ export default function RegisterPage() {
     }
     try {
       await initiateEmailSignUp(auth, email, password);
-      // The auth state listener in AuthProvider will handle the redirect
+      // The auth state listener in AuthProvider will handle the redirect to the dashboard
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('This email address is already in use.');

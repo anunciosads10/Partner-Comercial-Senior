@@ -4,7 +4,7 @@ import { useAuth } from "@/firebase";
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
-const PROTECTED_ROUTES = ['/'];
+const PROTECTED_DASHBOARD_PREFIX = '/';
 const PUBLIC_ROUTES = ['/login', '/register'];
 
 export function AuthProvider({ children }) {
@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (isUserLoading) return; // Wait until the auth state is determined
 
-    const isProtectedRoute = PROTECTED_ROUTES.includes(pathname);
+    const isProtectedRoute = !PUBLIC_ROUTES.includes(pathname);
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
 
     if (!user && isProtectedRoute) {
@@ -26,13 +26,13 @@ export function AuthProvider({ children }) {
 
     if (user && isPublicRoute) {
       // If user is logged in and tries to access login/register, redirect to dashboard
-      router.push('/');
+      router.push(PROTECTED_DASHBOARD_PREFIX);
     }
 
   }, [user, isUserLoading, router, pathname]);
 
   // While checking auth state, you might want to show a loader on protected routes
-  if (isUserLoading && PROTECTED_ROUTES.includes(pathname)) {
+  if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
     return (
       <div className="flex items-center justify-center h-screen">
         <p>Loading...</p>
@@ -43,7 +43,7 @@ export function AuthProvider({ children }) {
   // If the user is not authenticated and trying to access a protected route,
   // we render null to prevent flashing the protected content.
   // The useEffect above will handle the redirection.
-  if (!user && PROTECTED_ROUTES.includes(pathname)) {
+  if (!user && !PUBLIC_ROUTES.includes(pathname)) {
     return null;
   }
 

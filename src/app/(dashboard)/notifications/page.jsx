@@ -69,34 +69,6 @@ const mockNotificationRules = [
   },
 ];
 
-// --- Datos de ejemplo para notificaciones recibidas (para Admin/Partner) ---
-const mockReceivedNotifications = [
-    {
-        id: "notif-1",
-        title: "¡Felicitaciones por alcanzar el nivel Oro!",
-        message: "Tu arduo trabajo ha dado sus frutos. Has sido ascendido a Partner de nivel Oro, con acceso a comisiones más altas y soporte prioritario.",
-        timestamp: "2024-07-15T10:00:00Z",
-        isRead: false,
-        type: "Hito",
-    },
-    {
-        id: "notif-2",
-        title: "Pago Procesado",
-        message: "Tu pago de comisiones de $1,250.00 ha sido procesado y será depositado en tu cuenta en las próximas 48 horas.",
-        timestamp: "2024-07-14T15:30:00Z",
-        isRead: true,
-        type: "Pagos",
-    },
-    {
-        id: "notif-3",
-        title: "Alerta de Rendimiento",
-        message: "Hemos notado una disminución en tu actividad de ventas esta semana. Contáctanos si necesitas ayuda o recursos adicionales.",
-        timestamp: "2024-07-12T09:00:00Z",
-        isRead: true,
-        type: "Rendimiento",
-    }
-];
-
 const getStatusBadgeVariant = (status) => {
   return status === 'active' ? 'default' : 'secondary';
 };
@@ -223,21 +195,23 @@ const SuperAdminNotificationsView = () => {
     return (
         <Card>
             <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     <div>
-                        <CardTitle>Gestión de Comunicaciones</CardTitle>
-                        <CardDescription>
-                            Configura reglas de envío automático o envía alertas y mensajes personalizados de forma individual a tus partners.
+                        <CardTitle className="text-2xl font-bold">Centro de Comunicaciones y Alertas</CardTitle>
+                        <CardDescription className="text-base mt-1">
+                            Administra la interacción con tus socios. Automatiza notificaciones por hitos 
+                            o envía mensajes directos y alertas manuales de forma individual.
                         </CardDescription>
                     </div>
-                     <div className="flex items-center gap-2">
-                        <Button variant="outline" onClick={() => setIndividualDialogOpen(true)}>
+                    <div className="flex items-center gap-3">
+                        <Button variant="outline" onClick={() => setIndividualDialogOpen(true)} className="border-primary text-primary hover:bg-primary/10">
                             <Send className="mr-2 h-4 w-4" />
-                            Notificación Individual
+                            Enviar Alerta Manual
                         </Button>
-                        <Button onClick={openNewRuleDialog}>
+                        
+                        <Button onClick={openNewRuleDialog} className="bg-primary hover:bg-primary/90">
                             <PlusCircle className="mr-2 h-4 w-4" />
-                            Crear Nueva Regla
+                            Nueva Regla Automática
                         </Button>
                     </div>
                 </div>
@@ -341,19 +315,23 @@ const SuperAdminNotificationsView = () => {
                 </form>
             </Dialog>
 
-            {/* Diálogo para Enviar Notificación Individual */}
+            {/* MODAL DE ENVÍO INDIVIDUAL MEJORADO */}
             <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
                 <form onSubmit={handleSendIndividualNotification}>
                     <DialogContent className="sm:max-w-[525px]">
                         <DialogHeader>
-                            <DialogTitle>Enviar Notificación Individual</DialogTitle>
+                            <DialogTitle className="flex items-center gap-2">
+                                <BellRing className="h-5 w-5 text-primary" />
+                                Comunicación Directa con Partner
+                            </DialogTitle>
                             <DialogDescription>
-                                Selecciona un partner y redacta el mensaje que deseas enviar.
+                                Selecciona un socio de la lista para enviarle una alerta o mensaje privado que aparecerá en su panel principal.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="grid gap-4 py-4">
+                        
+                        <div className="grid gap-6 py-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="partner">Partner</Label>
+                                <Label htmlFor="partner" className="font-semibold">Socio Destinatario</Label>
                                  <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
                                     <PopoverTrigger asChild>
                                         <Button
@@ -399,19 +377,44 @@ const SuperAdminNotificationsView = () => {
                                     </PopoverContent>
                                 </Popover>
                             </div>
+
                             <div className="grid gap-2">
-                                <Label htmlFor="title">Título del Mensaje</Label>
-                                <Input id="title" value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} required />
+                                <Label htmlFor="title" className="font-semibold">Asunto / Título de la Alerta</Label>
+                                <Input 
+                                    id="title" 
+                                    placeholder="Ej: Actualización de comisiones o Alerta de cuenta"
+                                    value={notificationTitle} 
+                                    onChange={(e) => setNotificationTitle(e.target.value)} 
+                                    required 
+                                />
                             </div>
-                             <div className="grid gap-2">
-                                <Label htmlFor="message">Mensaje</Label>
-                                <Textarea id="message" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} required rows={4}/>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="message" className="font-semibold">Contenido del Mensaje</Label>
+                                <Textarea 
+                                    id="message" 
+                                    placeholder="Redacta aquí el mensaje detallado para el socio..."
+                                    value={notificationMessage} 
+                                    onChange={(e) => setNotificationMessage(e.target.value)} 
+                                    required 
+                                    rows={5}
+                                />
                             </div>
                         </div>
-                        <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setIndividualDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={isSending}>
-                                {isSending ? 'Enviando...' : 'Enviar Mensaje'}
+
+                        <DialogFooter className="gap-2">
+                            <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>
+                                Cancelar
+                            </Button>
+                            <Button type="submit" disabled={isSending} className="min-w-[120px]">
+                                {isSending ? (
+                                    "Procesando..."
+                                ) : (
+                                    <>
+                                        <Send className="mr-2 h-4 w-4" />
+                                        Enviar Ahora
+                                    </>
+                                )}
                             </Button>
                         </DialogFooter>
                     </DialogContent>
@@ -554,3 +557,5 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
+
+    

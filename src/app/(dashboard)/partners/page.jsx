@@ -393,7 +393,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
         </Card>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente al partner
               <span className="font-bold"> {partnerToDelete?.name}</span> y borrará sus datos de nuestros servidores.
@@ -411,79 +411,81 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
       {/* DIÁLOGO PARA EDITAR */}
       <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
-          {partnerToEdit && (
-            <form onSubmit={handleUpdatePartner}>
-              <DialogHeader>
-                <DialogTitle>Editar Partner</DialogTitle>
-                <DialogDescription>
-                  Actualiza los datos del partner. Haz clic en guardar cuando termines.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-name" className="text-right">
-                    Nombre
-                  </Label>
-                  <Input
-                    id="edit-name"
-                    value={partnerToEdit.name || ''}
-                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, name: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-email" className="text-right">
-                    Email
-                  </Label>
-                  <Input
-                    id="edit-email"
-                    type="email"
-                    value={partnerToEdit.email || ''}
-                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, email: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="edit-pais" className="text-right">
-                    País
-                  </Label>
-                  <Input
-                    id="edit-pais"
-                    value={partnerToEdit.pais || ''}
-                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, pais: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                    <Label htmlFor="edit-tier" className="text-right">
-                        Nivel
+          <form onSubmit={handleUpdatePartner}>
+            {partnerToEdit && (
+              <>
+                <DialogHeader>
+                  <DialogTitle>Editar Partner</DialogTitle>
+                  <DialogDescription>
+                    Actualiza los datos del partner. Haz clic en guardar cuando termines.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-name" className="text-right">
+                      Nombre
                     </Label>
-                      <Select
-                        value={partnerToEdit.tier || 'Silver'}
-                        onValueChange={(value) => setPartnerToEdit({ ...partnerToEdit, tier: value })}
-                    >
-                        <SelectTrigger className="col-span-3">
-                            <SelectValue placeholder="Selecciona un nivel" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Silver">Silver</SelectItem>
-                            <SelectItem value="Gold">Gold</SelectItem>
-                            <SelectItem value="Platinum">Platinum</SelectItem>
-                        </SelectContent>
-                    </Select>
+                    <Input
+                      id="edit-name"
+                      value={partnerToEdit.name || ''}
+                      onChange={(e) => setPartnerToEdit({ ...partnerToEdit, name: e.target.value })}
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-email" className="text-right">
+                      Email
+                    </Label>
+                    <Input
+                      id="edit-email"
+                      type="email"
+                      value={partnerToEdit.email || ''}
+                      onChange={(e) => setPartnerToEdit({ ...partnerToEdit, email: e.target.value })}
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-pais" className="text-right">
+                      País
+                    </Label>
+                    <Input
+                      id="edit-pais"
+                      value={partnerToEdit.pais || ''}
+                      onChange={(e) => setPartnerToEdit({ ...partnerToEdit, pais: e.target.value })}
+                      className="col-span-3"
+                      required
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="edit-tier" className="text-right">
+                          Nivel
+                      </Label>
+                        <Select
+                          value={partnerToEdit.tier || 'Silver'}
+                          onValueChange={(value) => setPartnerToEdit({ ...partnerToEdit, tier: value })}
+                      >
+                          <SelectTrigger className="col-span-3">
+                              <SelectValue placeholder="Selecciona un nivel" />
+                          </SelectTrigger>
+                          <SelectContent>
+                              <SelectItem value="Silver">Silver</SelectItem>
+                              <SelectItem value="Gold">Gold</SelectItem>
+                              <SelectItem value="Platinum">Platinum</SelectItem>
+                          </SelectContent>
+                      </Select>
+                  </div>
                 </div>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="secondary" onClick={() => setEditDialogOpen(false)}>
-                  Cancelar
-                </Button>
-                <Button type="submit">Guardar Cambios</Button>
-              </DialogFooter>
-            </form>
-          )}
+                <DialogFooter>
+                  <Button type="button" variant="secondary" onClick={() => setEditDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button type="submit">Guardar Cambios</Button>
+                </DialogFooter>
+              </>
+            )}
+          </form>
         </DialogContent>
       </Dialog>
     </>

@@ -140,16 +140,15 @@ const SuperAdminNotificationsView = () => {
             name: formData.get('name'),
             type: formData.get('type'),
             description: formData.get('description'),
-            status: currentRule ? currentRule.status : 'inactive',
         };
 
         if (currentRule) {
             // Editar
-            setRules(rules.map(r => r.id === currentRule.id ? { ...r, ...ruleData } : r));
+            setRules(rules.map(r => r.id === currentRule.id ? { ...currentRule, ...ruleData } : r));
             toast({ title: "Regla Actualizada", description: "La regla de notificación ha sido modificada." });
         } else {
             // Crear
-            const newRule = { ...ruleData, id: `rule-${Date.now()}` };
+            const newRule = { ...ruleData, id: `rule-${Date.now()}`, status: 'inactive' };
             setRules([...rules, newRule]);
             toast({ title: "Regla Creada", description: "La nueva regla de notificación ha sido añadida." });
         }

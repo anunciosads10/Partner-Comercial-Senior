@@ -370,7 +370,13 @@ const SuperAdminNotificationsView = () => {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[450px] p-0">
-                                        <Command>
+                                        <Command
+                                          filter={(value, search) => {
+                                            const partner = partners?.find(p => p.id === value);
+                                            if (partner?.name.toLowerCase().includes(search.toLowerCase())) return 1;
+                                            return 0;
+                                          }}
+                                        >
                                             <CommandInput placeholder="Buscar partner..." />
                                             <CommandList>
                                                 <CommandEmpty>No se encontraron partners.</CommandEmpty>
@@ -378,9 +384,9 @@ const SuperAdminNotificationsView = () => {
                                                     {partners?.map((partner) => (
                                                         <CommandItem
                                                             key={partner.id}
-                                                            value={partner.name}
-                                                            onSelect={() => {
-                                                                setSelectedPartnerId(partner.id === selectedPartnerId ? "" : partner.id);
+                                                            value={partner.id}
+                                                            onSelect={(currentValue) => {
+                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue);
                                                                 setPopoverOpen(false);
                                                             }}
                                                         >
@@ -554,3 +560,5 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
+
+    

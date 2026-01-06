@@ -104,6 +104,8 @@ const SuperAdminNotificationsView = () => {
     const [isAlertOpen, setAlertOpen] = React.useState(false);
     const [currentRule, setCurrentRule] = React.useState(null);
     const [ruleToDelete, setRuleToDelete] = React.useState(null);
+    const [openMenuId, setOpenMenuId] = React.useState(null);
+
 
     const handleStatusChange = (ruleId) => {
         setRules(prevRules =>
@@ -124,11 +126,13 @@ const SuperAdminNotificationsView = () => {
     const openEditDialog = (rule) => {
         setCurrentRule(rule);
         setDialogOpen(true);
+        setOpenMenuId(null);
     };
 
     const openDeleteAlert = (rule) => {
         setRuleToDelete(rule);
         setAlertOpen(true);
+        setOpenMenuId(null);
     };
 
     const handleSaveRule = (e) => {
@@ -214,7 +218,7 @@ const SuperAdminNotificationsView = () => {
                                     />
                                 </TableCell>
                                 <TableCell>
-                                    <DropdownMenu>
+                                    <DropdownMenu open={openMenuId === rule.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? rule.id : null)}>
                                         <DropdownMenuTrigger asChild>
                                             <Button aria-haspopup="true" size="icon" variant="ghost">
                                                 <MoreHorizontal className="h-4 w-4" />

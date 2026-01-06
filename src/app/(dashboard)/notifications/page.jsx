@@ -39,14 +39,8 @@ import { doc, collection, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
-
 
 // --- Datos de ejemplo para las reglas de notificación (para SuperAdmin) ---
 const mockNotificationRules = [
@@ -77,7 +71,7 @@ const getStatusBadgeVariant = (status) => {
   return status === 'active' ? 'default' : 'secondary';
 };
 
-// ======================= VISTA PARA SUPERADMIN =======================
+// ======================= VISTA PARA SUPERADMIN CORREGIDA =======================
 const SuperAdminNotificationsView = () => {
     const { toast } = useToast();
     const firestore = useFirestore();
@@ -92,18 +86,14 @@ const SuperAdminNotificationsView = () => {
     const [openMenuId, setOpenMenuId] = React.useState(null);
 
     // Estados para el formulario de notificación individual
-    const [selectedPartner, setSelectedPartner] = React.useState(null);
     const [selectedPartnerId, setSelectedPartnerId] = React.useState("");
     const [notificationTitle, setNotificationTitle] = React.useState("");
     const [notificationMessage, setNotificationMessage] = React.useState("");
     const [isSending, setIsSending] = React.useState(false);
-    const [isPopoverOpen, setPopoverOpen] = React.useState(false);
-
 
     // Obtener partners para el selector
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
     const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
-
 
     const handleStatusChange = (ruleId) => {
         setRules(prevRules =>
@@ -164,10 +154,12 @@ const SuperAdminNotificationsView = () => {
 
     const handleSendIndividualNotification = async (e) => {
         e.preventDefault();
-        if (!firestore || !selectedPartnerId || !notificationTitle || !notificationMessage) {
-            toast({ variant: "destructive", title: "Error", description: "Por favor, completa todos los campos." });
+        
+        if (!selectedPartnerId) {
+            toast({ variant: "destructive", title: "Error", description: "Selecciona un partner de la lista." });
             return;
         }
+        if (!firestore) return;
 
         setIsSending(true);
         try {
@@ -181,16 +173,15 @@ const SuperAdminNotificationsView = () => {
                 isRead: false,
             });
 
-            toast({ title: "Notificación Enviada", description: "El mensaje ha sido enviado al partner." });
+            toast({ title: "Notificación Enviada", description: "El mensaje ha sido enviado con éxito." });
             setIndividualDialogOpen(false);
-            // Resetear formulario
+            // Resetear
             setSelectedPartnerId("");
-            setSelectedPartner(null);
             setNotificationTitle("");
             setNotificationMessage("");
 
         } catch (error) {
-            console.error("Error al enviar notificación individual:", error);
+            console.error(error);
             toast({ variant: "destructive", title: "Error", description: "No se pudo enviar la notificación." });
         } finally {
             setIsSending(false);
@@ -230,9 +221,7 @@ const SuperAdminNotificationsView = () => {
                             <TableHead>Tipo</TableHead>
                             <TableHead>Estado</TableHead>
                             <TableHead className="w-[100px]">Activada</TableHead>
-                            <TableHead>
-                                <span className="sr-only">Acciones</span>
-                            </TableHead>
+                            <TableHead><span className="sr-only">Acciones</span></TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -242,9 +231,7 @@ const SuperAdminNotificationsView = () => {
                                     <div className="font-medium">{rule.name}</div>
                                     <div className="text-sm text-muted-foreground">{rule.description}</div>
                                 </TableCell>
-                                <TableCell>
-                                    <Badge variant="outline">{rule.type}</Badge>
-                                </TableCell>
+                                <TableCell><Badge variant="outline">{rule.type}</Badge></TableCell>
                                 <TableCell>
                                     <Badge variant={getStatusBadgeVariant(rule.status)}>
                                         {rule.status === 'active' ? 'Activa' : 'Inactiva'}
@@ -254,27 +241,16 @@ const SuperAdminNotificationsView = () => {
                                     <Switch
                                         checked={rule.status === 'active'}
                                         onCheckedChange={() => handleStatusChange(rule.id)}
-                                        aria-label={`Activar o desactivar la regla ${rule.name}`}
                                     />
                                 </TableCell>
                                 <TableCell>
                                     <DropdownMenu open={openMenuId === rule.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? rule.id : null)}>
                                         <DropdownMenuTrigger asChild>
-                                            <Button aria-haspopup="true" size="icon" variant="ghost">
-                                                <MoreHorizontal className="h-4 w-4" />
-                                                <span className="sr-only">Toggle menu</span>
-                                            </Button>
+                                            <Button size="icon" variant="ghost"><MoreHorizontal className="h-4 w-4" /></Button>
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
-                                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                            <DropdownMenuItem onSelect={() => openEditDialog(rule)}>
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                Editar
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteAlert(rule)}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Eliminar
-                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => openEditDialog(rule)}><Edit className="mr-2 h-4 w-4" />Editar</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteAlert(rule)}><Trash2 className="mr-2 h-4 w-4" />Eliminar</DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
@@ -282,14 +258,106 @@ const SuperAdminNotificationsView = () => {
                         ))}
                     </TableBody>
                 </Table>
-                {rules.length === 0 && (
-                    <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                        <p className="text-muted-foreground">No hay reglas de notificación configuradas.</p>
-                    </div>
-                )}
             </CardContent>
 
-            {/* Diálogo para Crear/Editar Reglas */}
+            {/* Diálogo para Notificación Individual CORREGIDO */}
+            <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
+                <DialogContent 
+                    className="sm:max-w-[525px]" 
+                    // SOLUCIÓN AL FOCO: Evitamos que el modal robe el foco automáticamente
+                    onOpenAutoFocus={(e) => e.preventDefault()}
+                >
+                    <form onSubmit={handleSendIndividualNotification}>
+                        <DialogHeader>
+                            <DialogTitle className="flex items-center gap-2">
+                                <BellRing className="h-5 w-5 text-primary" />
+                                Comunicación Directa con Partner
+                            </DialogTitle>
+                            <DialogDescription>
+                                Busca un socio, redacta el mensaje y haz clic en enviar.
+                            </DialogDescription>
+                        </DialogHeader>
+                        
+                        <div className="grid gap-6 py-4">
+                            {/* BUSCADOR INTEGRADO (Sin Popover para evitar conflictos) */}
+                            <div className="grid gap-2">
+                                <Label className="font-semibold text-primary">Socio Destinatario</Label>
+                                <div className="border rounded-md overflow-hidden bg-slate-50">
+                                    <Command className="w-full">
+                                        <CommandInput 
+                                            placeholder="Escriba el nombre para buscar..." 
+                                            className="border-none focus:ring-0"
+                                        />
+                                        <CommandList className="max-h-[180px]">
+                                            <CommandEmpty>No se encontraron socios.</CommandEmpty>
+                                            <CommandGroup heading="Lista de Partners">
+                                                {partners?.map((partner) => (
+                                                    <CommandItem
+                                                        key={partner.id}
+                                                        value={partner.name}
+                                                        onSelect={() => {
+                                                            setSelectedPartnerId(partner.id);
+                                                            toast({ title: `Partner: ${partner.name} seleccionado` });
+                                                        }}
+                                                        className="cursor-pointer"
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4",
+                                                                selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        <div className="flex flex-col">
+                                                            <span>{partner.name}</span>
+                                                            <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                                                        </div>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </div>
+                                {selectedPartnerId && (
+                                    <p className="text-[10px] text-green-600 font-bold">
+                                        Partner ID: {selectedPartnerId} (Seleccionado ✓)
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="title" className="font-semibold">Asunto del Mensaje</Label>
+                                <Input 
+                                    id="title" 
+                                    value={notificationTitle} 
+                                    onChange={(e) => setNotificationTitle(e.target.value)} 
+                                    required 
+                                    placeholder="Ej: Actualización de cuenta"
+                                />
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label htmlFor="message" className="font-semibold">Mensaje</Label>
+                                <Textarea 
+                                    id="message" 
+                                    value={notificationMessage} 
+                                    onChange={(e) => setNotificationMessage(e.target.value)} 
+                                    required 
+                                    rows={4}
+                                    placeholder="Escriba aquí el contenido de la alerta..."
+                                />
+                            </div>
+                        </div>
+
+                        <DialogFooter>
+                            <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={isSending || !selectedPartnerId} className="min-w-[140px]">
+                                {isSending ? "Enviando..." : <><Send className="mr-2 h-4 w-4" /> Enviar Ahora</>}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={isRuleDialogOpen} onOpenChange={setRuleDialogOpen}>
                  <form onSubmit={handleSaveRule}>
                     <DialogContent className="sm:max-w-[425px]">
@@ -321,115 +389,6 @@ const SuperAdminNotificationsView = () => {
                 </form>
             </Dialog>
 
-            {/* MODAL DE ENVÍO INDIVIDUAL MEJORADO */}
-            <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
-                <DialogContent className="sm:max-w-[525px]">
-                   <form onSubmit={handleSendIndividualNotification}>
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2">
-                            <BellRing className="h-5 w-5 text-primary" />
-                            Comunicación Directa con Partner
-                        </DialogTitle>
-                        <DialogDescription>
-                            Selecciona un socio de la lista para enviarle una alerta o mensaje privado que aparecerá en su panel principal.
-                        </DialogDescription>
-                    </DialogHeader>
-                    
-                    <div className="grid gap-6 py-4">
-                       <div className="grid gap-2">
-                            <Label htmlFor="partner" className="font-semibold">Socio Destinatario</Label>
-                            <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
-                                <PopoverTrigger asChild>
-                                <Button
-                                    variant="outline"
-                                    role="combobox"
-                                    aria-expanded={isPopoverOpen}
-                                    className="w-full justify-between"
-                                    disabled={isLoadingPartners}
-                                >
-                                    {selectedPartner
-                                    ? selectedPartner.name
-                                    : "Seleccionar partner..."}
-                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                </Button>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-full p-0">
-                                <Command>
-                                    <CommandInput placeholder="Buscar partner..." />
-                                    <CommandList>
-                                        <CommandEmpty>No se encontró ningún partner.</CommandEmpty>
-                                        <CommandGroup>
-                                        {partners?.map((partner) => (
-                                            <CommandItem
-                                                key={partner.id}
-                                                value={partner.name}
-                                                onSelect={() => {
-                                                    const currentPartner = partners.find(p => p.id === partner.id);
-                                                    setSelectedPartner(currentPartner || null);
-                                                    setSelectedPartnerId(partner.id);
-                                                    setPopoverOpen(false);
-                                                }}
-                                            >
-                                            <Check
-                                                className={cn(
-                                                    "mr-2 h-4 w-4",
-                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                                )}
-                                            />
-                                            {partner.name}
-                                            </CommandItem>
-                                        ))}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                                </PopoverContent>
-                            </Popover>
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="title" className="font-semibold">Asunto / Título de la Alerta</Label>
-                            <Input 
-                                id="title" 
-                                placeholder="Ej: Actualización de comisiones o Alerta de cuenta"
-                                value={notificationTitle} 
-                                onChange={(e) => setNotificationTitle(e.target.value)} 
-                                required 
-                            />
-                        </div>
-
-                        <div className="grid gap-2">
-                            <Label htmlFor="message" className="font-semibold">Contenido del Mensaje</Label>
-                            <Textarea 
-                                id="message" 
-                                placeholder="Redacta aquí el mensaje detallado para el socio..."
-                                value={notificationMessage} 
-                                onChange={(e) => setNotificationMessage(e.target.value)} 
-                                required 
-                                rows={5}
-                            />
-                        </div>
-                    </div>
-
-                    <DialogFooter className="gap-2">
-                        <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>
-                            Cancelar
-                        </Button>
-                        <Button type="submit" disabled={isSending} className="min-w-[120px]">
-                            {isSending ? (
-                                "Procesando..."
-                            ) : (
-                                <>
-                                    <Send className="mr-2 h-4 w-4" />
-                                    Enviar Ahora
-                                </>
-                            )}
-                        </Button>
-                    </DialogFooter>
-                    </form>
-                </DialogContent>
-            </Dialog>
-
-            {/* Alerta para Eliminar */}
             <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
@@ -565,5 +524,3 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
-
-    

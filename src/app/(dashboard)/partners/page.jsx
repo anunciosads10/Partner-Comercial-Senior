@@ -47,7 +47,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -88,7 +88,7 @@ function getStatusBadgeVariant(status) {
   }
 }
 
-const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) => {
+const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, searchTerm, setSearchTerm }) => {
   const { toast } = useToast();
   const [partnerToDelete, setPartnerToDelete] = React.useState(null);
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -291,6 +291,16 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) 
             </div>
           </CardHeader>
           <CardContent>
+            <div className="mb-4 relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por nombre, email o territorio..."
+                className="w-full rounded-lg bg-secondary pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
             {isLoading ? <p>Cargando partners...</p> : (
               <>
                 <Table>
@@ -363,7 +373,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore }) 
                 </Table>
                 {partners?.length === 0 && (
                   <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                    <p className="text-muted-foreground">No hay partners en la base de datos.</p>
+                    <p className="text-muted-foreground">{searchTerm ? 'No se encontraron partners.' : 'No hay partners en la base de datos.'}</p>
                   </div>
                 )}
               </>
@@ -452,6 +462,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
 export default function PartnersPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   // 1. Obtener el rol del usuario
   const userRoleDocRef = useMemoFirebase(() => {
@@ -468,6 +479,16 @@ export default function PartnersPage() {
     return collection(firestore, 'partners');
   }, [firestore, role]);
   const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollection);
+  
+  const filteredPartners = React.useMemo(() => {
+    if (!partners) return [];
+    return partners.filter(partner =>
+        partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        partner.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        partner.territory.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [partners, searchTerm]);
+
 
   // Para Admin: obtener solo sus propios datos de partner
   const partnerDocRef = useMemoFirebase(() => {
@@ -495,7 +516,7 @@ export default function PartnersPage() {
   }
 
   if (role === 'superadmin') {
-    return <SuperAdminPartnersView partners={partners} isLoading={isLoading} onSeedData={seedData} firestore={firestore} />;
+    return <SuperAdminPartnersView partners={filteredPartners} isLoading={isLoading} onSeedData={seedData} firestore={firestore} searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>;
   }
   
   if (role === 'admin') {

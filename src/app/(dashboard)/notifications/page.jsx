@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, PlusCircle, BellRing, Eye, Trash2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, BellRing, Eye, Trash2, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,8 +14,32 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+
 
 // --- Datos de ejemplo para las reglas de notificación (para SuperAdmin) ---
 const mockNotificationRules = [
@@ -76,7 +100,12 @@ const getStatusBadgeVariant = (status) => {
 
 // ======================= VISTA PARA SUPERADMIN =======================
 const SuperAdminNotificationsView = () => {
+    const { toast } = useToast();
     const [rules, setRules] = React.useState(mockNotificationRules);
+    const [isDialogOpen, setDialogOpen] = React.useState(false);
+    const [isAlertOpen, setAlertOpen] = React.useState(false);
+    const [currentRule, setCurrentRule] = React.useState(null);
+    const [ruleToDelete, setRuleToDelete] = React.useState(null);
 
     const handleStatusChange = (ruleId) => {
         setRules(prevRules =>
@@ -86,6 +115,54 @@ const SuperAdminNotificationsView = () => {
                     : rule
             )
         );
+        toast({ title: "Estado de la regla actualizado." });
+    };
+
+    const openNewDialog = () => {
+        setCurrentRule(null);
+        setDialogOpen(true);
+    };
+
+    const openEditDialog = (rule) => {
+        setCurrentRule(rule);
+        setDialogOpen(true);
+    };
+
+    const openDeleteAlert = (rule) => {
+        setRuleToDelete(rule);
+        setAlertOpen(true);
+    };
+
+    const handleSaveRule = (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        const ruleData = {
+            name: formData.get('name'),
+            type: formData.get('type'),
+            description: formData.get('description'),
+            status: currentRule ? currentRule.status : 'inactive',
+        };
+
+        if (currentRule) {
+            // Editar
+            setRules(rules.map(r => r.id === currentRule.id ? { ...r, ...ruleData } : r));
+            toast({ title: "Regla Actualizada", description: "La regla de notificación ha sido modificada." });
+        } else {
+            // Crear
+            const newRule = { ...ruleData, id: `rule-${Date.now()}` };
+            setRules([...rules, newRule]);
+            toast({ title: "Regla Creada", description: "La nueva regla de notificación ha sido añadida." });
+        }
+        setDialogOpen(false);
+        setCurrentRule(null);
+    };
+    
+    const handleDeleteRule = () => {
+        if (!ruleToDelete) return;
+        setRules(rules.filter(r => r.id !== ruleToDelete.id));
+        toast({ title: "Regla Eliminada", description: "La regla ha sido eliminada.", variant: "destructive" });
+        setAlertOpen(false);
+        setRuleToDelete(null);
     };
 
     return (
@@ -98,7 +175,7 @@ const SuperAdminNotificationsView = () => {
                             Configura alertas y notificaciones automáticas para mantener a los partners informados y comprometidos.
                         </CardDescription>
                     </div>
-                    <Button>
+                    <Button onClick={openNewDialog}>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Crear Nueva Regla
                     </Button>
@@ -149,8 +226,14 @@ const SuperAdminNotificationsView = () => {
                                         </DropdownMenuTrigger>
                                         <DropdownMenuContent align="end">
                                             <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                            <DropdownMenuItem>Editar</DropdownMenuItem>
-                                            <DropdownMenuItem className="text-destructive">Eliminar</DropdownMenuItem>
+                                            <DropdownMenuItem onSelect={() => openEditDialog(rule)}>
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Editar
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteAlert(rule)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Eliminar
+                                            </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
                                 </TableCell>
@@ -164,6 +247,54 @@ const SuperAdminNotificationsView = () => {
                     </div>
                 )}
             </CardContent>
+
+            {/* Diálogo para Crear/Editar */}
+            <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleSaveRule}>
+                        <DialogHeader>
+                            <DialogTitle>{currentRule ? 'Editar Regla' : 'Crear Nueva Regla'}</DialogTitle>
+                            <DialogDescription>
+                                Completa los detalles de la regla de notificación.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="name">Nombre</Label>
+                                <Input id="name" name="name" defaultValue={currentRule?.name} required />
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="description">Descripción</Label>
+                                <Input id="description" name="description" defaultValue={currentRule?.description} required />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="type">Tipo</Label>
+                                <Input id="type" name="type" defaultValue={currentRule?.type} required />
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <DialogClose asChild><Button type="button" variant="secondary">Cancelar</Button></DialogClose>
+                            <Button type="submit">Guardar</Button>
+                        </DialogFooter>
+                    </form>
+                </DialogContent>
+            </Dialog>
+
+            {/* Alerta para Eliminar */}
+            <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Esta acción es permanente y no se puede deshacer. La regla "{ruleToDelete?.name}" será eliminada.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteRule}>Eliminar</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </Card>
     );
 };

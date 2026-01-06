@@ -354,7 +354,7 @@ const SuperAdminNotificationsView = () => {
                         <div className="grid gap-4 py-4">
                             <div className="grid gap-2">
                                 <Label htmlFor="partner">Partner</Label>
-                                <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
+                                 <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -370,13 +370,7 @@ const SuperAdminNotificationsView = () => {
                                         </Button>
                                     </PopoverTrigger>
                                     <PopoverContent className="w-[450px] p-0">
-                                        <Command
-                                          filter={(value, search) => {
-                                            const partner = partners?.find(p => p.id === value);
-                                            if (partner?.name.toLowerCase().includes(search.toLowerCase())) return 1;
-                                            return 0;
-                                          }}
-                                        >
+                                       <Command>
                                             <CommandInput placeholder="Buscar partner..." />
                                             <CommandList>
                                                 <CommandEmpty>No se encontraron partners.</CommandEmpty>
@@ -560,5 +554,3 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
-
-    

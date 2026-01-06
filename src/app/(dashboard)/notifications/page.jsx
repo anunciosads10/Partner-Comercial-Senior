@@ -380,8 +380,8 @@ const SuperAdminNotificationsView = () => {
                                                             key={partner.id}
                                                             value={partner.id}
                                                             onSelect={(currentValue) => {
-                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue)
-                                                                setPopoverOpen(false)
+                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue);
+                                                                setPopoverOpen(false);
                                                             }}
                                                         >
                                                             <Check

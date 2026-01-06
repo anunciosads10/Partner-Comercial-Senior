@@ -378,9 +378,9 @@ const SuperAdminNotificationsView = () => {
                                                     {partners?.map((partner) => (
                                                         <CommandItem
                                                             key={partner.id}
-                                                            value={partner.id}
-                                                            onSelect={(currentValue) => {
-                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue);
+                                                            value={partner.name}
+                                                            onSelect={() => {
+                                                                setSelectedPartnerId(partner.id === selectedPartnerId ? "" : partner.id);
                                                                 setPopoverOpen(false);
                                                             }}
                                                         >

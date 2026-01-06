@@ -356,9 +356,13 @@ const SuperAdminNotificationsView = () => {
                                                     {partners?.map((partner) => (
                                                         <CommandItem
                                                             key={partner.id}
-                                                            value={partner.id}
-                                                            onSelect={(currentValue) => {
-                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue);
+                                                            value={partner.name}
+                                                            onPointerDown={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                            }}
+                                                            onSelect={() => {
+                                                                setSelectedPartnerId(partner.id);
                                                                 setPopoverOpen(false);
                                                             }}
                                                         >
@@ -369,6 +373,7 @@ const SuperAdminNotificationsView = () => {
                                                                 )}
                                                             />
                                                             {partner.name}
+                                                            <span className="ml-2 text-xs text-muted-foreground">({partner.email})</span>
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -557,5 +562,3 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
-
-    

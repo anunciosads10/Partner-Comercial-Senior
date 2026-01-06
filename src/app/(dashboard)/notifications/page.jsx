@@ -38,7 +38,6 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@
 import { doc, collection, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from '@/components/ui/textarea';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -90,6 +89,7 @@ const SuperAdminNotificationsView = () => {
     const [notificationTitle, setNotificationTitle] = React.useState("");
     const [notificationMessage, setNotificationMessage] = React.useState("");
     const [isSending, setIsSending] = React.useState(false);
+    const [searchTerm, setSearchTerm] = React.useState("");
 
     // Obtener partners para el selector
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
@@ -263,9 +263,7 @@ const SuperAdminNotificationsView = () => {
             {/* Diálogo para Notificación Individual CORREGIDO */}
             <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
                 <DialogContent 
-                    className="sm:max-w-[525px]" 
-                    // SOLUCIÓN AL FOCO: Evitamos que el modal robe el foco automáticamente
-                    onOpenAutoFocus={(e) => e.preventDefault()}
+                    className="sm:max-w-[525px]"
                 >
                     <form onSubmit={handleSendIndividualNotification}>
                         <DialogHeader>
@@ -279,67 +277,61 @@ const SuperAdminNotificationsView = () => {
                         </DialogHeader>
                         
                         <div className="grid gap-6 py-4">
-                            {/* SECCIÓN DEL SOCIO DESTINATARIO CORREGIDA */}
                             <div className="grid gap-2">
-                                <Label className="font-semibold text-primary">Socio Destinatario</Label>
-                                <div className="border rounded-md overflow-hidden bg-slate-50">
-                                    <Command className="w-full">
-                                        <CommandInput 
-                                            placeholder="Busca por nombre..." 
-                                            className="border-none focus:ring-0"
-                                        />
-                                        <CommandList className="max-h-[150px] border-t">
-                                            <CommandEmpty>No se encontró el socio.</CommandEmpty>
-                                            <CommandGroup>
-                                                {partners?.map((partner) => (
-                                                    <CommandItem
-                                                        key={partner.id}
-                                                        value={partner.name}
-                                                        // USAMOS onPointerDown PARA ASEGURAR EL CLIC EN EL MODAL
-                                                        onPointerDown={() => {
-                                                            setSelectedPartnerId(partner.id);
-                                                            toast({ title: `Socio seleccionado: ${partner.name}` });
-                                                        }}
-                                                        className={cn(
-                                                            "cursor-pointer p-2 flex items-center justify-between",
-                                                            selectedPartnerId === partner.id ? "bg-primary/20" : ""
-                                                        )}
-                                                    >
-                                                        <div className="flex items-center">
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4 text-primary",
-                                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <div className="flex flex-col">
-                                                                <span className="font-medium">{partner.name}</span>
-                                                                <span className="text-[10px] text-muted-foreground">{partner.email}</span>
-                                                            </div>
-                                                        </div>
-                                                        {selectedPartnerId === partner.id && (
-                                                            <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700 border-green-200">
-                                                                Seleccionado
-                                                            </Badge>
-                                                        )}
-                                                    </CommandItem>
-                                                ))}
-                                            </CommandGroup>
-                                        </CommandList>
-                                    </Command>
-                                </div>
+                              <Label className="font-semibold text-primary">Socio Destinatario</Label>
+                              <div className="flex flex-col gap-2 border rounded-md p-3 bg-slate-50">
+                                {/* Buscador Manual - Este NO se bloquea */}
+                                <Input 
+                                  placeholder="Escriba el nombre para buscar..." 
+                                  className="bg-white border-primary/20"
+                                  value={searchTerm}
+                                  onChange={(e) => setSearchTerm(e.target.value)}
+                                />
                                 
-                                {/* CONFIRMACIÓN VISUAL DEBAJO DEL BUSCADOR */}
-                                {selectedPartnerId ? (
-                                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-green-700 text-xs font-bold">
-                                        <Check className="h-3 w-3" />
-                                        Socio listo para recibir el mensaje
-                                    </div>
-                                ) : (
-                                    <p className="text-[10px] text-destructive font-medium italic">
-                                        * Debes hacer clic sobre el nombre del socio para activarlo.
+                                {/* Lista de Socios usando Botones Reales (Infalible al clic) */}
+                                <div className="max-h-[160px] overflow-y-auto border rounded bg-white flex flex-col shadow-inner">
+                                  {partners?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map((partner) => (
+                                    <button
+                                      key={partner.id}
+                                      type="button" // Importante para que no envíe el formulario antes de tiempo
+                                      onClick={() => {
+                                        setSelectedPartnerId(partner.id);
+                                        console.log("Partner ID guardado:", partner.id);
+                                      }}
+                                      className={cn(
+                                        "w-full text-left p-3 border-b last:border-0 hover:bg-slate-100 transition-colors flex items-center justify-between",
+                                        selectedPartnerId === partner.id ? "bg-primary/10 border-l-4 border-l-primary" : ""
+                                      )}
+                                    >
+                                      <div className="flex flex-col">
+                                        <span className={`font-bold text-sm ${selectedPartnerId === partner.id ? "text-primary" : ""}`}>
+                                            {partner.name}
+                                        </span>
+                                        <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                                      </div>
+                                      {selectedPartnerId === partner.id && (
+                                        <div className="flex items-center gap-1 bg-primary text-white px-2 py-0.5 rounded-full text-[10px]">
+                                            <Check className="h-3 w-3" /> Seleccionado
+                                        </div>
+                                      )}
+                                    </button>
+                                  ))}
+                                  {/* Mensaje si no hay resultados */}
+                                  {partners?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).length === 0 && (
+                                    <p className="p-6 text-center text-xs text-muted-foreground italic">
+                                        No se encontraron socios con ese nombre.
                                     </p>
-                                )}
+                                  )}
+                                </div>
+                              </div>
+                              
+                              {/* AVISO DE ÉXITO: Si sale esto, el botón de abajo SE ACTIVA sí o sí */}
+                              {selectedPartnerId && (
+                                <div className="flex items-center gap-2 p-2 bg-green-600 border border-green-700 rounded text-white text-xs font-bold animate-in zoom-in shadow-md">
+                                  <Check className="h-4 w-4" />
+                                  ¡SOCIO SELECCIONADO! Ahora puedes escribir el mensaje y enviar.
+                                </div>
+                              )}
                             </div>
 
                             <div className="grid gap-2">

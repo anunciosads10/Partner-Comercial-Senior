@@ -39,8 +39,13 @@ import { doc, collection, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from '@/components/ui/textarea';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Check } from 'lucide-react';
+import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 
 
 // --- Datos de ejemplo para las reglas de notificación (para SuperAdmin) ---
@@ -87,10 +92,13 @@ const SuperAdminNotificationsView = () => {
     const [openMenuId, setOpenMenuId] = React.useState(null);
 
     // Estados para el formulario de notificación individual
+    const [selectedPartner, setSelectedPartner] = React.useState(null);
     const [selectedPartnerId, setSelectedPartnerId] = React.useState("");
     const [notificationTitle, setNotificationTitle] = React.useState("");
     const [notificationMessage, setNotificationMessage] = React.useState("");
     const [isSending, setIsSending] = React.useState(false);
+    const [isPopoverOpen, setPopoverOpen] = React.useState(false);
+
 
     // Obtener partners para el selector
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
@@ -177,6 +185,7 @@ const SuperAdminNotificationsView = () => {
             setIndividualDialogOpen(false);
             // Resetear formulario
             setSelectedPartnerId("");
+            setSelectedPartner(null);
             setNotificationTitle("");
             setNotificationMessage("");
 
@@ -314,111 +323,108 @@ const SuperAdminNotificationsView = () => {
 
             {/* MODAL DE ENVÍO INDIVIDUAL MEJORADO */}
             <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
-                <form onSubmit={handleSendIndividualNotification}>
-                    <DialogContent className="sm:max-w-[525px]">
-                        <DialogHeader>
-                            <DialogTitle className="flex items-center gap-2">
-                                <BellRing className="h-5 w-5 text-primary" />
-                                Comunicación Directa con Partner
-                            </DialogTitle>
-                            <DialogDescription>
-                                Selecciona un socio de la lista para enviarle una alerta o mensaje privado que aparecerá en su panel principal.
-                            </DialogDescription>
-                        </DialogHeader>
-                        
-                        <div className="grid gap-6 py-4">
-                            <div className="grid gap-2">
-                              <Label className="font-semibold">Seleccionar Socio Destinatario</Label>
-                              <div className="border rounded-md p-2 bg-slate-50">
-                                <Command className="rounded-lg border shadow-md">
-                                  {/* 1. EL BUSCADOR: Ahora es directo, no necesita Popover */}
-                                  <CommandInput 
-                                    placeholder="Escribe el nombre del socio..." 
-                                    className="h-9"
-                                    // Forzamos que el foco funcione dentro del Dialog
-                                    onFocus={(e) => e.currentTarget.select()}
-                                  />
-                                  <CommandList className="max-h-[200px] overflow-y-auto">
-                                    <CommandEmpty>No se encontraron socios con ese nombre.</CommandEmpty>
-                                    <CommandGroup heading="Socios disponibles">
-                                      {partners?.map((partner) => (
+                <DialogContent className="sm:max-w-[525px]">
+                   <form onSubmit={handleSendIndividualNotification}>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <BellRing className="h-5 w-5 text-primary" />
+                            Comunicación Directa con Partner
+                        </DialogTitle>
+                        <DialogDescription>
+                            Selecciona un socio de la lista para enviarle una alerta o mensaje privado que aparecerá en su panel principal.
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    <div className="grid gap-6 py-4">
+                        <div className="grid gap-2">
+                            <Label htmlFor="partner" className="font-semibold">Socio Destinatario</Label>
+                            <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
+                                <PopoverTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    aria-expanded={isPopoverOpen}
+                                    className="w-full justify-between"
+                                    disabled={isLoadingPartners}
+                                >
+                                    {selectedPartner
+                                    ? selectedPartner.name
+                                    : "Seleccionar partner..."}
+                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-full p-0">
+                                <Command>
+                                    <CommandInput placeholder="Buscar partner..." />
+                                    <CommandEmpty>No se encontró ningún partner.</CommandEmpty>
+                                    <CommandGroup>
+                                    {partners?.map((partner) => (
                                         <CommandItem
-                                          key={partner.id}
-                                          // Importante: usamos el nombre para que el buscador funcione
-                                          value={partner.name}
-                                          onSelect={() => {
-                                            console.log("ID seleccionado:", partner.id);
-                                            setSelectedPartnerId(partner.id);
-                                          }}
-                                          className="flex items-center justify-between cursor-pointer"
+                                            key={partner.id}
+                                            value={partner.id}
+                                            onSelect={(currentValue) => {
+                                                const partner = partners.find(p => p.id === currentValue);
+                                                setSelectedPartner(partner || null);
+                                                setSelectedPartnerId(partner ? partner.id : "");
+                                                setPopoverOpen(false);
+                                            }}
                                         >
-                                          <div className="flex items-center">
-                                            <Check
-                                              className={cn(
+                                        <Check
+                                            className={cn(
                                                 "mr-2 h-4 w-4",
                                                 selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                              )}
-                                            />
-                                            <span>{partner.name}</span>
-                                            <span className="ml-2 text-xs text-muted-foreground">({partner.email})</span>
-                                          </div>
-                                          {selectedPartnerId === partner.id && (
-                                            <Badge variant="outline" className="bg-primary/10 text-primary text-[10px]">Seleccionado</Badge>
-                                          )}
+                                            )}
+                                        />
+                                        {partner.name}
                                         </CommandItem>
-                                      ))}
+                                    ))}
                                     </CommandGroup>
-                                  </CommandList>
                                 </Command>
-                              </div>
-                              {selectedPartnerId && (
-                                <p className="text-xs text-green-600 font-medium">
-                                  Socio seleccionado correctamente.
-                                </p>
-                              )}
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="title" className="font-semibold">Asunto / Título de la Alerta</Label>
-                                <Input 
-                                    id="title" 
-                                    placeholder="Ej: Actualización de comisiones o Alerta de cuenta"
-                                    value={notificationTitle} 
-                                    onChange={(e) => setNotificationTitle(e.target.value)} 
-                                    required 
-                                />
-                            </div>
-
-                            <div className="grid gap-2">
-                                <Label htmlFor="message" className="font-semibold">Contenido del Mensaje</Label>
-                                <Textarea 
-                                    id="message" 
-                                    placeholder="Redacta aquí el mensaje detallado para el socio..."
-                                    value={notificationMessage} 
-                                    onChange={(e) => setNotificationMessage(e.target.value)} 
-                                    required 
-                                    rows={5}
-                                />
-                            </div>
+                                </PopoverContent>
+                            </Popover>
                         </div>
 
-                        <DialogFooter className="gap-2">
-                            <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>
-                                Cancelar
-                            </Button>
-                            <Button type="submit" disabled={isSending} className="min-w-[120px]">
-                                {isSending ? (
-                                    "Procesando..."
-                                ) : (
-                                    <>
-                                        <Send className="mr-2 h-4 w-4" />
-                                        Enviar Ahora
-                                    </>
-                                )}
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </form>
+                        <div className="grid gap-2">
+                            <Label htmlFor="title" className="font-semibold">Asunto / Título de la Alerta</Label>
+                            <Input 
+                                id="title" 
+                                placeholder="Ej: Actualización de comisiones o Alerta de cuenta"
+                                value={notificationTitle} 
+                                onChange={(e) => setNotificationTitle(e.target.value)} 
+                                required 
+                            />
+                        </div>
+
+                        <div className="grid gap-2">
+                            <Label htmlFor="message" className="font-semibold">Contenido del Mensaje</Label>
+                            <Textarea 
+                                id="message" 
+                                placeholder="Redacta aquí el mensaje detallado para el socio..."
+                                value={notificationMessage} 
+                                onChange={(e) => setNotificationMessage(e.target.value)} 
+                                required 
+                                rows={5}
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter className="gap-2">
+                        <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>
+                            Cancelar
+                        </Button>
+                        <Button type="submit" disabled={isSending} className="min-w-[120px]">
+                            {isSending ? (
+                                "Procesando..."
+                            ) : (
+                                <>
+                                    <Send className="mr-2 h-4 w-4" />
+                                    Enviar Ahora
+                                </>
+                            )}
+                        </Button>
+                    </DialogFooter>
+                    </form>
+                </DialogContent>
             </Dialog>
 
             {/* Alerta para Eliminar */}
@@ -557,3 +563,5 @@ export default function NotificationsPage() {
   // Por defecto, o si es 'admin', muestra la vista del partner
   return <AdminNotificationsView />;
 }
+
+    

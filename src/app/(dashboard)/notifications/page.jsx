@@ -279,47 +279,65 @@ const SuperAdminNotificationsView = () => {
                         </DialogHeader>
                         
                         <div className="grid gap-6 py-4">
-                            {/* BUSCADOR INTEGRADO (Sin Popover para evitar conflictos) */}
+                            {/* SECCIÓN DEL SOCIO DESTINATARIO CORREGIDA */}
                             <div className="grid gap-2">
                                 <Label className="font-semibold text-primary">Socio Destinatario</Label>
                                 <div className="border rounded-md overflow-hidden bg-slate-50">
                                     <Command className="w-full">
                                         <CommandInput 
-                                            placeholder="Escriba el nombre para buscar..." 
+                                            placeholder="Busca por nombre..." 
                                             className="border-none focus:ring-0"
                                         />
-                                        <CommandList className="max-h-[180px]">
-                                            <CommandEmpty>No se encontraron socios.</CommandEmpty>
-                                            <CommandGroup heading="Lista de Partners">
+                                        <CommandList className="max-h-[150px] border-t">
+                                            <CommandEmpty>No se encontró el socio.</CommandEmpty>
+                                            <CommandGroup>
                                                 {partners?.map((partner) => (
                                                     <CommandItem
                                                         key={partner.id}
                                                         value={partner.name}
-                                                        onSelect={() => {
+                                                        // USAMOS onPointerDown PARA ASEGURAR EL CLIC EN EL MODAL
+                                                        onPointerDown={() => {
                                                             setSelectedPartnerId(partner.id);
-                                                            toast({ title: `Partner: ${partner.name} seleccionado` });
+                                                            toast({ title: `Socio seleccionado: ${partner.name}` });
                                                         }}
-                                                        className="cursor-pointer"
+                                                        className={cn(
+                                                            "cursor-pointer p-2 flex items-center justify-between",
+                                                            selectedPartnerId === partner.id ? "bg-primary/20" : ""
+                                                        )}
                                                     >
-                                                        <Check
-                                                            className={cn(
-                                                                "mr-2 h-4 w-4",
-                                                                selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                                            )}
-                                                        />
-                                                        <div className="flex flex-col">
-                                                            <span>{partner.name}</span>
-                                                            <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                                                        <div className="flex items-center">
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4 text-primary",
+                                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium">{partner.name}</span>
+                                                                <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                                                            </div>
                                                         </div>
+                                                        {selectedPartnerId === partner.id && (
+                                                            <Badge variant="secondary" className="text-[9px] bg-green-100 text-green-700 border-green-200">
+                                                                Seleccionado
+                                                            </Badge>
+                                                        )}
                                                     </CommandItem>
                                                 ))}
                                             </CommandGroup>
                                         </CommandList>
                                     </Command>
                                 </div>
-                                {selectedPartnerId && (
-                                    <p className="text-[10px] text-green-600 font-bold">
-                                        Partner ID: {selectedPartnerId} (Seleccionado ✓)
+                                
+                                {/* CONFIRMACIÓN VISUAL DEBAJO DEL BUSCADOR */}
+                                {selectedPartnerId ? (
+                                    <div className="flex items-center gap-2 p-2 bg-green-50 border border-green-200 rounded text-green-700 text-xs font-bold">
+                                        <Check className="h-3 w-3" />
+                                        Socio listo para recibir el mensaje
+                                    </div>
+                                ) : (
+                                    <p className="text-[10px] text-destructive font-medium italic">
+                                        * Debes hacer clic sobre el nombre del socio para activarlo.
                                     </p>
                                 )}
                             </div>
@@ -350,7 +368,11 @@ const SuperAdminNotificationsView = () => {
 
                         <DialogFooter>
                             <Button type="button" variant="ghost" onClick={() => setIndividualDialogOpen(false)}>Cancelar</Button>
-                            <Button type="submit" disabled={isSending || !selectedPartnerId} className="min-w-[140px]">
+                            <Button 
+                                type="submit" 
+                                disabled={isSending || !selectedPartnerId || !notificationTitle || !notificationMessage} 
+                                className="min-w-[140px]"
+                            >
                                 {isSending ? "Enviando..." : <><Send className="mr-2 h-4 w-4" /> Enviar Ahora</>}
                             </Button>
                         </DialogFooter>

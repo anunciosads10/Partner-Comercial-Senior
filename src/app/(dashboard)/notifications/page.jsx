@@ -336,7 +336,7 @@ const SuperAdminNotificationsView = () => {
                     </DialogHeader>
                     
                     <div className="grid gap-6 py-4">
-                        <div className="grid gap-2">
+                       <div className="grid gap-2">
                             <Label htmlFor="partner" className="font-semibold">Socio Destinatario</Label>
                             <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
                                 <PopoverTrigger asChild>
@@ -356,29 +356,31 @@ const SuperAdminNotificationsView = () => {
                                 <PopoverContent className="w-full p-0">
                                 <Command>
                                     <CommandInput placeholder="Buscar partner..." />
-                                    <CommandEmpty>No se encontró ningún partner.</CommandEmpty>
-                                    <CommandGroup>
-                                    {partners?.map((partner) => (
-                                        <CommandItem
-                                            key={partner.id}
-                                            value={partner.id}
-                                            onSelect={(currentValue) => {
-                                                const partner = partners.find(p => p.id === currentValue);
-                                                setSelectedPartner(partner || null);
-                                                setSelectedPartnerId(partner ? partner.id : "");
-                                                setPopoverOpen(false);
-                                            }}
-                                        >
-                                        <Check
-                                            className={cn(
-                                                "mr-2 h-4 w-4",
-                                                selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                            )}
-                                        />
-                                        {partner.name}
-                                        </CommandItem>
-                                    ))}
-                                    </CommandGroup>
+                                    <CommandList>
+                                        <CommandEmpty>No se encontró ningún partner.</CommandEmpty>
+                                        <CommandGroup>
+                                        {partners?.map((partner) => (
+                                            <CommandItem
+                                                key={partner.id}
+                                                value={partner.name}
+                                                onSelect={() => {
+                                                    const currentPartner = partners.find(p => p.id === partner.id);
+                                                    setSelectedPartner(currentPartner || null);
+                                                    setSelectedPartnerId(partner.id);
+                                                    setPopoverOpen(false);
+                                                }}
+                                            >
+                                            <Check
+                                                className={cn(
+                                                    "mr-2 h-4 w-4",
+                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
+                                                )}
+                                            />
+                                            {partner.name}
+                                            </CommandItem>
+                                        ))}
+                                        </CommandGroup>
+                                    </CommandList>
                                 </Command>
                                 </PopoverContent>
                             </Popover>

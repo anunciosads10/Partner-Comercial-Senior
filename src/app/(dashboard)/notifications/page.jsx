@@ -38,9 +38,8 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@
 import { doc, collection, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from '@/components/ui/textarea';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { Check, ChevronsUpDown } from 'lucide-react';
+import { Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
@@ -92,8 +91,6 @@ const SuperAdminNotificationsView = () => {
     const [notificationTitle, setNotificationTitle] = React.useState("");
     const [notificationMessage, setNotificationMessage] = React.useState("");
     const [isSending, setIsSending] = React.useState(false);
-    const [isPopoverOpen, setPopoverOpen] = React.useState(false);
-
 
     // Obtener partners para el selector
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
@@ -199,12 +196,12 @@ const SuperAdminNotificationsView = () => {
                     <div>
                         <CardTitle className="text-2xl font-bold">Centro de Comunicaciones y Alertas</CardTitle>
                         <CardDescription className="text-base mt-1">
-                            Administra la interacción con tus socios. Automatiza notificaciones por hitos 
-                            o envía mensajes directos y alertas manuales de forma individual.
+                           Administra la interacción con tus socios. Automatiza notificaciones por hitos 
+                           o envía mensajes directos y alertas manuales de forma individual.
                         </CardDescription>
                     </div>
                     <div className="flex items-center gap-3">
-                        <Button variant="outline" onClick={() => setIndividualDialogOpen(true)} className="border-primary text-primary hover:bg-primary/10">
+                         <Button variant="outline" onClick={() => setIndividualDialogOpen(true)} className="border-primary text-primary hover:bg-primary/10">
                             <Send className="mr-2 h-4 w-4" />
                             Enviar Alerta Manual
                         </Button>
@@ -331,56 +328,54 @@ const SuperAdminNotificationsView = () => {
                         
                         <div className="grid gap-6 py-4">
                             <div className="grid gap-2">
-                                <Label htmlFor="partner" className="font-semibold">Socio Destinatario</Label>
-                                 <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={isPopoverOpen}
-                                            className="w-full justify-between"
-                                            disabled={isLoadingPartners}
+                              <Label className="font-semibold">Seleccionar Socio Destinatario</Label>
+                              <div className="border rounded-md p-2 bg-slate-50">
+                                <Command className="rounded-lg border shadow-md">
+                                  {/* 1. EL BUSCADOR: Ahora es directo, no necesita Popover */}
+                                  <CommandInput 
+                                    placeholder="Escribe el nombre del socio..." 
+                                    className="h-9"
+                                    // Forzamos que el foco funcione dentro del Dialog
+                                    onFocus={(e) => e.currentTarget.select()}
+                                  />
+                                  <CommandList className="max-h-[200px] overflow-y-auto">
+                                    <CommandEmpty>No se encontraron socios con ese nombre.</CommandEmpty>
+                                    <CommandGroup heading="Socios disponibles">
+                                      {partners?.map((partner) => (
+                                        <CommandItem
+                                          key={partner.id}
+                                          // Importante: usamos el nombre para que el buscador funcione
+                                          value={partner.name}
+                                          onSelect={() => {
+                                            console.log("ID seleccionado:", partner.id);
+                                            setSelectedPartnerId(partner.id);
+                                          }}
+                                          className="flex items-center justify-between cursor-pointer"
                                         >
-                                            {selectedPartnerId
-                                                ? partners?.find((partner) => partner.id === selectedPartnerId)?.name
-                                                : "Selecciona un partner..."}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[450px] p-0">
-                                       <Command>
-                                            <CommandInput placeholder="Buscar partner..." />
-                                            <CommandList>
-                                                <CommandEmpty>No se encontraron partners.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {partners?.map((partner) => (
-                                                        <CommandItem
-                                                            key={partner.id}
-                                                            value={partner.name}
-                                                            onPointerDown={(e) => {
-                                                                e.preventDefault();
-                                                                e.stopPropagation();
-                                                            }}
-                                                            onSelect={() => {
-                                                                setSelectedPartnerId(partner.id);
-                                                                setPopoverOpen(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {partner.name}
-                                                            <span className="ml-2 text-xs text-muted-foreground">({partner.email})</span>
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
+                                          <div className="flex items-center">
+                                            <Check
+                                              className={cn(
+                                                "mr-2 h-4 w-4",
+                                                selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                            <span>{partner.name}</span>
+                                            <span className="ml-2 text-xs text-muted-foreground">({partner.email})</span>
+                                          </div>
+                                          {selectedPartnerId === partner.id && (
+                                            <Badge variant="outline" className="bg-primary/10 text-primary text-[10px]">Seleccionado</Badge>
+                                          )}
+                                        </CommandItem>
+                                      ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </div>
+                              {selectedPartnerId && (
+                                <p className="text-xs text-green-600 font-medium">
+                                  Socio seleccionado correctamente.
+                                </p>
+                              )}
                             </div>
 
                             <div className="grid gap-2">

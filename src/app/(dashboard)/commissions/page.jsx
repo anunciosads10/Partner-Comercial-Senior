@@ -1,10 +1,13 @@
 'use client';
+import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { commissions as allCommissions } from "@/lib/data";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
+import { Input } from '@/components/ui/input';
+import { Search } from 'lucide-react';
 
 const CommissionsTable = ({ commissions }) => {
   if (!commissions || commissions.length === 0) {
@@ -49,6 +52,7 @@ const CommissionsTable = ({ commissions }) => {
 export default function CommissionsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -63,8 +67,18 @@ export default function CommissionsPage() {
   const commissions = role === 'superadmin' 
     ? allCommissions 
     : allCommissions.filter(c => c.partnerId === uid);
+    
+  const filteredCommissions = React.useMemo(() => {
+    if (!commissions) return [];
+    return commissions.filter(commission =>
+      commission.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      commission.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (commission.status === 'Paid' ? 'pagada' : 'pendiente').includes(searchTerm.toLowerCase())
+    );
+  }, [commissions, searchTerm]);
 
-  const totalEarnings = commissions.reduce((acc, curr) => acc + curr.earning, 0);
+
+  const totalEarnings = filteredCommissions.reduce((acc, curr) => acc + curr.earning, 0);
 
   if (isRoleLoading) {
     return <div>Cargando comisiones...</div>;
@@ -82,17 +96,27 @@ export default function CommissionsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CommissionsTable commissions={commissions} />
+           <div className="mb-4 relative">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                placeholder="Buscar por ID, producto o estado..."
+                className="w-full rounded-lg bg-secondary pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+          <CommissionsTable commissions={filteredCommissions} />
         </CardContent>
       </Card>
       <Card className="w-full md:w-1/3 self-end">
           <CardHeader className="pb-2">
-              <CardDescription>Ganancias Totales</CardDescription>
+              <CardDescription>Ganancias Totales (Filtradas)</CardDescription>
               <CardTitle className="text-4xl">${totalEarnings.toLocaleString()}</CardTitle>
           </CardHeader>
           <CardContent>
               <div className="text-xs text-muted-foreground">
-                  Esta es la suma de todas tus comisiones pagadas y pendientes.
+                  Esta es la suma de las comisiones que coinciden con tu búsqueda.
               </div>
           </CardContent>
       </Card>

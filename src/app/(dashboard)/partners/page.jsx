@@ -94,6 +94,8 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [partnerToEdit, setPartnerToEdit] = React.useState(null);
+  const [openMenuId, setOpenMenuId] = React.useState(null);
+  const [isAlertOpen, setAlertOpen] = React.useState(false);
   const [newPartner, setNewPartner] = React.useState({
     name: '',
     email: '',
@@ -124,8 +126,15 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
   const openEditDialog = (partner) => {
     setPartnerToEdit(partner);
     setEditDialogOpen(true);
+    setOpenMenuId(null);
   };
   
+  const openDeleteAlert = (partner) => {
+    setPartnerToDelete(partner);
+    setAlertOpen(true);
+    setOpenMenuId(null);
+  };
+
   const confirmDeletePartner = async () => {
     if (!firestore || !partnerToDelete) return;
     const partnerRef = doc(firestore, "partners", partnerToDelete.id);
@@ -144,6 +153,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
       });
     } finally {
       setPartnerToDelete(null);
+      setAlertOpen(false);
     }
   };
 
@@ -202,198 +212,197 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
 
   return (
     <>
-      <AlertDialog>
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Gestión de Partners</CardTitle>
-                <CardDescription>Crea, edita, activa y suspende partners.</CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button onClick={onSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
-                <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button>
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      Crear Partner
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-[425px]">
-                    <form onSubmit={handleCreatePartner}>
-                      <DialogHeader>
-                        <DialogTitle>Crear Nuevo Partner</DialogTitle>
-                        <DialogDescription>
-                          Completa los detalles para añadir un nuevo partner al programa.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="name" className="text-right">
-                            Nombre
-                          </Label>
-                          <Input
-                            id="name"
-                            value={newPartner.name}
-                            onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="email" className="text-right">
-                            Email
-                          </Label>
-                          <Input
-                            id="email"
-                            type="email"
-                            value={newPartner.email}
-                            onChange={(e) => setNewPartner({ ...newPartner, email: e.target.value })}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-                         <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="pais" className="text-right">
-                            País
-                          </Label>
-                          <Input
-                            id="pais"
-                            value={newPartner.pais}
-                            onChange={(e) => setNewPartner({ ...newPartner, pais: e.target.value })}
-                            className="col-span-3"
-                            required
-                          />
-                        </div>
-                        <div className="grid grid-cols-4 items-center gap-4">
-                            <Label htmlFor="tier" className="text-right">
-                                Nivel
-                            </Label>
-                             <Select
-                                value={newPartner.tier}
-                                onValueChange={(value) => setNewPartner({ ...newPartner, tier: value })}
-                            >
-                                <SelectTrigger className="col-span-3">
-                                    <SelectValue placeholder="Selecciona un nivel" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="Silver">Silver</SelectItem>
-                                    <SelectItem value="Gold">Gold</SelectItem>
-                                    <SelectItem value="Platinum">Platinum</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Gestión de Partners</CardTitle>
+              <CardDescription>Crea, edita, activa y suspende partners.</CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={onSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
+              <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button>
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Crear Partner
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                  <form onSubmit={handleCreatePartner}>
+                    <DialogHeader>
+                      <DialogTitle>Crear Nuevo Partner</DialogTitle>
+                      <DialogDescription>
+                        Completa los detalles para añadir un nuevo partner al programa.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="name" className="text-right">
+                          Nombre
+                        </Label>
+                        <Input
+                          id="name"
+                          value={newPartner.name}
+                          onChange={(e) => setNewPartner({ ...newPartner, name: e.target.value })}
+                          className="col-span-3"
+                          required
+                        />
                       </div>
-                      <DialogFooter>
-                        <DialogClose asChild>
-                          <Button type="button" variant="secondary">
-                            Cancelar
-                          </Button>
-                        </DialogClose>
-                        <Button type="submit">Guardar Partner</Button>
-                      </DialogFooter>
-                    </form>
-                  </DialogContent>
-                </Dialog>
-              </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="email" className="text-right">
+                          Email
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newPartner.email}
+                          onChange={(e) => setNewPartner({ ...newPartner, email: e.target.value })}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                       <div className="grid grid-cols-4 items-center gap-4">
+                        <Label htmlFor="pais" className="text-right">
+                          País
+                        </Label>
+                        <Input
+                          id="pais"
+                          value={newPartner.pais}
+                          onChange={(e) => setNewPartner({ ...newPartner, pais: e.target.value })}
+                          className="col-span-3"
+                          required
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                          <Label htmlFor="tier" className="text-right">
+                              Nivel
+                          </Label>
+                           <Select
+                              value={newPartner.tier}
+                              onValueChange={(value) => setNewPartner({ ...newPartner, tier: value })}
+                          >
+                              <SelectTrigger className="col-span-3">
+                                  <SelectValue placeholder="Selecciona un nivel" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                  <SelectItem value="Silver">Silver</SelectItem>
+                                  <SelectItem value="Gold">Gold</SelectItem>
+                                  <SelectItem value="Platinum">Platinum</SelectItem>
+                              </SelectContent>
+                          </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <DialogClose asChild>
+                        <Button type="button" variant="secondary">
+                          Cancelar
+                        </Button>
+                      </DialogClose>
+                      <Button type="submit">Guardar Partner</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="mb-4 relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Buscar por nombre, email o país..."
-                className="w-full rounded-lg bg-secondary pl-8"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            {isLoading ? <p>Cargando partners...</p> : (
-              <>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Partner</TableHead>
-                      <TableHead>Nivel</TableHead>
-                      <TableHead>País</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>
-                        <span className="sr-only">Acciones</span>
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {partners?.map((partner) => (
-                      <TableRow key={partner.id}>
-                        <TableCell>
-                          <div className="flex items-center gap-4">
-                            <Avatar className="h-9 w-9">
-                              <AvatarImage src={partner.avatarUrl} alt={partner.name} />
-                              <AvatarFallback>{partner.name?.slice(0, 2)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">{partner.name}</div>
-                              <div className="text-sm text-muted-foreground">
-                                {partner.email}
-                              </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4 relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Buscar por nombre, email o país..."
+              className="w-full rounded-lg bg-secondary pl-8"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {isLoading ? <p>Cargando partners...</p> : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Partner</TableHead>
+                    <TableHead>Nivel</TableHead>
+                    <TableHead>País</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>
+                      <span className="sr-only">Acciones</span>
+                    </TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {partners?.map((partner) => (
+                    <TableRow key={partner.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-4">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={partner.avatarUrl} alt={partner.name} />
+                            <AvatarFallback>{partner.name?.slice(0, 2)}</AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <div className="font-medium">{partner.name}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {partner.email}
                             </div>
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={getTierBadgeVariant(partner.tier)}>
-                            {partner.tier}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{partner.pais}</TableCell>
-                        <TableCell>
-                          <Badge variant={getStatusBadgeVariant(partner.status)}>
-                            {partner.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button aria-haspopup="true" size="icon" variant="ghost">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Toggle menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                              <DropdownMenuItem onSelect={() => openEditDialog(partner)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Editar Perfil
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
-                                {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
-                              </DropdownMenuItem>
-                              <DropdownMenuSeparator />
-                               <AlertDialogTrigger asChild>
-                                  <DropdownMenuItem className="text-destructive" onSelect={() => setPartnerToDelete(partner)}>
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Eliminar
-                                  </DropdownMenuItem>
-                              </AlertDialogTrigger>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {partners?.length === 0 && (
-                  <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
-                    <p className="text-muted-foreground">{searchTerm ? 'No se encontraron partners.' : 'No hay partners en la base de datos.'}</p>
-                  </div>
-                )}
-              </>
-            )}
-          </CardContent>
-        </Card>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={getTierBadgeVariant(partner.tier)}>
+                          {partner.tier}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{partner.pais}</TableCell>
+                      <TableCell>
+                        <Badge variant={getStatusBadgeVariant(partner.status)}>
+                          {partner.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <DropdownMenu open={openMenuId === partner.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? partner.id : null)}>
+                          <DropdownMenuTrigger asChild>
+                            <Button aria-haspopup="true" size="icon" variant="ghost">
+                              <MoreHorizontal className="h-4 w-4" />
+                              <span className="sr-only">Toggle menu</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                            <DropdownMenuItem onSelect={() => openEditDialog(partner)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Editar Perfil
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
+                              {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteAlert(partner)}>
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Eliminar
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              {partners?.length === 0 && (
+                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg bg-secondary mt-4">
+                  <p className="text-muted-foreground">{searchTerm ? 'No se encontraron partners.' : 'No hay partners en la base de datos.'}</p>
+                </div>
+              )}
+            </>
+          )}
+        </CardContent>
+      </Card>
+      
+      <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente al partner
               <span className="font-bold"> {partnerToDelete?.name}</span> y borrará sus datos de nuestros servidores.

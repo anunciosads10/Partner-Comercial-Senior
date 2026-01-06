@@ -47,7 +47,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -92,6 +92,8 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
   const { toast } = useToast();
   const [partnerToDelete, setPartnerToDelete] = React.useState(null);
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
+  const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [partnerToEdit, setPartnerToEdit] = React.useState(null);
   const [newPartner, setNewPartner] = React.useState({
     name: '',
     email: '',
@@ -118,27 +120,10 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
       });
     }
   };
-
-  const handleCycleTier = async (partner) => {
-    if (!firestore || !partner) return;
-    const partnerRef = doc(firestore, "partners", partner.id);
-    const tiers = ['Silver', 'Gold', 'Platinum'];
-    const currentTierIndex = tiers.indexOf(partner.tier);
-    const nextTier = tiers[(currentTierIndex + 1) % tiers.length];
-    try {
-      await updateDoc(partnerRef, { tier: nextTier });
-      toast({
-        title: "Nivel del Partner Actualizado",
-        description: `${partner.name} ahora es nivel ${nextTier}.`,
-      });
-    } catch (error) {
-      console.error("Error al actualizar el nivel del partner:", error);
-      toast({
-        variant: "destructive",
-        title: "Error al editar",
-        description: "No se pudo cambiar el nivel del partner.",
-      });
-    }
+  
+  const openEditDialog = (partner) => {
+    setPartnerToEdit(partner);
+    setEditDialogOpen(true);
   };
   
   const confirmDeletePartner = async () => {
@@ -189,7 +174,30 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
             description: "No se pudo crear el nuevo partner.",
         });
     }
-};
+  };
+
+  const handleUpdatePartner = async (e) => {
+    e.preventDefault();
+    if (!firestore || !partnerToEdit) return;
+    
+    const partnerRef = doc(firestore, "partners", partnerToEdit.id);
+    try {
+      await updateDoc(partnerRef, partnerToEdit);
+      toast({
+        title: "Partner Actualizado",
+        description: `Los datos de ${partnerToEdit.name} han sido actualizados.`,
+      });
+      setEditDialogOpen(false);
+      setPartnerToEdit(null);
+    } catch (error) {
+      console.error("Error al actualizar el partner:", error);
+      toast({
+        variant: "destructive",
+        title: "Error al actualizar",
+        description: "No se pudo guardar los cambios del partner.",
+      });
+    }
+  };
 
 
   return (
@@ -353,7 +361,10 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                              <DropdownMenuItem onSelect={() => handleCycleTier(partner)}>Editar (Cambiar Nivel)</DropdownMenuItem>
+                              <DropdownMenuItem onSelect={() => openEditDialog(partner)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Editar Perfil
+                              </DropdownMenuItem>
                               <DropdownMenuItem onSelect={() => handleToggleSuspend(partner)}>
                                 {partner.status === 'Active' ? 'Suspender' : 'Reactivar'}
                               </DropdownMenuItem>
@@ -396,6 +407,85 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* DIÁLOGO PARA EDITAR */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          {partnerToEdit && (
+            <form onSubmit={handleUpdatePartner}>
+              <DialogHeader>
+                <DialogTitle>Editar Partner</DialogTitle>
+                <DialogDescription>
+                  Actualiza los datos del partner. Haz clic en guardar cuando termines.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-name" className="text-right">
+                    Nombre
+                  </Label>
+                  <Input
+                    id="edit-name"
+                    value={partnerToEdit.name}
+                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, name: e.target.value })}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-email" className="text-right">
+                    Email
+                  </Label>
+                  <Input
+                    id="edit-email"
+                    type="email"
+                    value={partnerToEdit.email}
+                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, email: e.target.value })}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                  <Label htmlFor="edit-pais" className="text-right">
+                    País
+                  </Label>
+                  <Input
+                    id="edit-pais"
+                    value={partnerToEdit.pais}
+                    onChange={(e) => setPartnerToEdit({ ...partnerToEdit, pais: e.target.value })}
+                    className="col-span-3"
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="edit-tier" className="text-right">
+                        Nivel
+                    </Label>
+                      <Select
+                        value={partnerToEdit.tier}
+                        onValueChange={(value) => setPartnerToEdit({ ...partnerToEdit, tier: value })}
+                    >
+                        <SelectTrigger className="col-span-3">
+                            <SelectValue placeholder="Selecciona un nivel" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Silver">Silver</SelectItem>
+                            <SelectItem value="Gold">Gold</SelectItem>
+                            <SelectItem value="Platinum">Platinum</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="button" variant="secondary" onClick={() => setEditDialogOpen(false)}>
+                  Cancelar
+                </Button>
+                <Button type="submit">Guardar Cambios</Button>
+              </DialogFooter>
+            </form>
+          )}
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
@@ -525,5 +615,3 @@ export default function PartnersPage() {
 
   return null; // O un mensaje de 'Acceso no autorizado'
 }
-
-    

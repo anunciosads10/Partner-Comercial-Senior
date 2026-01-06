@@ -7,7 +7,7 @@ export const partners = [
     id: 'p-001',
     name: 'Innovate Inc.',
     tier: 'Platinum',
-    territory: 'North America',
+    pais: 'Estados Unidos',
     status: 'Active',
     totalSales: 150000,
     revenue: 75000,
@@ -19,7 +19,7 @@ export const partners = [
     id: 'p-002',
     name: 'Solutions LLC',
     tier: 'Gold',
-    territory: 'Europe',
+    pais: 'Reino Unido',
     status: 'Active',
     totalSales: 120000,
     revenue: 60000,
@@ -31,7 +31,7 @@ export const partners = [
     id: 'p-003',
     name: 'Tech Gurus',
     tier: 'Gold',
-    territory: 'Asia',
+    pais: 'Japón',
     status: 'Active',
     totalSales: 110000,
     revenue: 55000,
@@ -43,7 +43,7 @@ export const partners = [
     id: 'p-004',
     name: 'Apex Traders',
     tier: 'Silver',
-    territory: 'North America',
+    pais: 'Canadá',
     status: 'Suspended',
     totalSales: 50000,
     revenue: 25000,
@@ -55,7 +55,7 @@ export const partners = [
     id: 'p-005',
     name: 'Synergy Corp',
     tier: 'Silver',
-    territory: 'South America',
+    pais: 'Brasil',
     status: 'Active',
     totalSales: 80000,
     revenue: 40000,
@@ -67,7 +67,7 @@ export const partners = [
     id: 'p-006',
     name: 'Growth Partners',
     tier: 'Bronze',
-    territory: 'Europe',
+    pais: 'Alemania',
     status: 'Inactive',
     totalSales: 25000,
     revenue: 12500,
@@ -94,3 +94,5 @@ export const salesData = [
 
 export const commissions = mockCommissions;
 export const payments = mockPayments;
+
+    

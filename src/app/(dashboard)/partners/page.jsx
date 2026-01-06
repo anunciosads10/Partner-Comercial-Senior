@@ -96,7 +96,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
     name: '',
     email: '',
     tier: 'Silver',
-    territory: ''
+    pais: ''
   });
 
   const handleToggleSuspend = async (partner) => {
@@ -180,7 +180,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
             description: `El partner ${newPartner.name} ha sido añadido exitosamente.`,
         });
         setCreateDialogOpen(false); // Cierra el diálogo
-        setNewPartner({ name: '', email: '', tier: 'Silver', territory: '' }); // Resetea el formulario
+        setNewPartner({ name: '', email: '', tier: 'Silver', pais: '' }); // Resetea el formulario
     } catch (error) {
         console.error("Error al crear el partner:", error);
         toast({
@@ -246,13 +246,13 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                           />
                         </div>
                          <div className="grid grid-cols-4 items-center gap-4">
-                          <Label htmlFor="territory" className="text-right">
-                            Territorio
+                          <Label htmlFor="pais" className="text-right">
+                            País
                           </Label>
                           <Input
-                            id="territory"
-                            value={newPartner.territory}
-                            onChange={(e) => setNewPartner({ ...newPartner, territory: e.target.value })}
+                            id="pais"
+                            value={newPartner.pais}
+                            onChange={(e) => setNewPartner({ ...newPartner, pais: e.target.value })}
                             className="col-span-3"
                             required
                           />
@@ -295,7 +295,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar por nombre, email o territorio..."
+                placeholder="Buscar por nombre, email o país..."
                 className="w-full rounded-lg bg-secondary pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -308,7 +308,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                     <TableRow>
                       <TableHead>Partner</TableHead>
                       <TableHead>Nivel</TableHead>
-                      <TableHead>Territorio</TableHead>
+                      <TableHead>País</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>
                         <span className="sr-only">Acciones</span>
@@ -337,7 +337,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                             {partner.tier}
                           </Badge>
                         </TableCell>
-                        <TableCell>{partner.territory}</TableCell>
+                        <TableCell>{partner.pais}</TableCell>
                         <TableCell>
                           <Badge variant={getStatusBadgeVariant(partner.status)}>
                             {partner.status}
@@ -446,7 +446,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
           </div>
           <div className="flex items-center gap-2">
             <Globe className="text-muted-foreground" />
-            <span>Territorio: {partnerData.territory}</span>
+            <span>País: {partnerData.pais}</span>
           </div>
           <div className="flex items-center gap-2">
             <Calendar className="text-muted-foreground" />
@@ -485,7 +485,7 @@ export default function PartnersPage() {
     return partners.filter(partner =>
         partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         partner.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partner.territory.toLowerCase().includes(searchTerm.toLowerCase())
+        (partner.pais && partner.pais.toLowerCase().includes(searchTerm.toLowerCase()))
     );
   }, [partners, searchTerm]);
 
@@ -525,3 +525,5 @@ export default function PartnersPage() {
 
   return null; // O un mensaje de 'Acceso no autorizado'
 }
+
+    

@@ -80,7 +80,7 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
       email: user.email,
       tier: 'Silver',
       status: 'Active',
-      territory: 'Sin asignar',
+      pais: 'Sin asignar',
       joinDate: new Date().toISOString(),
       totalSales: 0,
       revenue: 0,
@@ -202,3 +202,5 @@ export default function DashboardPage() {
     </div>
   );
 }
+
+    

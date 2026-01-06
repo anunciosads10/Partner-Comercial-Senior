@@ -426,7 +426,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                   </Label>
                   <Input
                     id="edit-name"
-                    value={partnerToEdit.name}
+                    value={partnerToEdit.name || ''}
                     onChange={(e) => setPartnerToEdit({ ...partnerToEdit, name: e.target.value })}
                     className="col-span-3"
                     required
@@ -439,7 +439,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                   <Input
                     id="edit-email"
                     type="email"
-                    value={partnerToEdit.email}
+                    value={partnerToEdit.email || ''}
                     onChange={(e) => setPartnerToEdit({ ...partnerToEdit, email: e.target.value })}
                     className="col-span-3"
                     required
@@ -451,7 +451,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                   </Label>
                   <Input
                     id="edit-pais"
-                    value={partnerToEdit.pais}
+                    value={partnerToEdit.pais || ''}
                     onChange={(e) => setPartnerToEdit({ ...partnerToEdit, pais: e.target.value })}
                     className="col-span-3"
                     required
@@ -462,7 +462,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
                         Nivel
                     </Label>
                       <Select
-                        value={partnerToEdit.tier}
+                        value={partnerToEdit.tier || 'Silver'}
                         onValueChange={(value) => setPartnerToEdit({ ...partnerToEdit, tier: value })}
                     >
                         <SelectTrigger className="col-span-3">

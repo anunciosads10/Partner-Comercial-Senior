@@ -272,7 +272,7 @@ const SuperAdminNotificationsView = () => {
                             </div>
                         </div>
                         <DialogFooter>
-                            <DialogClose asChild><Button type="button" variant="secondary">Cancelar</Button></DialogClose>
+                            <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>Cancelar</Button>
                             <Button type="submit">Guardar</Button>
                         </DialogFooter>
                     </form>

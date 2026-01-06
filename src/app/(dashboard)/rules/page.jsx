@@ -235,7 +235,7 @@ const SuperAdminRulesView = () => {
                 </AlertDialogContent>
             </AlertDialog>
 
-        </Card>>
+        </Card>
     );
 };
 

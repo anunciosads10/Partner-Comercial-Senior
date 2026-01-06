@@ -6,7 +6,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
-import { GitFork, User } from 'lucide-react';
+import { GitFork, Search } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 
 function getTierBadgeVariant(tier) {
   switch (tier) {
@@ -53,6 +54,7 @@ const PartnerNode = ({ partner }) => {
 
 export default function HierarchyPage() {
   const firestore = useFirestore();
+  const [searchTerm, setSearchTerm] = React.useState('');
 
   const partnersCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -82,6 +84,32 @@ export default function HierarchyPage() {
     return rootPartners;
   }, [partners]);
 
+  const filteredHierarchy = React.useMemo(() => {
+    if (!searchTerm) {
+      return hierarchy;
+    }
+
+    const lowerCaseSearch = searchTerm.toLowerCase();
+
+    function filterTree(nodes) {
+      const result = [];
+      for (const node of nodes) {
+        const children = node.children ? filterTree(node.children) : [];
+        
+        const selfMatches = node.name.toLowerCase().includes(lowerCaseSearch) || 
+                            node.email.toLowerCase().includes(lowerCaseSearch);
+
+        if (selfMatches || children.length > 0) {
+          result.push({ ...node, children });
+        }
+      }
+      return result;
+    }
+
+    return filterTree(hierarchy);
+  }, [hierarchy, searchTerm]);
+
+
   return (
     <Card>
       <CardHeader>
@@ -89,21 +117,33 @@ export default function HierarchyPage() {
         <CardDescription>
           Visualiza la estructura de partners y sus relaciones de sub-partners.
         </CardDescription>
+         <div className="mt-4 relative">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Buscar por nombre o email..."
+            className="w-full rounded-lg bg-secondary pl-8"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading && <p>Cargando jerarquía...</p>}
-        {!isLoading && hierarchy.length === 0 && (
+        {!isLoading && filteredHierarchy.length === 0 && (
           <div className="flex items-center justify-center h-96 border-2 border-dashed rounded-lg bg-secondary">
             <div className="text-center">
               <GitFork className="mx-auto h-12 w-12 text-muted-foreground" />
-              <p className="mt-4 text-muted-foreground">No hay datos de jerarquía para mostrar.</p>
+              <p className="mt-4 text-muted-foreground">
+                {searchTerm ? 'No se encontraron partners que coincidan con la búsqueda.' : 'No hay datos de jerarquía para mostrar.'}
+              </p>
               <p className="text-xs text-muted-foreground">Añade partners con el campo 'parentId' para construir el árbol.</p>
             </div>
           </div>
         )}
-        {!isLoading && hierarchy.length > 0 && (
+        {!isLoading && filteredHierarchy.length > 0 && (
           <div className="space-y-4">
-            {hierarchy.map(rootPartner => (
+            {filteredHierarchy.map(rootPartner => (
               <PartnerNode key={rootPartner.id} partner={rootPartner} />
             ))}
           </div>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { MoreHorizontal, PlusCircle, BellRing, Eye, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, PlusCircle, BellRing, Eye, Trash2, Edit, Send } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,9 +34,14 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { Textarea } from '@/components/ui/textarea';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 
 // --- Datos de ejemplo para las reglas de notificación (para SuperAdmin) ---
@@ -99,12 +104,28 @@ const getStatusBadgeVariant = (status) => {
 // ======================= VISTA PARA SUPERADMIN =======================
 const SuperAdminNotificationsView = () => {
     const { toast } = useToast();
+    const firestore = useFirestore();
     const [rules, setRules] = React.useState(mockNotificationRules);
-    const [isDialogOpen, setDialogOpen] = React.useState(false);
+    
+    // Estados para diálogos y menús
+    const [isRuleDialogOpen, setRuleDialogOpen] = React.useState(false);
+    const [isIndividualDialogOpen, setIndividualDialogOpen] = React.useState(false);
     const [isAlertOpen, setAlertOpen] = React.useState(false);
     const [currentRule, setCurrentRule] = React.useState(null);
     const [ruleToDelete, setRuleToDelete] = React.useState(null);
     const [openMenuId, setOpenMenuId] = React.useState(null);
+
+    // Estados para el formulario de notificación individual
+    const [selectedPartnerId, setSelectedPartnerId] = React.useState("");
+    const [notificationTitle, setNotificationTitle] = React.useState("");
+    const [notificationMessage, setNotificationMessage] = React.useState("");
+    const [isSending, setIsSending] = React.useState(false);
+    const [isPopoverOpen, setPopoverOpen] = React.useState(false);
+
+
+    // Obtener partners para el selector
+    const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
+    const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
 
 
     const handleStatusChange = (ruleId) => {
@@ -118,14 +139,14 @@ const SuperAdminNotificationsView = () => {
         toast({ title: "Estado de la regla actualizado." });
     };
 
-    const openNewDialog = () => {
+    const openNewRuleDialog = () => {
         setCurrentRule(null);
-        setDialogOpen(true);
+        setRuleDialogOpen(true);
     };
 
     const openEditDialog = (rule) => {
         setCurrentRule(rule);
-        setDialogOpen(true);
+        setRuleDialogOpen(true);
         setOpenMenuId(null);
     };
 
@@ -145,16 +166,14 @@ const SuperAdminNotificationsView = () => {
         };
 
         if (currentRule) {
-            // Editar
             setRules(rules.map(r => r.id === currentRule.id ? { ...currentRule, ...ruleData } : r));
             toast({ title: "Regla Actualizada", description: "La regla de notificación ha sido modificada." });
         } else {
-            // Crear
             const newRule = { ...ruleData, id: `rule-${Date.now()}`, status: 'inactive' };
             setRules([...rules, newRule]);
             toast({ title: "Regla Creada", description: "La nueva regla de notificación ha sido añadida." });
         }
-        setDialogOpen(false);
+        setRuleDialogOpen(false);
         setCurrentRule(null);
     };
     
@@ -166,20 +185,61 @@ const SuperAdminNotificationsView = () => {
         setRuleToDelete(null);
     };
 
+    const handleSendIndividualNotification = async (e) => {
+        e.preventDefault();
+        if (!firestore || !selectedPartnerId || !notificationTitle || !notificationMessage) {
+            toast({ variant: "destructive", title: "Error", description: "Por favor, completa todos los campos." });
+            return;
+        }
+
+        setIsSending(true);
+        try {
+            const notificationRef = collection(firestore, 'partners', selectedPartnerId, 'notifications');
+            await addDoc(notificationRef, {
+                partnerId: selectedPartnerId,
+                type: 'Individual',
+                title: notificationTitle,
+                message: notificationMessage,
+                timestamp: new Date().toISOString(),
+                isRead: false,
+            });
+
+            toast({ title: "Notificación Enviada", description: "El mensaje ha sido enviado al partner." });
+            setIndividualDialogOpen(false);
+            // Resetear formulario
+            setSelectedPartnerId("");
+            setNotificationTitle("");
+            setNotificationMessage("");
+
+        } catch (error) {
+            console.error("Error al enviar notificación individual:", error);
+            toast({ variant: "destructive", title: "Error", description: "No se pudo enviar la notificación." });
+        } finally {
+            setIsSending(false);
+        }
+    };
+
+
     return (
         <Card>
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle>Notificaciones Automáticas</CardTitle>
+                        <CardTitle>Gestión de Comunicaciones</CardTitle>
                         <CardDescription>
-                            Configura alertas y notificaciones automáticas para mantener a los partners informados y comprometidos.
+                            Configura reglas de envío automático o envía alertas y mensajes personalizados de forma individual a tus partners.
                         </CardDescription>
                     </div>
-                    <Button onClick={openNewDialog}>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Crear Nueva Regla
-                    </Button>
+                     <div className="flex items-center gap-2">
+                        <Button variant="outline" onClick={() => setIndividualDialogOpen(true)}>
+                            <Send className="mr-2 h-4 w-4" />
+                            Notificación Individual
+                        </Button>
+                        <Button onClick={openNewRuleDialog}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Crear Nueva Regla
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
@@ -249,10 +309,10 @@ const SuperAdminNotificationsView = () => {
                 )}
             </CardContent>
 
-            {/* Diálogo para Crear/Editar */}
-            <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="sm:max-w-[425px]">
-                    <form onSubmit={handleSaveRule}>
+            {/* Diálogo para Crear/Editar Reglas */}
+            <Dialog open={isRuleDialogOpen} onOpenChange={setRuleDialogOpen}>
+                 <form onSubmit={handleSaveRule}>
+                    <DialogContent className="sm:max-w-[425px]">
                         <DialogHeader>
                             <DialogTitle>{currentRule ? 'Editar Regla' : 'Crear Nueva Regla'}</DialogTitle>
                             <DialogDescription>
@@ -274,11 +334,88 @@ const SuperAdminNotificationsView = () => {
                             </div>
                         </div>
                         <DialogFooter>
-                            <Button type="button" variant="secondary" onClick={() => setDialogOpen(false)}>Cancelar</Button>
+                            <Button type="button" variant="secondary" onClick={() => setRuleDialogOpen(false)}>Cancelar</Button>
                             <Button type="submit">Guardar</Button>
                         </DialogFooter>
-                    </form>
-                </DialogContent>
+                    </DialogContent>
+                </form>
+            </Dialog>
+
+            {/* Diálogo para Enviar Notificación Individual */}
+            <Dialog open={isIndividualDialogOpen} onOpenChange={setIndividualDialogOpen}>
+                <form onSubmit={handleSendIndividualNotification}>
+                    <DialogContent className="sm:max-w-[525px]">
+                        <DialogHeader>
+                            <DialogTitle>Enviar Notificación Individual</DialogTitle>
+                            <DialogDescription>
+                                Selecciona un partner y redacta el mensaje que deseas enviar.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                                <Label htmlFor="partner">Partner</Label>
+                                <Popover open={isPopoverOpen} onOpenChange={setPopoverOpen}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={isPopoverOpen}
+                                            className="w-full justify-between"
+                                            disabled={isLoadingPartners}
+                                        >
+                                            {selectedPartnerId
+                                                ? partners?.find((partner) => partner.id === selectedPartnerId)?.name
+                                                : "Selecciona un partner..."}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[450px] p-0">
+                                        <Command>
+                                            <CommandInput placeholder="Buscar partner..." />
+                                            <CommandList>
+                                                <CommandEmpty>No se encontraron partners.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {partners?.map((partner) => (
+                                                        <CommandItem
+                                                            key={partner.id}
+                                                            value={partner.id}
+                                                            onSelect={(currentValue) => {
+                                                                setSelectedPartnerId(currentValue === selectedPartnerId ? "" : currentValue)
+                                                                setPopoverOpen(false)
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    selectedPartnerId === partner.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {partner.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            </div>
+                            <div className="grid gap-2">
+                                <Label htmlFor="title">Título del Mensaje</Label>
+                                <Input id="title" value={notificationTitle} onChange={(e) => setNotificationTitle(e.target.value)} required />
+                            </div>
+                             <div className="grid gap-2">
+                                <Label htmlFor="message">Mensaje</Label>
+                                <Textarea id="message" value={notificationMessage} onChange={(e) => setNotificationMessage(e.target.value)} required rows={4}/>
+                            </div>
+                        </div>
+                        <DialogFooter>
+                            <Button type="button" variant="secondary" onClick={() => setIndividualDialogOpen(false)}>Cancelar</Button>
+                            <Button type="submit" disabled={isSending}>
+                                {isSending ? 'Enviando...' : 'Enviar Mensaje'}
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </form>
             </Dialog>
 
             {/* Alerta para Eliminar */}
@@ -303,18 +440,40 @@ const SuperAdminNotificationsView = () => {
 
 // ======================= VISTA PARA ADMIN (PARTNER) =======================
 const AdminNotificationsView = () => {
-    const [notifications, setNotifications] = React.useState(mockReceivedNotifications);
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const notificationsCollection = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return collection(firestore, `partners/${user.uid}/notifications`);
+    }, [firestore, user]);
+    
+    const { data: notifications, isLoading } = useCollection(notificationsCollection);
+
+    const [displayedNotifications, setDisplayedNotifications] = React.useState([]);
+
+     React.useEffect(() => {
+        if (notifications) {
+            // Ordenar por timestamp descendente
+            const sorted = [...notifications].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            setDisplayedNotifications(sorted);
+        }
+    }, [notifications]);
+
 
     const handleMarkAsRead = (notifId) => {
-        setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
+        // En una implementación real, esto actualizaría el documento en Firestore
+        setDisplayedNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
     };
 
      const handleMarkAllAsRead = () => {
-        setNotifications(prev => prev.map(n => ({...n, isRead: true })));
+        // En una implementación real, esto actualizaría todos los documentos en Firestore
+        setDisplayedNotifications(prev => prev.map(n => ({...n, isRead: true })));
     };
 
     const handleDeleteAll = () => {
-        setNotifications([]);
+         // En una implementación real, esto eliminaría los documentos en Firestore
+        setDisplayedNotifications([]);
     };
     
     return (
@@ -341,16 +500,18 @@ const AdminNotificationsView = () => {
             </CardHeader>
             <CardContent>
                 <div className="space-y-4">
-                 {notifications.length === 0 ? (
+                 {isLoading ? (
+                    <p>Cargando notificaciones...</p>
+                 ) : displayedNotifications.length === 0 ? (
                      <div className="flex flex-col items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
                         <BellRing className="h-12 w-12 text-muted-foreground" />
                         <p className="mt-4 text-muted-foreground">Tu bandeja de entrada está vacía.</p>
                     </div>
                  ) : (
-                    notifications.map(notif => (
+                    displayedNotifications.map(notif => (
                         <div key={notif.id} className={`p-4 rounded-lg flex items-start gap-4 transition-colors ${notif.isRead ? 'bg-secondary' : 'bg-card border'}`}>
                             {!notif.isRead && <div className="h-2 w-2 mt-1.5 rounded-full bg-primary animate-pulse" />}
-                            <div className="flex-grow ml-2">
+                            <div className={`flex-grow ${!notif.isRead ? 'ml-2' : 'ml-4'}`}>
                                 <p className={`font-semibold ${notif.isRead ? 'text-muted-foreground' : ''}`}>{notif.title}</p>
                                 <p className="text-sm text-muted-foreground">{notif.message}</p>
                                 <p className="text-xs text-muted-foreground mt-2">{new Date(notif.timestamp).toLocaleString()}</p>

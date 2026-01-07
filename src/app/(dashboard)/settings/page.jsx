@@ -175,6 +175,35 @@ const paymentOptions = [
   { id: 'cod', name: 'Pago contra entrega' },
 ];
 
+const NequiConfigPanel = () => {
+  const { toast } = useToast();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configuración Nequi</CardTitle>
+        <CardDescription>Ajusta los detalles para recibir pagos a través de Nequi.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="nequi-holder-name">Nombre del titular</Label>
+          <Input id="nequi-holder-name" placeholder="Ej: Alex Rojas" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="nequi-phone">Número de celular</Label>
+          <Input id="nequi-phone" placeholder="Ej: 3001234567" />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+            <CheckCircle className="h-4 w-4"/>
+            <span>Configurado correctamente</span>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={() => toast({ title: "Configuración guardada", description: "Tus datos de Nequi se han actualizado."})}>Guardar configuración Nequi</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 const BreBConfigPanel = () => {
   const { toast } = useToast();
   return (
@@ -264,9 +293,9 @@ const PaymentSettings = () => {
                     </div>
 
                     <div className="col-span-2">
-                        {activeOption === 'bre-b' ? (
-                            <BreBConfigPanel />
-                        ) : (
+                        {activeOption === 'nequi' && <NequiConfigPanel />}
+                        {activeOption === 'bre-b' && <BreBConfigPanel />}
+                        {activeOption !== 'nequi' && activeOption !== 'bre-b' && (
                             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
                                 <div className="text-center text-muted-foreground">
                                     <p>Selecciona una opción de pago para configurarla.</p>

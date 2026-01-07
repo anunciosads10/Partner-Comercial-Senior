@@ -333,6 +333,14 @@
         "baseCommission": {
           "type": "number",
           "description": "The suggested base commission rate for new affiliations."
+        },
+        "firstSubscriptionCommission": {
+          "type": "number",
+          "description": "The commission percentage for the first subscription of a client."
+        },
+        "recurringCommission": {
+          "type": "number",
+          "description": "The commission percentage for recurring subscriptions from the second one onwards."
         }
       },
       "required": [

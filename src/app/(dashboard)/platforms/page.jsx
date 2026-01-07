@@ -99,6 +99,8 @@ const PlatformsPage = () => {
       category: formData.get('category'),
       description: formData.get('description'),
       status: formData.get('status'),
+      firstSubscriptionCommission: Number(formData.get('firstSubscriptionCommission')) || 0,
+      recurringCommission: Number(formData.get('recurringCommission')) || 0,
     };
 
     try {
@@ -247,6 +249,22 @@ const PlatformsPage = () => {
                   </SelectContent>
                 </Select>
               </div>
+
+               <div className="border-t pt-4 mt-2 space-y-4">
+                  <h4 className="font-semibold text-foreground">Configuración de Comisiones del Partner</h4>
+                   <div className="grid gap-2">
+                      <Label htmlFor="firstSubscriptionCommission">Comisión por primera suscripción (%)</Label>
+                      <Input id="firstSubscriptionCommission" name="firstSubscriptionCommission" type="number" defaultValue={currentPlatform?.firstSubscriptionCommission || 80} required />
+                      <p className="text-xs text-muted-foreground">El partner recibe esta comisión una sola vez, cuando el cliente se suscribe por primera vez.</p>
+                  </div>
+
+                   <div className="grid gap-2">
+                      <Label htmlFor="recurringCommission">Comisión recurrente (%)</Label>
+                      <Input id="recurringCommission" name="recurringCommission" type="number" defaultValue={currentPlatform?.recurringCommission || 30} required />
+                       <p className="text-xs text-muted-foreground">Comisión que el partner recibe en cada renovación, desde la segunda suscripción en adelante.</p>
+                  </div>
+              </div>
+
             </div>
             <DialogFooter>
               <DialogClose asChild>

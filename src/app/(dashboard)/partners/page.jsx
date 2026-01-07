@@ -716,6 +716,66 @@ const RequestAffiliationForm = ({ onFinished, toast }) => {
   );
 };
 
+const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
+  if (!affiliation) return null;
+  return (
+    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Detalles de la Afiliación</DialogTitle>
+          <DialogDescription>
+            Información detallada sobre tu afiliación a la plataforma {affiliation.platform}.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4 text-sm">
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label className="text-muted-foreground">Plataforma</Label>
+            <span className="col-span-2 font-medium">{affiliation.platform}</span>
+          </div>
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label className="text-muted-foreground">Tipo de Afiliación</Label>
+            <span className="col-span-2">{affiliation.type}</span>
+          </div>
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label className="text-muted-foreground">Tasa de Comisión</Label>
+            <span className="col-span-2 font-bold text-primary">{affiliation.commission}</span>
+          </div>
+          <div className="grid grid-cols-3 items-center gap-4">
+            <Label className="text-muted-foreground">Estado</Label>
+            <div className="col-span-2">
+              <Badge variant={getStatusBadgeVariant(affiliation.status)}>{affiliation.status}</Badge>
+            </div>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+};
+
+const CancelAffiliationDialog = ({ affiliation, isOpen, onOpenChange, onConfirm }) => {
+  if (!affiliation) return null;
+  return (
+    <AlertDialog open={isOpen} onOpenChange={onOpenChange}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>¿Estás seguro de cancelar la afiliación?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Esta acción no se puede deshacer. Perderás la capacidad de generar comisiones de la plataforma 
+            <span className="font-bold"> {affiliation.platform}</span>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>No, mantener</AlertDialogCancel>
+          <AlertDialogAction onClick={() => onConfirm(affiliation)}>Sí, cancelar afiliación</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+};
+
 
 const AdminPartnerView = ({ partnerData, isLoading }) => {
   const firestore = useFirestore();
@@ -724,6 +784,10 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
   const [isAffiliationOpen, setAffiliationOpen] = React.useState(false);
   const [openMenuId, setOpenMenuId] = React.useState(null);
 
+  // Estados para los nuevos diálogos
+  const [isDetailsOpen, setDetailsOpen] = React.useState(false);
+  const [isCancelAlertOpen, setCancelAlertOpen] = React.useState(false);
+  const [selectedAffiliation, setSelectedAffiliation] = React.useState(null);
 
   // Datos de ejemplo para las afiliaciones
   const affiliations = [
@@ -757,6 +821,30 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
       </Card>
     );
   }
+  
+  const handleViewDetails = (affiliation) => {
+    setSelectedAffiliation(affiliation);
+    setDetailsOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const handleCancelAffiliation = (affiliation) => {
+    setSelectedAffiliation(affiliation);
+    setCancelAlertOpen(true);
+    setOpenMenuId(null);
+  };
+  
+  const confirmCancelAffiliation = (affiliation) => {
+    // Aquí iría la lógica para eliminar la afiliación en Firestore
+    console.log("Cancelando afiliación para:", affiliation.platform);
+    toast({
+      title: "Afiliación Cancelada",
+      description: `Has cancelado tu afiliación a ${affiliation.platform}.`,
+      variant: "destructive"
+    });
+    setCancelAlertOpen(false);
+  };
+
 
   const { paymentInfo } = partnerData;
 
@@ -843,7 +931,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                         <span className="text-muted-foreground">Titular</span>
                         <span className="font-medium">{paymentInfo.holderName}</span>
                     </div>
-                    {paymentInfo.method === 'nequi' && (
+                    {(paymentInfo.method === 'nequi' || paymentInfo.method === 'daviplata' || paymentInfo.method === 'bre-b') && (
                         <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Teléfono</span>
                             <span className="font-medium">{paymentInfo.phone}</span>
@@ -921,11 +1009,11 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => toast({title: "Función en desarrollo."})}>
+                                <DropdownMenuItem onSelect={() => handleViewDetails(aff)}>
                                     <Eye className="mr-2 h-4 w-4" /> Ver Detalles
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onSelect={() => toast({title: "Función en desarrollo."})}>
+                                <DropdownMenuItem className="text-destructive" onSelect={() => handleCancelAffiliation(aff)}>
                                     <Trash2 className="mr-2 h-4 w-4" /> Cancelar Afiliación
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
@@ -946,7 +1034,17 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
         </CardContent>
       </Card>
 
-
+      <AffiliationDetailsDialog 
+        affiliation={selectedAffiliation}
+        isOpen={isDetailsOpen}
+        onOpenChange={setDetailsOpen}
+      />
+      <CancelAffiliationDialog
+        affiliation={selectedAffiliation}
+        isOpen={isCancelAlertOpen}
+        onOpenChange={setCancelAlertOpen}
+        onConfirm={confirmCancelAffiliation}
+      />
     </div>
   );
 };

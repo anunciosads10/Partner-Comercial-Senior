@@ -13,7 +13,7 @@ import { DollarSign, CheckCircle, Clock, Download, BarChart3, Users, Puzzle, Loa
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { addDays, format } from "date-fns";
+import { addDays, format, subYears } from "date-fns";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 const ReportsPage = () => {
@@ -28,7 +28,7 @@ const ReportsPage = () => {
     const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
     
     // Estados para los filtros
-    const [date, setDate] = React.useState({ from: addDays(new Date(), -30), to: new Date() });
+    const [date, setDate] = React.useState({ from: subYears(new Date(), 1), to: new Date() });
     const [selectedPartner, setSelectedPartner] = React.useState('all');
     const [selectedStatus, setSelectedStatus] = React.useState('all');
 
@@ -46,7 +46,7 @@ const ReportsPage = () => {
             const isAfterFrom = !date?.from || commissionDate >= date.from;
             const isBeforeTo = !date?.to || commissionDate <= date.to;
             const partnerMatch = selectedPartner === 'all' || c.partnerId === selectedPartner;
-            const statusMatch = selectedStatus === 'all' || c.status.toLowerCase() === selectedStatus;
+            const statusMatch = selectedStatus === 'all' || c.status === selectedStatus;
             return isAfterFrom && isBeforeTo && partnerMatch && statusMatch;
         });
     }, [commissions, date, selectedPartner, selectedStatus]);
@@ -146,8 +146,8 @@ const ReportsPage = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Estados</SelectItem>
-                                            <SelectItem value="pending">Pendiente</SelectItem>
-                                            <SelectItem value="paid">Pagado</SelectItem>
+                                            <SelectItem value="Pending">Pendiente</SelectItem>
+                                            <SelectItem value="Paid">Pagado</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

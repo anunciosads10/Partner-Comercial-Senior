@@ -216,63 +216,60 @@ const PlatformsPage = () => {
 
       {/* Dialog for Create/Edit */}
       <Dialog open={isDialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[525px]">
-          <form onSubmit={handleSavePlatform}>
-            <DialogHeader>
-              <DialogTitle>{currentPlatform ? 'Editar Plataforma SaaS' : 'Crear Nueva Plataforma SaaS'}</DialogTitle>
-              <DialogDescription>
-                Completa los detalles de la plataforma.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid gap-2">
-                <Label htmlFor="name">Nombre de la Plataforma</Label>
-                <Input id="name" name="name" defaultValue={currentPlatform?.name} required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="category">Categoría</Label>
-                <Input id="category" name="category" defaultValue={currentPlatform?.category} placeholder="Ej: Restaurante, Ecommerce" required />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="description">Descripción Corta</Label>
-                <Textarea id="description" name="description" defaultValue={currentPlatform?.description} required rows={3} />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="status">Estado</Label>
-                <Select name="status" defaultValue={currentPlatform?.status || 'Active'}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Activa</SelectItem>
-                    <SelectItem value="Inactive">Inactiva</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-               <div className="border-t pt-4 mt-2 space-y-4">
-                  <h4 className="font-semibold text-foreground">Configuración de Comisiones del Partner</h4>
-                   <div className="grid gap-2">
-                      <Label htmlFor="firstSubscriptionCommission">Comisión por primera suscripción (%)</Label>
-                      <Input id="firstSubscriptionCommission" name="firstSubscriptionCommission" type="number" defaultValue={currentPlatform?.firstSubscriptionCommission || 80} required />
-                      <p className="text-xs text-muted-foreground">El partner recibe esta comisión una sola vez, cuando el cliente se suscribe por primera vez.</p>
-                  </div>
-
-                   <div className="grid gap-2">
-                      <Label htmlFor="recurringCommission">Comisión recurrente (%)</Label>
-                      <Input id="recurringCommission" name="recurringCommission" type="number" defaultValue={currentPlatform?.recurringCommission || 30} required />
-                       <p className="text-xs text-muted-foreground">Comisión que el partner recibe en cada renovación, desde la segunda suscripción en adelante.</p>
-                  </div>
-              </div>
-
-            </div>
-            <DialogFooter>
-              <DialogClose asChild>
-                <Button type="button" variant="secondary">Cancelar</Button>
-              </DialogClose>
-              <Button type="submit">Guardar Plataforma</Button>
-            </DialogFooter>
-          </form>
+        <DialogContent className="sm:max-w-[525px] flex flex-col max-h-[90vh]">
+          <DialogHeader className="flex-shrink-0">
+            <DialogTitle>{currentPlatform ? 'Editar Plataforma SaaS' : 'Crear Nueva Plataforma SaaS'}</DialogTitle>
+            <DialogDescription>
+              Completa los detalles de la plataforma.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex-grow overflow-y-auto -mx-6 px-6">
+            <form id="platform-form" onSubmit={handleSavePlatform} className="space-y-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Nombre de la Plataforma</Label>
+                  <Input id="name" name="name" defaultValue={currentPlatform?.name} required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="category">Categoría</Label>
+                  <Input id="category" name="category" defaultValue={currentPlatform?.category} placeholder="Ej: Restaurante, Ecommerce" required />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="description">Descripción Corta</Label>
+                  <Textarea id="description" name="description" defaultValue={currentPlatform?.description} required rows={3} />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="status">Estado</Label>
+                  <Select name="status" defaultValue={currentPlatform?.status || 'Active'}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Active">Activa</SelectItem>
+                      <SelectItem value="Inactive">Inactiva</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="border-t pt-4 mt-2 space-y-4">
+                    <h4 className="font-semibold text-foreground">Configuración de Comisiones del Partner</h4>
+                    <div className="grid gap-2">
+                        <Label htmlFor="firstSubscriptionCommission">Comisión por primera suscripción (%)</Label>
+                        <Input id="firstSubscriptionCommission" name="firstSubscriptionCommission" type="number" defaultValue={currentPlatform?.firstSubscriptionCommission || 80} required />
+                        <p className="text-xs text-muted-foreground">El partner recibe esta comisión una sola vez, cuando el cliente se suscribe por primera vez.</p>
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="recurringCommission">Comisión recurrente (%)</Label>
+                        <Input id="recurringCommission" name="recurringCommission" type="number" defaultValue={currentPlatform?.recurringCommission || 30} required />
+                        <p className="text-xs text-muted-foreground">Comisión que el partner recibe en cada renovación, desde la segunda suscripción en adelante.</p>
+                    </div>
+                </div>
+            </form>
+          </div>
+          <DialogFooter className="flex-shrink-0">
+            <DialogClose asChild>
+              <Button type="button" variant="secondary">Cancelar</Button>
+            </DialogClose>
+            <Button type="submit" form="platform-form">Guardar Plataforma</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

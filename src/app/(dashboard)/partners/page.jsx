@@ -565,6 +565,8 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="daviplata">Daviplata</SelectItem>
+                    <SelectItem value="bre-b">Bre-B</SelectItem>
                     <SelectItem value="bancolombia">Cuenta Bancaria</SelectItem>
                 </SelectContent>
             </Select>
@@ -575,9 +577,9 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
              <Input id="holderName" name="holderName" value={formData.holderName} onChange={handleChange} required />
           </div>
 
-          {method === 'nequi' && (
+          {(method === 'nequi' || method === 'daviplata' || method === 'bre-b') && (
             <div className="grid gap-2">
-                <Label htmlFor="phone">Número de Celular (Nequi)</Label>
+                <Label htmlFor="phone">Número de Celular</Label>
                 <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required />
             </div>
           )}

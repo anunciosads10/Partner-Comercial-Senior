@@ -70,7 +70,7 @@
             "method": {
               "type": "string",
               "description": "Payment method (e.g., nequi, bancolombia).",
-              "enum": ["nequi", "bancolombia"]
+              "enum": ["nequi", "bancolombia", "daviplata", "bre-b"]
             },
             "holderName": {
               "type": "string",

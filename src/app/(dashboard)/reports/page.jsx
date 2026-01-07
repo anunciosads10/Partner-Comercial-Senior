@@ -6,7 +6,6 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { DollarSign, CheckCircle, Clock, Download, BarChart3, Users, Puzzle, Loader2 } from "lucide-react";
@@ -41,12 +40,25 @@ const ReportsPage = () => {
     // Filtrar comisiones según los filtros seleccionados
     const filteredCommissions = React.useMemo(() => {
         if (!commissions) return [];
+
+        const fromDate = date?.from;
+        const toDate = date?.to;
+
         return commissions.filter(c => {
-            const commissionDate = new Date(c.date || c.createdAt || Date.now());
-            const isAfterFrom = !date?.from || commissionDate >= date.from;
-            const isBeforeTo = !date?.to || commissionDate <= date.to;
+            // Normalizar la fecha de la comisión (puede venir como string)
+            const commissionDateStr = c.date || c.createdAt || c.paymentDate;
+            if (!commissionDateStr) return false; // Si no hay fecha, no se puede filtrar
+            
+            const commissionDate = new Date(commissionDateStr);
+
+            // Comparación de fechas
+            const isAfterFrom = fromDate ? commissionDate >= fromDate : true;
+            const isBeforeTo = toDate ? commissionDate <= toDate : true;
+
+            // Comparación de partner y estado
             const partnerMatch = selectedPartner === 'all' || c.partnerId === selectedPartner;
             const statusMatch = selectedStatus === 'all' || c.status === selectedStatus;
+            
             return isAfterFrom && isBeforeTo && partnerMatch && statusMatch;
         });
     }, [commissions, date, selectedPartner, selectedStatus]);
@@ -69,11 +81,13 @@ const ReportsPage = () => {
         csvContent += headers.join(",") + "\r\n";
 
         filteredCommissions.forEach(c => {
-          const commissionDate = c.date || c.createdAt;
+          const commissionDateStr = c.date || c.createdAt || c.paymentDate;
+          const commissionDate = commissionDateStr ? new Date(commissionDateStr).toLocaleDateString() : 'N/A';
+
           const row = [
             c.id,
             partnerNames[c.partnerId] || c.partnerId,
-            commissionDate ? new Date(commissionDate).toLocaleDateString() : 'N/A',
+            commissionDate,
             c.product || 'N/A',
             c.saleAmount || 0,
             c.commissionRate || 0,
@@ -183,8 +197,8 @@ const ReportsPage = () => {
                                             <TableRow key={c.id}>
                                                 <TableCell className="font-medium">{partnerNames[c.partnerId] || 'N/A'}</TableCell>
                                                 <TableCell>{c.product}</TableCell>
-                                                <TableCell>${c.saleAmount.toLocaleString()}</TableCell>
-                                                <TableCell className="font-semibold text-primary">${c.earning.toLocaleString()}</TableCell>
+                                                <TableCell>${(c.saleAmount || 0).toLocaleString()}</TableCell>
+                                                <TableCell className="font-semibold text-primary">${(c.earning || 0).toLocaleString()}</TableCell>
                                                 <TableCell><Badge variant={c.status === 'Paid' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
                                             </TableRow>
                                         ))}

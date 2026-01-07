@@ -1,7 +1,7 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
@@ -12,7 +12,8 @@ import {
   Bell,
   Settings,
   Wallet,
-} from "lucide-react";
+  BarChart3, // Importar nuevo ícono
+} from 'lucide-react';
 
 import {
   SidebarHeader,
@@ -22,18 +23,18 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   useSidebar,
-} from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
+} from '@/components/ui/sidebar';
+import { cn } from '@/lib/utils';
 
 const allMenuItems = [
-  { href: "/", label: "Panel Principal", icon: LayoutDashboard, roles: ["admin", "superadmin"] },
-  { href: "/partners", label: "Partners", icon: Users, roles: ["admin", "superadmin"] },
-  { href: "/commissions", label: "Comisiones", icon: Percent, roles: ["superadmin"] },
-  { href: "/hierarchy", label: "Jerarquía", icon: GitFork, roles: ["admin", "superadmin"] },
-  { href: "/payments", label: "Pagos", icon: CreditCard, roles: ["admin", "superadmin"] },
-  { href: "/settings", label: "Métodos de Pago", icon: Wallet, roles: ["superadmin"] },
-  { href: "/rules", label: "Reglas", icon: Gavel, roles: ["superadmin"] },
-  { href: "/notifications", label: "Notificaciones", icon: Bell, roles: ["admin", "superadmin"] },
+  { href: '/', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
+  { href: '/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
+  { href: '/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },
+  { href: '/hierarchy', label: 'Jerarquía', icon: GitFork, roles: ['admin', 'superadmin'] },
+  { href: '/payments', label: 'Pagos', icon: CreditCard, roles: ['admin', 'superadmin'] },
+  { href: '/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] }, // Nuevo ítem de menú
+  { href: '/rules', label: 'Reglas', icon: Gavel, roles: ['superadmin'] },
+  { href: '/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];
 
 export function MainNav({ userData }) {
@@ -77,8 +78,8 @@ export function MainNav({ userData }) {
           </svg>
           <span
             className={cn(
-              "text-lg font-semibold text-sidebar-primary-foreground",
-              state === "collapsed" && "hidden"
+              'text-lg font-semibold text-sidebar-primary-foreground',
+              state === 'collapsed' && 'hidden'
             )}
           >
             PartnerVerse
@@ -104,10 +105,10 @@ export function MainNav({ userData }) {
       </SidebarContent>
       <SidebarFooter className="p-2 mt-auto">
         <SidebarMenu>
-          <SidebarMenuItem>
+           <SidebarMenuItem>
             <Link href="/settings">
               <SidebarMenuButton
-                isActive={pathname === "/settings"}
+                isActive={pathname.startsWith('/settings')}
                 tooltip="Configuración"
               >
                 <Settings />

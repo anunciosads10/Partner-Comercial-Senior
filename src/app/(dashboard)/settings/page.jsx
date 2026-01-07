@@ -204,6 +204,47 @@ const NequiConfigPanel = () => {
   );
 };
 
+const BancolombiaConfigPanel = () => {
+  const { toast } = useToast();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configuración Bancolombia</CardTitle>
+        <CardDescription>Configura los datos para recibir pagos por transferencia a Bancolombia.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="bancolombia-holder-name">Nombre del titular de la cuenta</Label>
+          <Input id="bancolombia-holder-name" placeholder="Ej: Alex J. Rojas" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bancolombia-account-type">Tipo de cuenta</Label>
+           <Select defaultValue="ahorros">
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ahorros">Ahorros</SelectItem>
+                <SelectItem value="corriente">Corriente</SelectItem>
+              </SelectContent>
+            </Select>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bancolombia-account-number">Número de cuenta</Label>
+          <Input id="bancolombia-account-number" placeholder="Ej: 123-456789-00" />
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <CheckCircle className="h-4 w-4 text-green-600"/>
+            <span>Tus datos están guardados y verificados.</span>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={() => toast({ title: "Configuración guardada", description: "Tus datos de Bancolombia han sido actualizados."})}>Guardar Configuración</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 const BreBConfigPanel = () => {
   const { toast } = useToast();
   return (
@@ -294,8 +335,9 @@ const PaymentSettings = () => {
 
                     <div className="col-span-2">
                         {activeOption === 'nequi' && <NequiConfigPanel />}
+                        {activeOption === 'bancolombia' && <BancolombiaConfigPanel />}
                         {activeOption === 'bre-b' && <BreBConfigPanel />}
-                        {activeOption !== 'nequi' && activeOption !== 'bre-b' && (
+                        {activeOption !== 'nequi' && activeOption !== 'bre-b' && activeOption !== 'bancolombia' && (
                             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
                                 <div className="text-center text-muted-foreground">
                                     <p>Selecciona una opción de pago para configurarla.</p>

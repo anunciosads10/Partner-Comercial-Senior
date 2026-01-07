@@ -4,9 +4,19 @@ import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Download, Clock, CreditCard, Loader2 } from "lucide-react";
+import { DollarSign, Download, Clock, CreditCard, Loader2, CheckCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, doc, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, doc, addDoc, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 
@@ -31,6 +41,9 @@ export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  
+  const [paymentToPay, setPaymentToPay] = React.useState(null);
+  const [isAlertOpen, setAlertOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -43,11 +56,9 @@ export default function PaymentsPage() {
 
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Superadmin ve todos los pagos de todos los partners
     if (role === 'superadmin') {
         return collection(firestore, 'payments');
     }
-    // Admin (partner) solo ve sus propios pagos
     if (role === 'admin' && uid) {
         return query(collection(firestore, 'payments'), where('partnerId', '==', uid));
     }
@@ -141,9 +152,44 @@ export default function PaymentsPage() {
     }
   };
 
+  const openPayDialog = (payment) => {
+    setPaymentToPay(payment);
+    setAlertOpen(true);
+  };
+  
+  const confirmPayment = async () => {
+    if (!paymentToPay || !firestore || !user) return;
+
+    const paymentRef = doc(firestore, 'payments', paymentToPay.id);
+
+    try {
+        await updateDoc(paymentRef, {
+            status: 'Pagado',
+            paidAt: new Date().toISOString(),
+            paidBy: user.uid,
+        });
+        toast({
+            title: "Pago Confirmado",
+            description: `El pago para ${paymentToPay.partnerName} ha sido marcado como "Pagado".`
+        });
+    } catch (error) {
+        console.error("Error al marcar como pagado:", error);
+        toast({
+            variant: "destructive",
+            title: "Error al actualizar",
+            description: "No se pudo actualizar el estado del pago."
+        });
+    } finally {
+        setAlertOpen(false);
+        setPaymentToPay(null);
+    }
+  };
+
+
   const isLoading = isRoleLoading || arePaymentsLoading;
 
   return (
+    <>
     <div className="flex flex-col gap-8">
       <Card>
         <CardHeader>
@@ -208,6 +254,7 @@ export default function PaymentsPage() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead>Estado</TableHead>
+                       {role === 'superadmin' && <TableHead className="text-right">Acciones</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -220,6 +267,20 @@ export default function PaymentsPage() {
                         <TableCell>
                           <PaymentStatusBadge status={payment.status} />
                         </TableCell>
+                         {role === 'superadmin' && (
+                            <TableCell className="text-right">
+                                {payment.status === 'Pendiente' ? (
+                                    <Button size="sm" onClick={() => openPayDialog(payment)}>
+                                        Marcar como Pagado
+                                    </Button>
+                                ) : (
+                                   <div className="flex items-center justify-end text-green-600 gap-2">
+                                        <CheckCircle className="h-4 w-4" />
+                                        <span>Realizado</span>
+                                   </div>
+                                )}
+                            </TableCell>
+                         )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -237,5 +298,27 @@ export default function PaymentsPage() {
         </CardContent>
       </Card>
     </div>
+    
+    <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+                <AlertDialogTitle>Confirmar Pago Manual</AlertDialogTitle>
+                <AlertDialogDescription>
+                    ¿Estás seguro de que quieres marcar este pago de 
+                    <span className="font-bold"> ${paymentToPay?.amount.toLocaleString()}</span> para 
+                    <span className="font-bold"> {paymentToPay?.partnerName}</span> como "Pagado"?
+                    <br />
+                    Esta acción es solo un registro y no transfiere dinero real.
+                </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={confirmPayment}>
+                    Sí, marcar como Pagado
+                </AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
+    </>
   );
 }

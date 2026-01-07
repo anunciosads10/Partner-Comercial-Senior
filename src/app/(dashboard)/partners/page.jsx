@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -512,11 +512,20 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
         accountNumber: paymentInfo?.accountNumber || '',
         accountType: paymentInfo?.accountType || 'Ahorros',
     });
+    const fileInputRef = React.useRef(null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
     };
+
+    const handleFileChange = (e) => {
+      if (e.target.files[0]) {
+        toast({ title: `Archivo QR seleccionado: ${e.target.files[0].name}` });
+        // Aquí iría la lógica para subir el archivo
+      }
+    };
+
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -606,6 +615,29 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
               </div>
             </>
           )}
+
+          {['nequi', 'bancolombia', 'daviplata', 'bre-b'].includes(method) && (
+             <div className="space-y-2">
+                <Label>Código QR (Opcional)</Label>
+                <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
+                    <div className="text-center text-muted-foreground">
+                    <QrCode className="mx-auto h-12 w-12"/>
+                    <Button size="sm" type="button" variant="ghost" className="mt-2" onClick={() => fileInputRef.current?.click()}>
+                        Subir Imagen del QR
+                    </Button>
+                    <Input 
+                        id="qr-upload" 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden" 
+                        accept="image/*" 
+                        onChange={handleFileChange} 
+                    />
+                    </div>
+                </div>
+            </div>
+          )}
+
 
         </div>
         <DialogFooter>

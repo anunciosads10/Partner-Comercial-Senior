@@ -11,6 +11,7 @@ import {
   Gavel,
   Bell,
   Settings,
+  Wallet,
 } from "lucide-react";
 
 import {
@@ -30,6 +31,7 @@ const allMenuItems = [
   { href: "/commissions", label: "Comisiones", icon: Percent, roles: ["superadmin"] },
   { href: "/hierarchy", label: "Jerarquía", icon: GitFork, roles: ["admin", "superadmin"] },
   { href: "/payments", label: "Pagos", icon: CreditCard, roles: ["admin", "superadmin"] },
+  { href: "/settings", label: "Métodos de Pago", icon: Wallet, roles: ["superadmin"] },
   { href: "/rules", label: "Reglas", icon: Gavel, roles: ["superadmin"] },
   { href: "/notifications", label: "Notificaciones", icon: Bell, roles: ["admin", "superadmin"] },
 ];

@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Upload, ChevronRight, QrCode, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 
 const ProfileSettings = () => {
@@ -177,6 +178,14 @@ const paymentOptions = [
 
 const NequiConfigPanel = () => {
   const { toast } = useToast();
+  const fileInputRef = React.useRef(null);
+  
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      toast({ title: `Archivo QR: ${e.target.files[0].name} seleccionado.` });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -192,6 +201,18 @@ const NequiConfigPanel = () => {
           <Label htmlFor="nequi-phone">Número de celular</Label>
           <Input id="nequi-phone" placeholder="Ej: 3001234567" />
         </div>
+        <div className="space-y-2">
+          <Label>Código QR (Opcional)</Label>
+          <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
+            <div className="text-center text-muted-foreground">
+              <QrCode className="mx-auto h-12 w-12"/>
+              <Button size="sm" type="button" variant="ghost" className="mt-2" onClick={() => fileInputRef.current?.click()}>
+                Subir Imagen del QR
+              </Button>
+               <Input id="nequi-qr-upload" type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
             <CheckCircle className="h-4 w-4"/>
             <span>Configurado correctamente</span>
@@ -206,6 +227,14 @@ const NequiConfigPanel = () => {
 
 const BancolombiaConfigPanel = () => {
   const { toast } = useToast();
+  const fileInputRef = React.useRef(null);
+  
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      toast({ title: `Archivo QR: ${e.target.files[0].name} seleccionado.` });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -233,6 +262,18 @@ const BancolombiaConfigPanel = () => {
           <Label htmlFor="bancolombia-account-number">Número de cuenta</Label>
           <Input id="bancolombia-account-number" placeholder="Ej: 123-456789-00" />
         </div>
+        <div className="space-y-2">
+          <Label>Código QR (Opcional)</Label>
+          <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
+            <div className="text-center text-muted-foreground">
+              <QrCode className="mx-auto h-12 w-12"/>
+              <Button size="sm" type="button" variant="ghost" className="mt-2" onClick={() => fileInputRef.current?.click()}>
+                Subir Imagen del QR
+              </Button>
+              <Input id="bancolombia-qr-upload" type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+            </div>
+          </div>
+        </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle className="h-4 w-4 text-green-600"/>
             <span>Tus datos están guardados y verificados.</span>
@@ -247,6 +288,14 @@ const BancolombiaConfigPanel = () => {
 
 const DaviplataConfigPanel = () => {
   const { toast } = useToast();
+  const fileInputRef = React.useRef(null);
+  
+  const handleFileChange = (e) => {
+    if (e.target.files[0]) {
+      toast({ title: `Archivo QR: ${e.target.files[0].name} seleccionado.` });
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -261,6 +310,18 @@ const DaviplataConfigPanel = () => {
         <div className="space-y-2">
           <Label htmlFor="daviplata-phone">Número de celular</Label>
           <Input id="daviplata-phone" placeholder="Ej: 3001234567" />
+        </div>
+        <div className="space-y-2">
+          <Label>Código QR (Opcional)</Label>
+          <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
+            <div className="text-center text-muted-foreground">
+              <QrCode className="mx-auto h-12 w-12"/>
+              <Button size="sm" type="button" variant="ghost" className="mt-2" onClick={() => fileInputRef.current?.click()}>
+                Subir Imagen del QR
+              </Button>
+              <Input id="daviplata-qr-upload" type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+            </div>
+          </div>
         </div>
          <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
             <CheckCircle className="h-4 w-4"/>
@@ -329,6 +390,42 @@ const BreBConfigPanel = () => {
   );
 };
 
+const CodConfigPanel = () => {
+    const { toast } = useToast();
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Configuración de Pago Contra Entrega</CardTitle>
+                <CardDescription>Habilita y define las instrucciones para el pago contra entrega.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                        <Label htmlFor="cod-enabled">Habilitar Pago Contra Entrega</Label>
+                        <p className="text-xs text-muted-foreground">
+                           Permite a los partners seleccionar esta opción para recibir sus comisiones.
+                        </p>
+                    </div>
+                    <Switch id="cod-enabled" defaultChecked />
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="cod-instructions">Instrucciones para Partners</Label>
+                    <Textarea 
+                        id="cod-instructions" 
+                        placeholder="Ej: Asegúrate de tener el monto exacto. Los pagos se realizan los días 15 y 30 de cada mes."
+                        rows={4}
+                    />
+                </div>
+            </CardContent>
+            <CardFooter>
+                <Button onClick={() => toast({ title: "Configuración guardada", description: "La configuración de pago contra entrega ha sido actualizada."})}>
+                    Guardar Configuración
+                </Button>
+            </CardFooter>
+        </Card>
+    );
+};
+
 
 const PaymentSettings = () => {
     const [activeOption, setActiveOption] = React.useState('nequi');
@@ -367,11 +464,11 @@ const PaymentSettings = () => {
                         {activeOption === 'bancolombia' && <BancolombiaConfigPanel />}
                         {activeOption === 'daviplata' && <DaviplataConfigPanel />}
                         {activeOption === 'bre-b' && <BreBConfigPanel />}
-                        {activeOption !== 'nequi' && activeOption !== 'daviplata' && activeOption !== 'bre-b' && activeOption !== 'bancolombia' && (
+                        {activeOption === 'cod' && <CodConfigPanel />}
+                        {activeOption !== 'nequi' && activeOption !== 'bancolombia' && activeOption !== 'daviplata' && activeOption !== 'bre-b' && activeOption !== 'cod' && (
                             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
                                 <div className="text-center text-muted-foreground">
                                     <p>Selecciona una opción de pago para configurarla.</p>
-                                    <p className="text-sm">La configuración para "{paymentOptions.find(p => p.id === activeOption)?.name}" está en desarrollo.</p>
                                 </div>
                             </div>
                         )}

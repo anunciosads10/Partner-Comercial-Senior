@@ -8,65 +8,80 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { DollarSign, CheckCircle, Clock, Download, BarChart3, Users, Puzzle, Loader2 } from "lucide-react";
+import { DollarSign, CheckCircle, Clock, Download, BarChart3, Loader2 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { addDays, format, subYears } from "date-fns";
+import { format, subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 const ReportsPage = () => {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // Obtener todas las comisiones y partners para los reportes
     const commissionsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'commissions') : null, [firestore]);
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
     
     const { data: commissions, isLoading: isLoadingCommissions } = useCollection(commissionsCollection);
     const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
     
-    // Estados para los filtros
     const [date, setDate] = React.useState({ from: subYears(new Date(), 1), to: new Date() });
     const [selectedPartner, setSelectedPartner] = React.useState('all');
     const [selectedStatus, setSelectedStatus] = React.useState('all');
 
-    // Mapeo de nombres de partners para acceso rápido
     const partnerNames = React.useMemo(() => {
         if (!partners) return {};
         return partners.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
     }, [partners]);
 
-    // Filtrar comisiones según los filtros seleccionados
+    // Función auxiliar para convertir cualquier formato de fecha de Firebase a objeto Date de JS
+    const parseFirebaseDate = (dateValue) => {
+        if (!dateValue) return null;
+        if (dateValue.toDate) return dateValue.toDate(); // Si es Timestamp de Firebase
+        const parsed = new Date(dateValue);
+        return isNaN(parsed.getTime()) ? null : parsed;
+    };
+
     const filteredCommissions = React.useMemo(() => {
         if (!commissions) return [];
 
-        const fromDate = date?.from;
-        const toDate = date?.to;
+        // Normalizamos el rango del filtro: inicio del primer día y fin del último día
+        const rangeStart = date?.from ? startOfDay(date.from) : null;
+        const rangeEnd = date?.to ? endOfDay(date.to) : null;
 
         return commissions.filter(c => {
-            // Normalizar la fecha de la comisión (puede venir como string)
-            const commissionDateStr = c.date || c.createdAt || c.paymentDate;
-            if (!commissionDateStr) return false; // Si no hay fecha, no se puede filtrar
+            const rawDate = c.date || c.createdAt || c.paymentDate;
+            const commissionDate = parseFirebaseDate(rawDate);
             
-            const commissionDate = new Date(commissionDateStr);
+            if (!commissionDate) return false;
 
-            // Comparación de fechas
-            const isAfterFrom = fromDate ? commissionDate >= fromDate : true;
-            const isBeforeTo = toDate ? commissionDate <= toDate : true;
+            // Filtro de Fecha
+            let dateMatch = true;
+            if (rangeStart && rangeEnd) {
+                dateMatch = isWithinInterval(commissionDate, { start: rangeStart, end: rangeEnd });
+            }
 
-            // Comparación de partner y estado
+            // Filtro de Partner
             const partnerMatch = selectedPartner === 'all' || c.partnerId === selectedPartner;
-            const statusMatch = selectedStatus === 'all' || c.status === selectedStatus;
             
-            return isAfterFrom && isBeforeTo && partnerMatch && statusMatch;
+            // Filtro de Estado (Case-insensitive para evitar errores de tipeo)
+            const currentStatus = (c.status || '').toLowerCase();
+            const filterStatus = selectedStatus.toLowerCase();
+            const statusMatch = selectedStatus === 'all' || currentStatus === filterStatus;
+            
+            return dateMatch && partnerMatch && statusMatch;
         });
     }, [commissions, date, selectedPartner, selectedStatus]);
 
-    // Calcular KPIs
-    const totalCommissions = filteredCommissions.reduce((acc, c) => acc + c.earning, 0);
-    const paidCommissions = filteredCommissions.filter(c => c.status === 'Paid').reduce((acc, c) => acc + c.earning, 0);
-    const pendingCommissions = filteredCommissions.filter(c => c.status === 'Pending').reduce((acc, c) => acc + c.earning, 0);
+    // Cálculos de KPIs basados en los datos filtrados
+    const totalCommissions = filteredCommissions.reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+    const paidCommissions = filteredCommissions
+        .filter(c => (c.status || '').toLowerCase() === 'pagado')
+        .reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+    const pendingCommissions = filteredCommissions
+        .filter(c => (c.status || '').toLowerCase() === 'pendiente')
+        .reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+
 
     const isLoading = isLoadingCommissions || isLoadingPartners;
 
@@ -81,13 +96,14 @@ const ReportsPage = () => {
         csvContent += headers.join(",") + "\r\n";
 
         filteredCommissions.forEach(c => {
-          const commissionDateStr = c.date || c.createdAt || c.paymentDate;
-          const commissionDate = commissionDateStr ? new Date(commissionDateStr).toLocaleDateString() : 'N/A';
+          const rawDate = c.date || c.createdAt || c.paymentDate;
+          const commissionDate = parseFirebaseDate(rawDate);
+          const formattedDate = commissionDate ? format(commissionDate, 'yyyy-MM-dd') : 'N/A';
 
           const row = [
             c.id,
             partnerNames[c.partnerId] || c.partnerId,
-            commissionDate,
+            formattedDate,
             c.product || 'N/A',
             c.saleAmount || 0,
             c.commissionRate || 0,
@@ -160,8 +176,8 @@ const ReportsPage = () => {
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Estados</SelectItem>
-                                            <SelectItem value="Pending">Pendiente</SelectItem>
-                                            <SelectItem value="Paid">Pagado</SelectItem>
+                                            <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                            <SelectItem value="Pagado">Pagado</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -195,11 +211,11 @@ const ReportsPage = () => {
                                     <TableBody>
                                         {filteredCommissions.map(c => (
                                             <TableRow key={c.id}>
-                                                <TableCell className="font-medium">{partnerNames[c.partnerId] || 'N/A'}</TableCell>
+                                                <TableCell className="font-medium">{partnerNames[c.partnerId] || c.partnerId}</TableCell>
                                                 <TableCell>{c.product}</TableCell>
                                                 <TableCell>${(c.saleAmount || 0).toLocaleString()}</TableCell>
                                                 <TableCell className="font-semibold text-primary">${(c.earning || 0).toLocaleString()}</TableCell>
-                                                <TableCell><Badge variant={c.status === 'Paid' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
+                                                <TableCell><Badge variant={(c.status || '').toLowerCase() === 'pagado' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>

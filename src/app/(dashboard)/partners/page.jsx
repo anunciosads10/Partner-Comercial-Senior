@@ -62,6 +62,7 @@ import { collection, writeBatch, doc, updateDoc, deleteDoc, addDoc } from "fireb
 import { partners as mockPartners } from "@/lib/data";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 function getTierBadgeVariant(tier) {
   switch (tier) {
@@ -646,11 +647,82 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
         </DialogFooter>
       </form>
     )
-}
+};
+
+const RequestAffiliationForm = ({ onFinished, toast }) => {
+  const [selectedPlatform, setSelectedPlatform] = React.useState(null);
+
+  // Datos de ejemplo
+  const availablePlatforms = [
+    { id: 'saas-ecom', name: 'SaaS E-commerce Pro', description: 'Solución completa para tiendas online.' },
+    { id: 'saas-booking', name: 'SaaS Booking System', description: 'Gestión de reservas para hoteles y servicios.' },
+    { id: 'saas-learning', name: 'SaaS Learning Platform', description: 'Plataforma para cursos y formación online.' },
+  ];
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!selectedPlatform) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Debes seleccionar una plataforma para solicitar la afiliación.",
+      });
+      return;
+    }
+    
+    // Aquí iría la lógica para enviar la solicitud a Firestore
+    console.log("Solicitando afiliación para:", selectedPlatform);
+    
+    toast({
+      title: "Solicitud Enviada",
+      description: `Tu solicitud para afiliarte a ${selectedPlatform.name} ha sido enviada para revisión.`,
+    });
+    
+    onFinished();
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <DialogHeader>
+        <DialogTitle>Solicitar Nueva Afiliación</DialogTitle>
+        <DialogDescription>
+          Elige una de las plataformas SaaS disponibles para enviar tu solicitud de afiliación.
+        </DialogDescription>
+      </DialogHeader>
+      <div className="py-4">
+        <RadioGroup onValueChange={(value) => setSelectedPlatform(availablePlatforms.find(p => p.id === value))}>
+          <div className="space-y-3">
+            {availablePlatforms.map((platform) => (
+              <Label
+                key={platform.id}
+                htmlFor={platform.id}
+                className="flex items-start gap-4 rounded-md border p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground has-[:checked]:bg-primary/10 has-[:checked]:border-primary"
+              >
+                <RadioGroupItem value={platform.id} id={platform.id} className="mt-1" />
+                <div className="grid gap-1.5">
+                    <span className="font-bold">{platform.name}</span>
+                    <span className="text-sm text-muted-foreground">{platform.description}</span>
+                </div>
+              </Label>
+            ))}
+          </div>
+        </RadioGroup>
+      </div>
+      <DialogFooter>
+        <Button type="button" variant="secondary" onClick={onFinished}>Cancelar</Button>
+        <Button type="submit" disabled={!selectedPlatform}>Enviar Solicitud</Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
 
 const AdminPartnerView = ({ partnerData, isLoading }) => {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [isPaymentInfoOpen, setPaymentInfoOpen] = React.useState(false);
+  const [isAffiliationOpen, setAffiliationOpen] = React.useState(false);
+
 
   // Datos de ejemplo para las afiliaciones
   const affiliations = [
@@ -805,7 +877,17 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
             <CardTitle>Afiliaciones SaaS</CardTitle>
             <CardDescription>Plataformas a las que estás afiliado y tus comisiones.</CardDescription>
           </div>
-          <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" />Añadir Afiliación</Button>
+           <Dialog open={isAffiliationOpen} onOpenChange={setAffiliationOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" />Añadir Afiliación</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <RequestAffiliationForm 
+                        onFinished={() => setAffiliationOpen(false)}
+                        toast={toast}
+                    />
+                </DialogContent>
+            </Dialog>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">

@@ -13,6 +13,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter
 } from "@/components/ui/card";
 import {
   AlertDialog,
@@ -47,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -402,7 +403,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
+            <AlertDialogTitle>¿Estás absolutely seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente al partner
               <span className="font-bold"> {partnerToDelete?.name}</span> y borrará sus datos de nuestros servidores.
@@ -501,7 +502,122 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
   );
 };
 
+const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
+    const { toast } = useToast();
+    const [method, setMethod] = React.useState(paymentInfo?.method || 'nequi');
+    const [formData, setFormData] = React.useState({
+        holderName: paymentInfo?.holderName || '',
+        phone: paymentInfo?.phone || '',
+        bank: paymentInfo?.bank || '',
+        accountNumber: paymentInfo?.accountNumber || '',
+        accountType: paymentInfo?.accountType || 'Ahorros',
+    });
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormData(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!firestore || !partnerId) return;
+
+        const partnerRef = doc(firestore, 'partners', partnerId);
+        const dataToSave = {
+            method,
+            status: 'pending', // Siempre se guarda como pendiente para verificación
+            updatedAt: new Date().toISOString(),
+            ...formData,
+        };
+
+        try {
+            await updateDoc(partnerRef, { paymentInfo: dataToSave });
+            toast({
+                title: "Datos de Pago Guardados",
+                description: "Tu información de pago ha sido guardada y está pendiente de verificación.",
+            });
+            onFinished();
+        } catch (error) {
+            console.error("Error al guardar datos de pago:", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "No se pudieron guardar tus datos de pago.",
+            });
+        }
+    };
+
+
+    return (
+      <form onSubmit={handleSubmit}>
+        <DialogHeader>
+          <DialogTitle>Configurar Datos de Pago</DialogTitle>
+          <DialogDescription>
+            Esta información se usará para enviarte tus comisiones. Asegúrate de que sea correcta.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-4 py-4">
+          <div className="grid gap-2">
+            <Label htmlFor="method">Método de Pago</Label>
+             <Select id="method" value={method} onValueChange={setMethod}>
+                <SelectTrigger>
+                    <SelectValue placeholder="Selecciona un método" />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="nequi">Nequi</SelectItem>
+                    <SelectItem value="bancolombia">Cuenta Bancaria</SelectItem>
+                </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="grid gap-2">
+             <Label htmlFor="holderName">Nombre del Titular</Label>
+             <Input id="holderName" name="holderName" value={formData.holderName} onChange={handleChange} required />
+          </div>
+
+          {method === 'nequi' && (
+            <div className="grid gap-2">
+                <Label htmlFor="phone">Número de Celular (Nequi)</Label>
+                <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required />
+            </div>
+          )}
+
+          {method === 'bancolombia' && (
+            <>
+              <div className="grid gap-2">
+                <Label htmlFor="bank">Banco</Label>
+                <Input id="bank" name="bank" value={formData.bank} onChange={handleChange} required />
+              </div>
+               <div className="grid gap-2">
+                <Label htmlFor="accountType">Tipo de Cuenta</Label>
+                <Select id="accountType" name="accountType" value={formData.accountType} onValueChange={(v) => setFormData(p => ({...p, accountType: v}))}>
+                    <SelectTrigger><SelectValue/></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="Ahorros">Ahorros</SelectItem>
+                        <SelectItem value="Corriente">Corriente</SelectItem>
+                    </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="accountNumber">Número de Cuenta</Label>
+                <Input id="accountNumber" name="accountNumber" value={formData.accountNumber} onChange={handleChange} required />
+              </div>
+            </>
+          )}
+
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="secondary" onClick={onFinished}>Cancelar</Button>
+          <Button type="submit">Guardar Datos</Button>
+        </DialogFooter>
+      </form>
+    )
+}
+
 const AdminPartnerView = ({ partnerData, isLoading }) => {
+  const firestore = useFirestore();
+  const [isPaymentInfoOpen, setPaymentInfoOpen] = React.useState(false);
+
   if (isLoading) {
     return <p>Cargando tu perfil...</p>;
   }
@@ -519,43 +635,121 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
     );
   }
 
+  const { paymentInfo } = partnerData;
+
+  const getPaymentStatusVariant = (status) => {
+    switch (status) {
+        case 'verified': return 'default';
+        case 'pending': return 'secondary';
+        case 'rejected': return 'destructive';
+        default: return 'outline';
+    }
+  }
+
   return (
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle>Tu Perfil de Partner</CardTitle>
+          <CardDescription>Aquí puedes ver los detalles de tu cuenta de partner.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center gap-6 mb-6">
+            <Avatar className="h-20 w-20">
+              <AvatarImage src={partnerData.avatarUrl} alt={partnerData.name} />
+              <AvatarFallback>{partnerData.name?.slice(0, 2)}</AvatarFallback>
+            </Avatar>
+            <div>
+              <h2 className="text-2xl font-bold">{partnerData.name}</h2>
+              <p className="text-muted-foreground">{partnerData.email}</p>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Award className="text-muted-foreground" />
+              <span>Nivel: <Badge variant={getTierBadgeVariant(partnerData.tier)}>{partnerData.tier}</Badge></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="text-muted-foreground" />
+              <span>Estado: <Badge variant={getStatusBadgeVariant(partnerData.status)}>{partnerData.status}</Badge></span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Globe className="text-muted-foreground" />
+              <span>País: {partnerData.pais}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Calendar className="text-muted-foreground" />
+              <span>Miembro desde: {new Date(partnerData.joinDate).toLocaleDateString()}</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
     <Card>
-      <CardHeader>
-        <CardTitle>Tu Perfil de Partner</CardTitle>
-        <CardDescription>Aquí puedes ver los detalles de tu cuenta de partner.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex items-center gap-6 mb-6">
-          <Avatar className="h-20 w-20">
-            <AvatarImage src={partnerData.avatarUrl} alt={partnerData.name} />
-            <AvatarFallback>{partnerData.name?.slice(0, 2)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h2 className="text-2xl font-bold">{partnerData.name}</h2>
-            <p className="text-muted-foreground">{partnerData.email}</p>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Award className="text-muted-foreground" />
-            <span>Nivel: <Badge variant={getTierBadgeVariant(partnerData.tier)}>{partnerData.tier}</Badge></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Shield className="text-muted-foreground" />
-            <span>Estado: <Badge variant={getStatusBadgeVariant(partnerData.status)}>{partnerData.status}</Badge></span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Globe className="text-muted-foreground" />
-            <span>País: {partnerData.pais}</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Calendar className="text-muted-foreground" />
-            <span>Miembro desde: {new Date(partnerData.joinDate).toLocaleDateString()}</span>
-          </div>
-        </div>
-      </CardContent>
+        <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle>Datos de Pago</CardTitle>
+              <CardDescription>La información a donde se enviarán tus comisiones.</CardDescription>
+            </div>
+            <Dialog open={isPaymentInfoOpen} onOpenChange={setPaymentInfoOpen}>
+                <DialogTrigger asChild>
+                    <Button variant="outline"><Edit className="mr-2 h-4 w-4" />{paymentInfo ? 'Editar' : 'Añadir'} Datos</Button>
+                </DialogTrigger>
+                <DialogContent>
+                    <PaymentInfoForm 
+                        paymentInfo={paymentInfo} 
+                        partnerId={partnerData.id} 
+                        firestore={firestore} 
+                        onFinished={() => setPaymentInfoOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+        </CardHeader>
+        <CardContent>
+            {paymentInfo ? (
+                 <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Estado de Verificación</span>
+                        <Badge variant={getPaymentStatusVariant(paymentInfo.status)}>{paymentInfo.status || 'Pendiente'}</Badge>
+                    </div>
+                     <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Método de Pago</span>
+                        <span className="font-medium capitalize">{paymentInfo.method}</span>
+                    </div>
+                     <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground">Titular</span>
+                        <span className="font-medium">{paymentInfo.holderName}</span>
+                    </div>
+                    {paymentInfo.method === 'nequi' && (
+                        <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Teléfono</span>
+                            <span className="font-medium">{paymentInfo.phone}</span>
+                        </div>
+                    )}
+                    {paymentInfo.method === 'bancolombia' && (
+                         <>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Banco</span>
+                                <span className="font-medium">{paymentInfo.bank}</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">Número de Cuenta</span>
+                                <span className="font-medium">{paymentInfo.accountNumber}</span>
+                            </div>
+                         </>
+                    )}
+                </div>
+            ) : (
+                <div className="text-center text-muted-foreground py-8">
+                  <CreditCard className="mx-auto h-12 w-12 mb-4" />
+                  <p>Aún no has configurado tus datos de pago.</p>
+                  <p className="text-sm">Añade tu información para poder recibir comisiones.</p>
+                </div>
+            )}
+        </CardContent>
     </Card>
+
+    </div>
   );
 };
 

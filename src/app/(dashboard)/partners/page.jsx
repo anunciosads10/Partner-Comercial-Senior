@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -722,6 +722,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
   const { toast } = useToast();
   const [isPaymentInfoOpen, setPaymentInfoOpen] = React.useState(false);
   const [isAffiliationOpen, setAffiliationOpen] = React.useState(false);
+  const [openMenuId, setOpenMenuId] = React.useState(null);
 
 
   // Datos de ejemplo para las afiliaciones
@@ -893,7 +894,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
             <div className="space-y-4">
               {affiliations.map((aff, index) => (
                 <div key={index} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4 flex-grow">
                     <div className="bg-primary/10 text-primary p-3 rounded-full">
                       <Puzzle className="h-6 w-6" />
                     </div>
@@ -910,6 +911,26 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                        <div className="text-center">
                           <Badge variant={getStatusBadgeVariant(aff.status)}>{aff.status}</Badge>
                           <p className="text-muted-foreground text-xs mt-1">Estado</p>
+                      </div>
+                      <div className="text-center">
+                         <DropdownMenu open={openMenuId === aff.platform} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? aff.platform : null)}>
+                            <DropdownMenuTrigger asChild>
+                                <Button size="icon" variant="ghost">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                <DropdownMenuItem onSelect={() => toast({title: "Función en desarrollo."})}>
+                                    <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onSelect={() => toast({title: "Función en desarrollo."})}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Cancelar Afiliación
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                          <p className="text-muted-foreground text-xs mt-1">Acciones</p>
                       </div>
                   </div>
                 </div>

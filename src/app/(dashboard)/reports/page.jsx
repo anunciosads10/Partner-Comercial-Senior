@@ -42,7 +42,7 @@ const ReportsPage = () => {
     const filteredCommissions = React.useMemo(() => {
         if (!commissions) return [];
         return commissions.filter(c => {
-            const commissionDate = new Date(c.date || c.createdAt);
+            const commissionDate = new Date(c.date || c.createdAt || Date.now());
             const isAfterFrom = !date?.from || commissionDate >= date.from;
             const isBeforeTo = !date?.to || commissionDate <= date.to;
             const partnerMatch = selectedPartner === 'all' || c.partnerId === selectedPartner;
@@ -69,15 +69,16 @@ const ReportsPage = () => {
         csvContent += headers.join(",") + "\r\n";
 
         filteredCommissions.forEach(c => {
+          const commissionDate = c.date || c.createdAt;
           const row = [
             c.id,
             partnerNames[c.partnerId] || c.partnerId,
-            c.date ? new Date(c.date).toLocaleDateString() : 'N/A',
-            c.product,
-            c.saleAmount,
-            c.commissionRate,
-            c.earning,
-            c.status
+            commissionDate ? new Date(commissionDate).toLocaleDateString() : 'N/A',
+            c.product || 'N/A',
+            c.saleAmount || 0,
+            c.commissionRate || 0,
+            c.earning || 0,
+            c.status || 'N/A'
           ];
           csvContent += row.join(",") + "\r\n";
         });

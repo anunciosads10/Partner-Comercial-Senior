@@ -14,6 +14,7 @@ import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { addDays, format } from "date-fns";
+import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 const ReportsPage = () => {
     const firestore = useFirestore();
@@ -151,8 +152,7 @@ const ReportsPage = () => {
                                 </div>
                                  <div className="grid gap-2">
                                      <Label>Rango de Fechas</Label>
-                                     {/* Este es un placeholder. Idealmente usarías un componente como react-day-picker */}
-                                     <Input type="text" value="Próximamente: Selector de Fechas" disabled />
+                                     <DateRangePicker date={date} onDateChange={setDate} />
                                  </div>
                             </div>
                         </CardContent>

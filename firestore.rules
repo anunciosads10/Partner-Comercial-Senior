@@ -75,6 +75,13 @@ service cloud.firestore {
       // Los partners (admin) pueden crear sus propios pagos, pero no modificarlos ni borrarlos.
       allow create: if isAdmin() && request.resource.data.partnerId == request.auth.uid;
     }
+    
+    // -------------------------------------------------------------------------
+    // Colección Global de Comisiones (para Reportes)
+    // -------------------------------------------------------------------------
+    match /commissions/{commissionId} {
+      allow read, write: if isSuperAdmin();
+    }
 
     // -------------------------------------------------------------------------
     // Configuraciones Globales (Solo lectura para usuarios, escritura para Admin)

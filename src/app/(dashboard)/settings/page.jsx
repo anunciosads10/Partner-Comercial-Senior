@@ -245,6 +245,35 @@ const BancolombiaConfigPanel = () => {
   );
 };
 
+const DaviplataConfigPanel = () => {
+  const { toast } = useToast();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configuración Daviplata</CardTitle>
+        <CardDescription>Ajusta los detalles para recibir pagos a través de Daviplata.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="daviplata-holder-name">Nombre del titular</Label>
+          <Input id="daviplata-holder-name" placeholder="Ej: Alex Rojas" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="daviplata-phone">Número de celular</Label>
+          <Input id="daviplata-phone" placeholder="Ej: 3001234567" />
+        </div>
+         <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+            <CheckCircle className="h-4 w-4"/>
+            <span>Configurado correctamente</span>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={() => toast({ title: "Configuración guardada", description: "Tus datos de Daviplata se han actualizado."})}>Guardar configuración Daviplata</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
 const BreBConfigPanel = () => {
   const { toast } = useToast();
   return (
@@ -336,8 +365,9 @@ const PaymentSettings = () => {
                     <div className="col-span-2">
                         {activeOption === 'nequi' && <NequiConfigPanel />}
                         {activeOption === 'bancolombia' && <BancolombiaConfigPanel />}
+                        {activeOption === 'daviplata' && <DaviplataConfigPanel />}
                         {activeOption === 'bre-b' && <BreBConfigPanel />}
-                        {activeOption !== 'nequi' && activeOption !== 'bre-b' && activeOption !== 'bancolombia' && (
+                        {activeOption !== 'nequi' && activeOption !== 'daviplata' && activeOption !== 'bre-b' && activeOption !== 'bancolombia' && (
                             <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
                                 <div className="text-center text-muted-foreground">
                                     <p>Selecciona una opción de pago para configurarla.</p>

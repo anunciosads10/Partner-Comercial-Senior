@@ -299,6 +299,48 @@
         "message",
         "timestamp"
       ]
+    },
+    "SaasPlatform": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SaasPlatform",
+      "type": "object",
+      "description": "Represents a SaaS business or product that partners can be affiliated with.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the SaaS Platform entity."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the SaaS platform (e.g., Restaurante POS)."
+        },
+        "category": {
+          "type": "string",
+          "description": "The business category of the SaaS (e.g., Restaurante, Talleres, Ecommerce)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A short description of the SaaS platform."
+        },
+        "status": {
+          "type": "string",
+          "description": "The status of the platform (e.g., Active, Inactive).",
+          "enum": [
+            "Active",
+            "Inactive"
+          ]
+        },
+        "baseCommission": {
+          "type": "number",
+          "description": "The suggested base commission rate for new affiliations."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "category",
+        "status"
+      ]
     }
   },
   "auth": {
@@ -445,6 +487,22 @@
             {
               "name": "paymentId",
               "description": "The unique identifier of the payment."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/saasPlatforms/{saasPlatformId}",
+        "definition": {
+          "entityName": "SaasPlatform",
+          "schema": {
+            "$ref": "#/backend/entities/SaasPlatform"
+          },
+          "description": "Stores the catalog of SaaS platforms partners can be affiliated with.",
+          "params": [
+            {
+              "name": "saasPlatformId",
+              "description": "The unique identifier of the SaaS platform."
             }
           ]
         }

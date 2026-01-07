@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -616,7 +616,7 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
             </>
           )}
 
-          {['nequi', 'bancolombia', 'daviplata', 'bre-b'].includes(method) && (
+          {(method === 'nequi' || method === 'bancolombia' || method === 'daviplata' || method === 'bre-b') && (
              <div className="space-y-2">
                 <Label>Código QR (Opcional)</Label>
                 <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
@@ -651,6 +651,22 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
 const AdminPartnerView = ({ partnerData, isLoading }) => {
   const firestore = useFirestore();
   const [isPaymentInfoOpen, setPaymentInfoOpen] = React.useState(false);
+
+  // Datos de ejemplo para las afiliaciones
+  const affiliations = [
+    {
+      platform: 'Restaurante POS',
+      type: 'Comercial',
+      commission: '20%',
+      status: 'Active',
+    },
+    {
+      platform: 'Autoservicios SaaS',
+      type: 'Referido',
+      commission: '15%',
+      status: 'Inactive',
+    },
+  ];
 
   if (isLoading) {
     return <p>Cargando tu perfil...</p>;
@@ -782,6 +798,51 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
             )}
         </CardContent>
     </Card>
+
+    <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle>Afiliaciones SaaS</CardTitle>
+            <CardDescription>Plataformas a las que estás afiliado y tus comisiones.</CardDescription>
+          </div>
+          <Button variant="outline"><PlusCircle className="mr-2 h-4 w-4" />Añadir Afiliación</Button>
+        </CardHeader>
+        <CardContent>
+            <div className="space-y-4">
+              {affiliations.map((aff, index) => (
+                <div key={index} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="bg-primary/10 text-primary p-3 rounded-full">
+                      <Puzzle className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="font-bold">{aff.platform}</p>
+                      <p className="text-sm text-muted-foreground">{aff.type}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
+                      <div className="text-center">
+                          <p className="font-semibold text-lg">{aff.commission}</p>
+                          <p className="text-muted-foreground text-xs">Comisión</p>
+                      </div>
+                       <div className="text-center">
+                          <Badge variant={getStatusBadgeVariant(aff.status)}>{aff.status}</Badge>
+                          <p className="text-muted-foreground text-xs mt-1">Estado</p>
+                      </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+             {affiliations.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  <Puzzle className="mx-auto h-12 w-12 mb-4" />
+                  <p>Aún no estás afiliado a ninguna plataforma.</p>
+                  <p className="text-sm">Solicita una afiliación para empezar a ganar comisiones.</p>
+                </div>
+            )}
+        </CardContent>
+      </Card>
+
 
     </div>
   );

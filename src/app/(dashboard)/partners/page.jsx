@@ -58,11 +58,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, writeBatch, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
-import { partners as mockPartners } from "@/lib/data";
+import { collection, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { seedAllData } from "@/lib/seed-data";
 
 function getTierBadgeVariant(tier) {
   switch (tier) {
@@ -90,7 +90,7 @@ function getStatusBadgeVariant(status) {
   }
 }
 
-const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, searchTerm, setSearchTerm }) => {
+const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, setSearchTerm }) => {
   const { toast } = useToast();
   const [partnerToDelete, setPartnerToDelete] = React.useState(null);
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -104,6 +104,15 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
     tier: 'Silver',
     pais: ''
   });
+
+  const handleSeedData = async () => {
+    if (!firestore) return;
+    await seedAllData(firestore);
+    toast({
+      title: "Datos de Prueba Cargados",
+      description: "Las colecciones de partners, comisiones y pagos han sido pobladas.",
+    });
+  }
 
   const handleToggleSuspend = async (partner) => {
     if (!firestore || !partner) return;
@@ -222,7 +231,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, onSeedData, firestore, se
               <CardDescription>Crea, edita, activa y suspende partners.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <Button onClick={onSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
+              <Button onClick={handleSeedData} variant="outline" disabled={!firestore}>Cargar Datos de Prueba</Button>
               <Dialog open={isCreateDialogOpen} onOpenChange={setCreateDialogOpen}>
                 <DialogTrigger asChild>
                   <Button>
@@ -1088,18 +1097,6 @@ export default function PartnersPage() {
   }, [firestore, role, user]);
   const { data: partnerData, isLoading: isPartnerDataLoading } = useDoc(partnerDocRef);
 
-
-  const seedData = async () => {
-    if (!firestore) return;
-    const batch = writeBatch(firestore);
-    mockPartners.forEach((partner) => {
-      const docRef = doc(firestore, "partners", partner.id);
-      batch.set(docRef, partner);
-    });
-    await batch.commit();
-    console.log("Datos de prueba sembrados exitosamente!");
-  };
-
   const isLoading = isRoleLoading || (role === 'superadmin' && arePartnersLoading) || (role === 'admin' && isPartnerDataLoading);
 
   if (isRoleLoading) {
@@ -1107,7 +1104,7 @@ export default function PartnersPage() {
   }
 
   if (role === 'superadmin') {
-    return <SuperAdminPartnersView partners={filteredPartners} isLoading={isLoading} onSeedData={seedData} firestore={firestore} searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>;
+    return <SuperAdminPartnersView partners={filteredPartners} isLoading={isLoading} firestore={firestore} searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>;
   }
   
   if (role === 'admin') {

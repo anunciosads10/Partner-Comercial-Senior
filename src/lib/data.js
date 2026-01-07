@@ -1,5 +1,4 @@
 import { PlaceHolderImages } from './placeholder-images';
-import { mockCommissions } from './commission-data';
 import { mockPayments } from './payment-data';
 
 export const partners = [
@@ -75,6 +74,18 @@ export const partners = [
     email: 'contact@growthpartners.biz',
     joinDate: '2023-08-30',
   },
+   {
+    id: 'gHZ9n7s2b9X8fJ2kP3s5t8YxVOE2',
+    name: 'alexjf',
+    tier: 'Platinum',
+    pais: 'Colombia',
+    status: 'Active',
+    totalSales: 250000,
+    revenue: 125000,
+    avatarUrl: '',
+    email: 'alexsuperadmin@gmail.com',
+    joinDate: '2021-01-01',
+  }
 ];
 
 export const salesData = [
@@ -92,7 +103,4 @@ export const salesData = [
     { month: 'Dec', totalSales: 5200, subPartnerSales: 6800 },
   ];
 
-export const commissions = mockCommissions;
 export const payments = mockPayments;
-
-    

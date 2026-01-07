@@ -3,9 +3,8 @@ import * as React from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { commissions as allCommissions } from "@/lib/data";
-import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, collection } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -61,12 +60,19 @@ export default function CommissionsPage() {
 
   const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
 
+  const commissionsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'commissions');
+  }, [firestore]);
+
+  const { data: allCommissions, isLoading: areCommissionsLoading } = useCollection(commissionsCollection);
+
   const { role, uid } = userData || {};
 
   // Filtrar comisiones basado en el rol del usuario
   const commissions = role === 'superadmin' 
     ? allCommissions 
-    : allCommissions.filter(c => c.partnerId === uid);
+    : allCommissions?.filter(c => c.partnerId === uid);
     
   const filteredCommissions = React.useMemo(() => {
     if (!commissions) return [];
@@ -78,9 +84,11 @@ export default function CommissionsPage() {
   }, [commissions, searchTerm]);
 
 
-  const totalEarnings = filteredCommissions.reduce((acc, curr) => acc + curr.earning, 0);
+  const totalEarnings = filteredCommissions?.reduce((acc, curr) => acc + curr.earning, 0) || 0;
+  
+  const isLoading = isRoleLoading || areCommissionsLoading;
 
-  if (isRoleLoading) {
+  if (isLoading) {
     return <div>Cargando comisiones...</div>;
   }
 

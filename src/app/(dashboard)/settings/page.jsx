@@ -9,7 +9,10 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload } from 'lucide-react';
+import { Upload, ChevronRight, QrCode, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+
 
 const ProfileSettings = () => {
   const { toast } = useToast();
@@ -164,6 +167,120 @@ const NotificationsSettings = () => {
   );
 };
 
+const paymentOptions = [
+  { id: 'nequi', name: 'Paga con Nequi' },
+  { id: 'bancolombia', name: 'Paga con Bancolombia' },
+  { id: 'daviplata', name: 'Paga con Daviplata' },
+  { id: 'bre-b', name: 'Paga con Bre-B' },
+  { id: 'cod', name: 'Pago contra entrega' },
+];
+
+const BreBConfigPanel = () => {
+  const { toast } = useToast();
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Configuración Bre-B</CardTitle>
+        <CardDescription>Ajusta los detalles para recibir pagos a través de Bre-B.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="breb-holder-name">Nombre del titular / comercio</Label>
+          <Input id="breb-holder-name" placeholder="Ej: Mi Tienda S.A.S" />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="breb-key-type">Llave Bre-B</Label>
+          <div className="flex gap-2">
+            <Select defaultValue="celular">
+              <SelectTrigger className="w-[120px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="celular">Celular</SelectItem>
+                <SelectItem value="correo">Correo</SelectItem>
+                <SelectItem value="documento">Documento</SelectItem>
+                <SelectItem value="alfanumerico">Alfanumérico</SelectItem>
+              </SelectContent>
+            </Select>
+            <Input id="breb-key-value" placeholder="Valor de la llave" />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="breb-commerce-code">Código de Comercio Bre-B (Opcional)</Label>
+          <Input id="breb-commerce-code" placeholder="Ej: 123456789" />
+        </div>
+        <div className="space-y-2">
+          <Label>Código QR Bre-B</Label>
+          <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
+            <div className="text-center text-muted-foreground">
+              <QrCode className="mx-auto h-12 w-12"/>
+              <p className="mt-2 text-sm">El código QR se generará al guardar.</p>
+            </div>
+          </div>
+        </div>
+         <div className="flex items-center gap-2 text-sm text-green-600 font-medium">
+            <CheckCircle className="h-4 w-4"/>
+            <span>Configurado correctamente</span>
+        </div>
+      </CardContent>
+      <CardFooter>
+        <Button onClick={() => toast({ title: "Configuración guardada", description: "Tus datos de Bre-B se han actualizado."})}>Guardar configuración Bre-B</Button>
+      </CardFooter>
+    </Card>
+  );
+};
+
+
+const PaymentSettings = () => {
+    const [activeOption, setActiveOption] = React.useState('nequi');
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Configuración de Pagos</CardTitle>
+                <CardDescription>
+                    Gestiona los métodos de pago que ofreces a tus partners.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="col-span-1 flex flex-col gap-2">
+                        <Label>Opciones de Pago</Label>
+                        {paymentOptions.map((option) => (
+                            <button
+                                key={option.id}
+                                onClick={() => setActiveOption(option.id)}
+                                className={cn(
+                                    "w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors",
+                                    activeOption === option.id
+                                        ? "bg-primary/10 border-primary text-primary font-semibold"
+                                        : "hover:bg-muted/50"
+                                )}
+                            >
+                                <span>{option.name}</span>
+                                <ChevronRight className={cn("h-4 w-4", activeOption === option.id && "text-primary")} />
+                            </button>
+                        ))}
+                    </div>
+
+                    <div className="col-span-2">
+                        {activeOption === 'bre-b' ? (
+                            <BreBConfigPanel />
+                        ) : (
+                            <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
+                                <div className="text-center text-muted-foreground">
+                                    <p>Selecciona una opción de pago para configurarla.</p>
+                                    <p className="text-sm">La configuración para "{paymentOptions.find(p => p.id === activeOption)?.name}" está en desarrollo.</p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+};
+
 
 export default function SettingsPage() {
   return (
@@ -180,6 +297,7 @@ export default function SettingsPage() {
           <TabsTrigger value="profile">Perfil</TabsTrigger>
           <TabsTrigger value="appearance">Apariencia</TabsTrigger>
           <TabsTrigger value="notifications">Notificaciones</TabsTrigger>
+          <TabsTrigger value="payments">Pagos</TabsTrigger>
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
@@ -192,6 +310,10 @@ export default function SettingsPage() {
 
         <TabsContent value="notifications" className="space-y-4">
           <NotificationsSettings />
+        </TabsContent>
+        
+        <TabsContent value="payments" className="space-y-4">
+          <PaymentSettings />
         </TabsContent>
       </Tabs>
     </div>

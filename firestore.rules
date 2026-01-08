@@ -84,7 +84,7 @@ service cloud.firestore {
     }
 
     // -------------------------------------------------------------------------
-    // Configuraciones Globales (Solo lectura para usuarios, escritura para Admin)
+    // Configuraciones Globales (Lectura para usuarios, escritura para Admin)
     // -------------------------------------------------------------------------
 
     match /commission_schemes/{schemeId} {
@@ -103,7 +103,10 @@ service cloud.firestore {
     }
     
     match /settings/{settingId} {
-        allow read, write: if isSuperAdmin();
+      // Admins (partners) pueden LEER la configuración para ver los ciclos de pago.
+      allow read: if isAdmin();
+      // Solo SuperAdmin puede ESCRIBIR (modificar) la configuración.
+      allow write: if isSuperAdmin();
     }
   }
 }

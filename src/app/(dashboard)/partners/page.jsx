@@ -587,7 +587,6 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        // Validación de servicios
         if (!firestore || !storage || !partnerId) {
             toast({ variant: "destructive", title: "Error", description: "Servicios de Firebase no listos." });
             return;
@@ -597,45 +596,37 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
         try {
             let finalQrCodeUrl = paymentInfo?.qrCodeUrl || '';
 
-            // 1. Subida de Imagen
             if (qrImageFile) {
-                // Usamos una ruta directa para coincidir con reglas de seguridad estándar
-                const imagePath = `qrcodes/${partnerId}`; 
+                const imagePath = `qrcodes/${partnerId}/qr_code.png`;
                 const imageRef = storageRef(storage, imagePath);
                 
                 const snapshot = await uploadBytes(imageRef, qrImageFile);
                 finalQrCodeUrl = await getDownloadURL(snapshot.ref);
             }
 
-            // 2. Preparar objeto de datos
-            const paymentData = {
-                method,
-                holderName: formData.holderName,
-                qrCodeUrl: finalQrCodeUrl,
-                status: 'pending',
-                updatedAt: new Date().toISOString(),
+            const dataToSave = {
+                'paymentInfo.method': method,
+                'paymentInfo.holderName': formData.holderName,
+                'paymentInfo.status': 'pending',
+                'paymentInfo.updatedAt': new Date().toISOString(),
+                'paymentInfo.qrCodeUrl': finalQrCodeUrl
             };
 
             if (['nequi', 'daviplata', 'bre-b'].includes(method)) {
-                paymentData.phone = formData.phone;
+                dataToSave['paymentInfo.phone'] = formData.phone;
             }
 
             if (method === 'bancolombia') {
-                paymentData.bank = formData.bank;
-                paymentData.accountNumber = formData.accountNumber;
-                paymentData.accountType = formData.accountType;
+                dataToSave['paymentInfo.bank'] = formData.bank;
+                dataToSave['paymentInfo.accountNumber'] = formData.accountNumber;
+                dataToSave['paymentInfo.accountType'] = formData.accountType;
             }
-
-            // 3. GUARDAR EN FIRESTORE 
-            // Usamos setDoc con { merge: true } para que funcione siempre (exista el doc o no)
-            const partnerRef = doc(firestore, 'partners', partnerId);
             
-            await setDoc(partnerRef, {
-                paymentInfo: paymentData
-            }, { merge: true });
+            const partnerRef = doc(firestore, 'partners', partnerId);
+            await updateDoc(partnerRef, dataToSave);
 
             toast({ title: "¡Éxito!", description: "Datos de pago guardados correctamente." });
-            onFinished();
+            if (onFinished) onFinished();
 
         } catch (error) {
             console.error("Error completo:", error);
@@ -710,7 +701,6 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
             <Label>Código QR (Opcional)</Label>
             <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted relative overflow-hidden">
                 {qrPreview ? (
-                    /* Usamos una etiqueta img normal para evitar problemas de Next.js con Blobs locales */
                     <img src={qrPreview} alt="QR Preview" className="h-full w-full object-contain" />
                 ) : (
                     <QrCode className="h-12 w-12 text-muted-foreground" />

@@ -102,6 +102,11 @@
               "type": "string",
               "description": "Last update timestamp.",
               "format": "date-time"
+            },
+            "qrCodeUrl": {
+              "type": "string",
+              "description": "URL of the uploaded QR code image.",
+              "format": "uri"
             }
           }
         }

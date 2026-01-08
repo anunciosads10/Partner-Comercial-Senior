@@ -64,6 +64,7 @@ import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { seedAllData } from "@/lib/seed-data";
 import { slugify } from "@/lib/utils";
+import Image from 'next/image';
 
 const generateAffiliateLink = (platformUrl, partner) => {
   if (!platformUrl) return "Configura la URL en la Plataforma";
@@ -565,6 +566,8 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
         accountType: paymentInfo?.accountType || 'Ahorros',
     });
     const fileInputRef = React.useRef(null);
+    const [qrImage, setQrImage] = React.useState(null);
+    const [qrPreview, setQrPreview] = React.useState(paymentInfo?.qrCodeUrl || null);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -572,26 +575,43 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
     };
 
     const handleFileChange = (e) => {
-      if (e.target.files[0]) {
-        toast({ title: `Archivo QR seleccionado: ${e.target.files[0].name}` });
-        // Aquí iría la lógica para subir el archivo
-      }
+        const file = e.target.files?.[0];
+        if (file) {
+            setQrImage(file);
+            const previewUrl = URL.createObjectURL(file);
+            setQrPreview(previewUrl);
+            toast({ title: `Archivo QR seleccionado: ${file.name}` });
+        }
     };
 
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (!firestore || !partnerId) return;
+        
+        let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
 
-        const partnerRef = doc(firestore, 'partners', partnerId);
+        // Placeholder para la lógica de subida de archivos
+        if (qrImage) {
+            // 1. Subir qrImage a Firebase Storage.
+            // 2. Obtener la URL de descarga (qrCodeUrl).
+            // Por ahora, solo mostraremos un mensaje.
+            console.log("Simulando subida de archivo a Firebase Storage:", qrImage.name);
+            qrCodeUrl = qrPreview; // Usamos la URL de previsualización como placeholder
+            toast({ title: "Subida de archivos no implementada", description: "La imagen del QR no se guardará permanentemente."})
+        }
+
+
         const dataToSave = {
             method,
             status: 'pending', // Siempre se guarda como pendiente para verificación
             updatedAt: new Date().toISOString(),
+            qrCodeUrl: qrCodeUrl,
             ...formData,
         };
 
         try {
+            const partnerRef = doc(firestore, 'partners', partnerId);
             await updateDoc(partnerRef, { paymentInfo: dataToSave });
             toast({
                 title: "Datos de Pago Guardados",
@@ -671,11 +691,16 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
           {(method === 'nequi' || method === 'bancolombia' || method === 'daviplata' || method === 'bre-b') && (
              <div className="space-y-2">
                 <Label>Código QR (Opcional)</Label>
-                <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted">
-                    <div className="text-center text-muted-foreground">
-                    <QrCode className="mx-auto h-12 w-12"/>
-                    <Button size="sm" type="button" variant="ghost" className="mt-2" onClick={() => fileInputRef.current?.click()}>
-                        Subir Imagen del QR
+                <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted relative">
+                    {qrPreview ? (
+                        <Image src={qrPreview} alt="Vista previa del QR" layout="fill" objectFit="contain" />
+                    ) : (
+                        <div className="text-center text-muted-foreground">
+                            <QrCode className="mx-auto h-12 w-12"/>
+                        </div>
+                    )}
+                     <Button size="sm" type="button" variant="ghost" className="absolute bottom-2" onClick={() => fileInputRef.current?.click()}>
+                        {qrPreview ? 'Cambiar Imagen' : 'Subir Imagen del QR'}
                     </Button>
                     <Input 
                         id="qr-upload" 
@@ -685,7 +710,6 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
                         accept="image/*" 
                         onChange={handleFileChange} 
                     />
-                    </div>
                 </div>
             </div>
           )}

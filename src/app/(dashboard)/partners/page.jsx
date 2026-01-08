@@ -596,9 +596,9 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
 
         setIsSaving(true);
         
-        try {
-            let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
+        let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
 
+        try {
             if (qrImageFile) {
                 toast({ title: "Subiendo imagen...", description: "Por favor espera." });
                 const imageRef = storageRef(storage, `qrcodes/${partnerId}/${qrImageFile.name}`);

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, ChevronRight, QrCode, CheckCircle } from 'lucide-react';
+import { Upload, ChevronRight, QrCode, CheckCircle, CalendarDays } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
@@ -428,54 +428,84 @@ const CodConfigPanel = () => {
 
 
 const PaymentSettings = () => {
+    const { toast } = useToast();
     const [activeOption, setActiveOption] = React.useState('nequi');
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle>Configuración de Pagos</CardTitle>
-                <CardDescription>
-                    Gestiona los métodos de pago que ofreces a tus partners.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="col-span-1 flex flex-col gap-2">
-                        <Label>Opciones de Pago</Label>
-                        {paymentOptions.map((option) => (
-                            <button
-                                key={option.id}
-                                onClick={() => setActiveOption(option.id)}
-                                className={cn(
-                                    "w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors",
-                                    activeOption === option.id
-                                        ? "bg-primary/10 border-primary text-primary font-semibold"
-                                        : "hover:bg-muted/50"
-                                )}
-                            >
-                                <span>{option.name}</span>
-                                <ChevronRight className={cn("h-4 w-4", activeOption === option.id && "text-primary")} />
-                            </button>
-                        ))}
+        <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><CalendarDays /> Ciclos de Pago</CardTitle>
+                    <CardDescription>
+                        Define la frecuencia y el día en que se procesarán los pagos de comisiones a los partners.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="grid md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                        <Label htmlFor="payment-frequency">Frecuencia de Pago</Label>
+                        <Select defaultValue="monthly">
+                            <SelectTrigger id="payment-frequency">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="monthly">Mensual</SelectItem>
+                                <SelectItem value="biweekly">Quincenal</SelectItem>
+                                <SelectItem value="weekly">Semanal</SelectItem>
+                            </SelectContent>
+                        </Select>
                     </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="payment-day">Día de Pago</Label>
+                        <Input id="payment-day" type="number" placeholder="Ej: 15" />
+                        <p className="text-xs text-muted-foreground">
+                            Introduce el día del mes (1-31) o de la semana (1-7) para el pago.
+                        </p>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button onClick={() => toast({ title: "Configuración de Ciclos Guardada"})}>Guardar Ciclos de Pago</Button>
+                </CardFooter>
+            </Card>
 
-                    <div className="col-span-2">
-                        {activeOption === 'nequi' && <NequiConfigPanel />}
-                        {activeOption === 'bancolombia' && <BancolombiaConfigPanel />}
-                        {activeOption === 'daviplata' && <DaviplataConfigPanel />}
-                        {activeOption === 'bre-b' && <BreBConfigPanel />}
-                        {activeOption === 'cod' && <CodConfigPanel />}
-                        {activeOption !== 'nequi' && activeOption !== 'bancolombia' && activeOption !== 'daviplata' && activeOption !== 'bre-b' && activeOption !== 'cod' && (
-                            <div className="flex items-center justify-center h-full border-2 border-dashed rounded-lg bg-secondary">
-                                <div className="text-center text-muted-foreground">
-                                    <p>Selecciona una opción de pago para configurarla.</p>
-                                </div>
-                            </div>
-                        )}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Métodos de Pago</CardTitle>
+                    <CardDescription>
+                        Gestiona los métodos de pago que ofreces a tus partners.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <div className="col-span-1 flex flex-col gap-2">
+                            <Label>Opciones Disponibles</Label>
+                            {paymentOptions.map((option) => (
+                                <button
+                                    key={option.id}
+                                    onClick={() => setActiveOption(option.id)}
+                                    className={cn(
+                                        "w-full flex items-center justify-between p-3 rounded-lg border text-left transition-colors",
+                                        activeOption === option.id
+                                            ? "bg-primary/10 border-primary text-primary font-semibold"
+                                            : "hover:bg-muted/50"
+                                    )}
+                                >
+                                    <span>{option.name}</span>
+                                    <ChevronRight className={cn("h-4 w-4", activeOption === option.id && "text-primary")} />
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="col-span-2">
+                            {activeOption === 'nequi' && <NequiConfigPanel />}
+                            {activeOption === 'bancolombia' && <BancolombiaConfigPanel />}
+                            {activeOption === 'daviplata' && <DaviplataConfigPanel />}
+                            {activeOption === 'bre-b' && <BreBConfigPanel />}
+                            {activeOption === 'cod' && <CodConfigPanel />}
+                        </div>
                     </div>
-                </div>
-            </CardContent>
-        </Card>
+                </CardContent>
+            </Card>
+        </div>
     );
 };
 

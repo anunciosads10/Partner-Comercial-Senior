@@ -6,13 +6,71 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
-import { Search, Download, MoreHorizontal } from 'lucide-react';
+import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from '@/components/ui/label';
+
+const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
+    if (!commission) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                        <Info className="h-5 w-5 text-primary"/>
+                        Detalle de la Transacción
+                    </DialogTitle>
+                    <DialogDescription>
+                        ID: {commission.id}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 text-sm">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground flex items-center gap-1"><User className="h-4 w-4"/> Partner</Label>
+                        <span className="col-span-2 font-medium">{commission.partnerName || 'N/A'}</span>
+                    </div>
+                     <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground flex items-center gap-1"><CircleDollarSign className="h-4 w-4"/> Monto</Label>
+                        <span className="col-span-2 font-bold text-primary">${commission.amount.toLocaleString()}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground flex items-center gap-1"><Calendar className="h-4 w-4"/> Fecha</Label>
+                        <span className="col-span-2">{new Date(commission.paymentDate).toLocaleDateString()}</span>
+                    </div>
+                     <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground flex items-center gap-1"><Tag className="h-4 w-4"/> Estado</Label>
+                        <div className="col-span-2">
+                            <Badge variant={commission.status === 'Pagado' ? 'default' : 'secondary'}>{commission.status}</Badge>
+                        </div>
+                    </div>
+                     {commission.status === 'Pagado' && commission.paidAt && (
+                        <div className="grid grid-cols-3 items-center gap-4 text-green-600">
+                           <Label className="flex items-center gap-1"><CheckCircle className="h-4 w-4"/> Pagado el</Label>
+                           <span className="col-span-2 font-medium">{new Date(commission.paidAt).toLocaleString()}</span>
+                        </div>
+                     )}
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
 
 
-const CommissionsTable = ({ commissions }) => {
+const CommissionsTable = ({ commissions, onSelectDetail }) => {
   const { toast } = useToast();
 
   if (!commissions || commissions.length === 0) {
@@ -54,11 +112,11 @@ const CommissionsTable = ({ commissions }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem onSelect={() => toast({ title: "Mostrando detalles de la comisión...", description: `ID: ${commission.id}` })}>
-                          Ver Detalle
+                        <DropdownMenuItem onSelect={() => onSelectDetail(commission)}>
+                          <Eye className="mr-2 h-4 w-4" /> Ver Detalle
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => toast({ title: "Notificación enviada", description: `Se ha notificado al partner ${commission.partnerName}.` })}>
-                          Notificar Partner
+                          <Bell className="mr-2 h-4 w-4" /> Notificar Partner
                         </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
@@ -76,6 +134,9 @@ export default function CommissionsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [selectedCommission, setSelectedCommission] = React.useState(null);
+  const [isDetailDialogOpen, setDetailDialogOpen] = React.useState(false);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -148,6 +209,11 @@ export default function CommissionsPage() {
 
      toast({ title: "Reporte de Comisiones Generado" });
   };
+  
+  const handleSelectDetail = (commission) => {
+    setSelectedCommission(commission);
+    setDetailDialogOpen(true);
+  };
 
 
   if (isLoading) {
@@ -186,7 +252,7 @@ export default function CommissionsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          <CommissionsTable commissions={filteredCommissions} />
+          <CommissionsTable commissions={filteredCommissions} onSelectDetail={handleSelectDetail} />
         </CardContent>
       </Card>
       <Card className="w-full md:w-1/3 self-end">
@@ -200,6 +266,12 @@ export default function CommissionsPage() {
               </div>
           </CardContent>
       </Card>
+
+      <CommissionDetailsDialog
+        commission={selectedCommission}
+        isOpen={isDetailDialogOpen}
+        onOpenChange={setDetailDialogOpen}
+      />
     </div>
   );
 }

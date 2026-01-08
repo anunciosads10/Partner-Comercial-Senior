@@ -73,6 +73,7 @@ const PlatformsPage = () => {
   const [isAlertOpen, setAlertOpen] = React.useState(false);
   const [currentPlatform, setCurrentPlatform] = React.useState(null);
   const [platformToDelete, setPlatformToDelete] = React.useState(null);
+  const [openMenuId, setOpenMenuId] = React.useState(null);
 
   const openNewDialog = () => {
     setCurrentPlatform(null);
@@ -82,11 +83,13 @@ const PlatformsPage = () => {
   const openEditDialog = (platform) => {
     setCurrentPlatform(platform);
     setDialogOpen(true);
+    setOpenMenuId(null);
   };
 
   const openDeleteAlert = (platform) => {
     setPlatformToDelete(platform);
     setAlertOpen(true);
+    setOpenMenuId(null);
   };
 
   const handleSavePlatform = async (e) => {
@@ -182,7 +185,7 @@ const PlatformsPage = () => {
                       <PlatformStatusBadge status={platform.status} />
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
+                      <DropdownMenu open={openMenuId === platform.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? platform.id : null)}>
                         <DropdownMenuTrigger asChild>
                           <Button size="icon" variant="ghost">
                             <MoreHorizontal className="h-4 w-4" />

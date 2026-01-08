@@ -80,6 +80,46 @@ const ReportsPage = () => {
             return dateMatch && partnerMatch && statusMatch;
         });
     }, [commissions, payments, date, selectedPartner, selectedStatus]);
+    
+    const handleExport = () => {
+        if (!combinedAndFilteredData || combinedAndFilteredData.length === 0) {
+          toast({
+            variant: "destructive",
+            title: "No hay datos para exportar",
+            description: "No hay datos que coincidan con los filtros actuales.",
+          });
+          return;
+        }
+    
+        let csvContent = "data:text/csv;charset=utf-8,";
+        const headers = ["Partner", "Concepto", "Fecha", "Monto", "Estado"];
+        csvContent += headers.join(",") + "\r\n";
+    
+        combinedAndFilteredData.forEach(item => {
+          const row = [
+            item.partnerName || partnerNames[item.partnerId] || item.partner || 'N/A',
+            item.product || 'Pago Registrado',
+            robustParseDate(item.paymentDate || item.paidAt || item.date)?.toLocaleDateString() || 'N/A',
+            (Number(item.amount || item.earning || 0)),
+            item.status || 'N/A'
+          ];
+          csvContent += row.join(",") + "\r\n";
+        });
+    
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "reporte_financiero.csv");
+        document.body.appendChild(link);
+        
+        link.click();
+        document.body.removeChild(link);
+        
+        toast({
+            title: "Reporte Generado",
+            description: "La descarga de tu reporte ha comenzado.",
+        });
+    };
 
     // KPIs usando 'amount' o 'earning' indistintamente
     const total = combinedAndFilteredData.reduce((acc, item) => acc + (Number(item.amount || item.earning || 0)), 0);
@@ -104,6 +144,10 @@ const ReportsPage = () => {
                             </CardTitle>
                             <CardDescription>Análisis consolidado de comisiones y pagos realizados.</CardDescription>
                         </div>
+                         <Button onClick={handleExport} variant="outline" disabled={isLoading || combinedAndFilteredData.length === 0}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Exportar Reporte
+                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">

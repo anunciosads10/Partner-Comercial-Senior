@@ -4,11 +4,11 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where } from "firebase/firestore";
+import { doc, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
-import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle } from 'lucide-react';
+import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle, Edit, Trash2, Pencil } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from "@/hooks/use-toast";
 import {
   Dialog,
@@ -18,6 +18,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
 
 const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
@@ -70,7 +80,7 @@ const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
 };
 
 
-const CommissionsTable = ({ commissions, onSelectDetail }) => {
+const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectDelete }) => {
   const { toast } = useToast();
 
   if (!commissions || commissions.length === 0) {
@@ -115,6 +125,21 @@ const CommissionsTable = ({ commissions, onSelectDetail }) => {
                         <DropdownMenuItem onSelect={() => onSelectDetail(commission)}>
                           <Eye className="mr-2 h-4 w-4" /> Ver Detalle
                         </DropdownMenuItem>
+                         {commission.status !== 'Pagado' && (
+                          <>
+                            <DropdownMenuItem onSelect={() => onSelectEdit(commission)}>
+                              <Pencil className="mr-2 h-4 w-4" /> Editar
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => onSelectDelete(commission)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" /> Eliminar
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem onSelect={() => toast({ title: "Notificación enviada", description: `Se ha notificado al partner ${commission.partnerName}.` })}>
                           <Bell className="mr-2 h-4 w-4" /> Notificar Partner
                         </DropdownMenuItem>
@@ -134,9 +159,15 @@ export default function CommissionsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
+  
+  // State for dialogs
   const [selectedCommission, setSelectedCommission] = React.useState(null);
-  const [isDetailDialogOpen, setDetailDialogOpen] = React.useState(false);
+  const [commissionToEdit, setCommissionToEdit] = React.useState(null);
+  const [commissionToDelete, setCommissionToDelete] = React.useState(null);
 
+  const [isDetailDialogOpen, setDetailDialogOpen] = React.useState(false);
+  const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
+  const [isAlertOpen, setAlertOpen] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -164,7 +195,7 @@ export default function CommissionsPage() {
     if (!allCommissions) return [];
     const lowerCaseSearch = searchTerm.toLowerCase();
     return allCommissions.filter(commission =>
-      commission.id.toLowerCase().includes(lowerCaseSearch) ||
+      (commission.id || '').toLowerCase().includes(lowerCaseSearch) ||
       (commission.partnerName || '').toLowerCase().includes(lowerCaseSearch) ||
       (commission.status || '').toLowerCase().includes(lowerCaseSearch)
     );
@@ -210,9 +241,54 @@ export default function CommissionsPage() {
      toast({ title: "Reporte de Comisiones Generado" });
   };
   
+  // Handlers for actions
   const handleSelectDetail = (commission) => {
     setSelectedCommission(commission);
     setDetailDialogOpen(true);
+  };
+
+  const handleSelectEdit = (commission) => {
+    setCommissionToEdit(commission);
+    setEditDialogOpen(true);
+  };
+  
+  const handleSelectDelete = (commission) => {
+    setCommissionToDelete(commission);
+    setAlertOpen(true);
+  };
+
+  const handleUpdateCommission = async (e) => {
+    e.preventDefault();
+    if (!firestore || !commissionToEdit) return;
+
+    const commissionRef = doc(firestore, "payments", commissionToEdit.id);
+    try {
+      await updateDoc(commissionRef, {
+        amount: Number(commissionToEdit.amount),
+        partnerName: commissionToEdit.partnerName,
+      });
+      toast({ title: "Comisión Actualizada", description: "Los datos se han guardado." });
+      setEditDialogOpen(false);
+      setCommissionToEdit(null);
+    } catch (error) {
+      console.error("Error updating commission:", error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar la comisión." });
+    }
+  };
+
+  const handleDeleteCommission = async () => {
+    if (!firestore || !commissionToDelete) return;
+
+    const commissionRef = doc(firestore, "payments", commissionToDelete.id);
+    try {
+      await deleteDoc(commissionRef);
+      toast({ title: "Comisión Eliminada", description: "El registro ha sido eliminado." });
+      setAlertOpen(false);
+      setCommissionToDelete(null);
+    } catch (error) {
+      console.error("Error deleting commission:", error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar la comisión." });
+    }
   };
 
 
@@ -252,7 +328,12 @@ export default function CommissionsPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-          <CommissionsTable commissions={filteredCommissions} onSelectDetail={handleSelectDetail} />
+          <CommissionsTable 
+            commissions={filteredCommissions} 
+            onSelectDetail={handleSelectDetail}
+            onSelectEdit={handleSelectEdit}
+            onSelectDelete={handleSelectDelete}
+          />
         </CardContent>
       </Card>
       <Card className="w-full md:w-1/3 self-end">
@@ -272,6 +353,62 @@ export default function CommissionsPage() {
         isOpen={isDetailDialogOpen}
         onOpenChange={setDetailDialogOpen}
       />
+      
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent>
+           {commissionToEdit && (
+              <form onSubmit={handleUpdateCommission}>
+                <DialogHeader>
+                    <DialogTitle>Editar Comisión</DialogTitle>
+                    <DialogDescription>ID: {commissionToEdit.id}</DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-partnerName">Partner</Label>
+                        <Input
+                          id="edit-partnerName"
+                          value={commissionToEdit.partnerName}
+                          onChange={(e) => setCommissionToEdit({ ...commissionToEdit, partnerName: e.target.value })}
+                        />
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="edit-amount">Monto</Label>
+                        <Input
+                          id="edit-amount"
+                          type="number"
+                          value={commissionToEdit.amount}
+                          onChange={(e) => setCommissionToEdit({ ...commissionToEdit, amount: e.target.value })}
+                        />
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button type="button" variant="secondary" onClick={() => setEditDialogOpen(false)}>Cancelar</Button>
+                    <Button type="submit">Guardar Cambios</Button>
+                </DialogFooter>
+              </form>
+            )}
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Esto eliminará permanentemente la comisión de 
+              <span className="font-bold"> ${commissionToDelete?.amount.toLocaleString()}</span> para 
+              <span className="font-bold"> {commissionToDelete?.partnerName}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteCommission}>Eliminar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
     </div>
   );
 }

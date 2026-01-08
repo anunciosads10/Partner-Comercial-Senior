@@ -42,6 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +50,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MoreHorizontal, PlusCircle, Edit, Trash2, Puzzle, Loader2 } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Edit, Trash2, Puzzle, Loader2, Eye } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase, useUser, useDoc } from "@/firebase";
 import { collection, doc, addDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -58,6 +59,58 @@ const PlatformStatusBadge = ({ status }) => {
   const variant = status === 'Active' ? 'default' : 'secondary';
   return <Badge variant={variant}>{status}</Badge>;
 };
+
+const PlatformDetailsDialog = ({ platform, isOpen, onOpenChange }) => {
+    if (!platform) return null;
+
+    return (
+        <Dialog open={isOpen} onOpenChange={onOpenChange}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Detalles de la Plataforma</DialogTitle>
+                    <DialogDescription>
+                        Información completa de la plataforma SaaS.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4 text-sm">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground">Nombre</Label>
+                        <span className="col-span-2 font-medium">{platform.name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-start gap-4">
+                        <Label className="text-muted-foreground pt-1">Descripción</Label>
+                        <span className="col-span-2">{platform.description}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground">Categoría</Label>
+                        <span className="col-span-2">{platform.category}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-muted-foreground">Estado</Label>
+                        <div className="col-span-2">
+                           <PlatformStatusBadge status={platform.status} />
+                        </div>
+                    </div>
+                    <div className="border-t pt-4 mt-2 grid gap-4">
+                         <h4 className="font-semibold text-foreground col-span-3">Comisiones</h4>
+                        <div className="grid grid-cols-3 items-center gap-4">
+                            <Label className="text-muted-foreground">Comisión Inicial</Label>
+                            <span className="col-span-2 font-bold text-primary">{(platform.firstSubscriptionCommission || 0)}%</span>
+                        </div>
+                        <div className="grid grid-cols-3 items-center gap-4">
+                            <Label className="text-muted-foreground">Comisión Recurrente</Label>
+                            <span className="col-span-2 font-bold text-primary">{(platform.recurringCommission || 0)}%</span>
+                        </div>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)}>Cerrar</Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    );
+};
+
 
 const PlatformsPage = () => {
   const firestore = useFirestore();
@@ -75,6 +128,11 @@ const PlatformsPage = () => {
   const [platformToDelete, setPlatformToDelete] = React.useState(null);
   const [openMenuId, setOpenMenuId] = React.useState(null);
 
+  // Estados para el diálogo de detalles
+  const [isDetailOpen, setDetailOpen] = React.useState(false);
+  const [platformToView, setPlatformToView] = React.useState(null);
+
+
   const openNewDialog = () => {
     setCurrentPlatform(null);
     setDialogOpen(true);
@@ -89,6 +147,12 @@ const PlatformsPage = () => {
   const openDeleteAlert = (platform) => {
     setPlatformToDelete(platform);
     setAlertOpen(true);
+    setOpenMenuId(null);
+  };
+
+  const openDetailDialog = (platform) => {
+    setPlatformToView(platform);
+    setDetailOpen(true);
     setOpenMenuId(null);
   };
 
@@ -193,9 +257,13 @@ const PlatformsPage = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                           <DropdownMenuItem onSelect={() => openDetailDialog(platform)}>
+                            <Eye className="mr-2 h-4 w-4" /> Ver Detalle
+                          </DropdownMenuItem>
                           <DropdownMenuItem onSelect={() => openEditDialog(platform)}>
                             <Edit className="mr-2 h-4 w-4" /> Editar
                           </DropdownMenuItem>
+                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive" onSelect={() => openDeleteAlert(platform)}>
                             <Trash2 className="mr-2 h-4 w-4" /> Eliminar
                           </DropdownMenuItem>
@@ -291,6 +359,13 @@ const PlatformsPage = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      
+      {/* Dialog for Details */}
+      <PlatformDetailsDialog 
+        platform={platformToView}
+        isOpen={isDetailOpen}
+        onOpenChange={setDetailOpen}
+      />
     </>
   );
 };

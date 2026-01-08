@@ -12,7 +12,7 @@ import { DollarSign, CheckCircle, Clock, Download, BarChart3, Loader2 } from "lu
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format, subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { format, subYears, startOfDay, endOfDay, isWithinInterval, parse } from "date-fns";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 const ReportsPage = () => {
@@ -34,57 +34,75 @@ const ReportsPage = () => {
         return partners.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
     }, [partners]);
 
-    // Función auxiliar para convertir cualquier formato de fecha de Firebase a objeto Date de JS
-    const parseFirebaseDate = (dateValue) => {
+    // FUNCIÓN CRÍTICA: Parsea fechas asumiendo formato latino (5/1/2026 = 5 de Enero)
+    const robustParseDate = (dateValue) => {
         if (!dateValue) return null;
-        if (dateValue.toDate) return dateValue.toDate(); // Si es Timestamp de Firebase
-        const parsed = new Date(dateValue);
-        return isNaN(parsed.getTime()) ? null : parsed;
+        if (dateValue.toDate) return dateValue.toDate(); // Firebase Timestamp
+        if (dateValue instanceof Date) return dateValue;
+        
+        if (typeof dateValue === 'string') {
+            // Si tiene "/" probamos primero formato latino DD/MM/YYYY
+            if (dateValue.includes('/')) {
+                const parts = dateValue.split('/');
+                if (parts.length === 3) {
+                    // Forzamos interpretación DD/MM/YYYY
+                    const d = parseInt(parts[0], 10);
+                    const m = parseInt(parts[1], 10) - 1;
+                    const y = parseInt(parts[2], 10);
+                    const parsed = new Date(y, m, d);
+                    if (!isNaN(parsed.getTime())) return parsed;
+                }
+            }
+            // Fallback para otros formatos de string como ISO
+            const native = new Date(dateValue);
+            return isNaN(native.getTime()) ? null : native;
+        }
+        return null;
     };
 
     const filteredCommissions = React.useMemo(() => {
         if (!commissions) return [];
 
-        // Normalizamos el rango del filtro: inicio del primer día y fin del último día
         const rangeStart = date?.from ? startOfDay(date.from) : null;
         const rangeEnd = date?.to ? endOfDay(date.to) : null;
 
         return commissions.filter(c => {
-            const rawDate = c.date || c.createdAt || c.paymentDate;
-            const commissionDate = parseFirebaseDate(rawDate);
-            
+            // 1. Obtener y parsear fecha
+            const rawDate = c.date || c.createdAt || c.paymentDate || c.fecha;
+            const commissionDate = robustParseDate(rawDate);
             if (!commissionDate) return false;
 
-            // Filtro de Fecha
-            let dateMatch = true;
-            if (rangeStart && rangeEnd) {
-                dateMatch = isWithinInterval(commissionDate, { start: rangeStart, end: rangeEnd });
-            }
+            // 2. Filtro de Rango de Fechas
+            const dateMatch = (rangeStart && rangeEnd) 
+                ? isWithinInterval(commissionDate, { start: rangeStart, end: rangeEnd })
+                : true;
 
-            // Filtro de Partner
-            const partnerMatch = selectedPartner === 'all' || c.partnerId === selectedPartner;
+            // 3. Filtro de Partner (compara contra ID y contra el nombre por si acaso)
+            const cPartnerId = (c.partnerId || c.partner || '').toString().toLowerCase();
+            const fPartnerId = selectedPartner.toLowerCase();
+            const partnerMatch = selectedPartner === 'all' || cPartnerId === fPartnerId;
             
-            // Filtro de Estado (Case-insensitive para evitar errores de tipeo)
-            const currentStatus = (c.status || '').toLowerCase();
-            const filterStatus = selectedStatus.toLowerCase();
-            const statusMatch = selectedStatus === 'all' || currentStatus === filterStatus;
+            // 4. Filtro de Estado (insensible a mayúsculas)
+            const cStatus = (c.status || c.estado || '').toString().toLowerCase();
+            const fStatus = selectedStatus.toLowerCase();
+            const statusMatch = selectedStatus === 'all' || cStatus === fStatus;
             
             return dateMatch && partnerMatch && statusMatch;
         });
     }, [commissions, date, selectedPartner, selectedStatus]);
 
-    // Cálculos de KPIs basados en los datos filtrados
-    const totalCommissions = filteredCommissions.reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+    // KPIs asegurando que los valores sean numéricos
+    const totalCommissions = filteredCommissions.reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
     const paidCommissions = filteredCommissions
-        .filter(c => (c.status || '').toLowerCase() === 'pagado')
-        .reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+        .filter(c => (c.status || c.estado || '').toLowerCase().includes('pagado'))
+        .reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
     const pendingCommissions = filteredCommissions
-        .filter(c => (c.status || '').toLowerCase() === 'pendiente')
-        .reduce((acc, c) => acc + (Number(c.earning) || 0), 0);
+        .filter(c => (c.status || c.estado || '').toLowerCase().includes('pendiente'))
+        .reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
 
 
     const isLoading = isLoadingCommissions || isLoadingPartners;
-
+    
     const handleExport = () => {
         if (!filteredCommissions || filteredCommissions.length === 0) {
           toast({ variant: "destructive", title: "No hay datos para exportar." });
@@ -97,7 +115,7 @@ const ReportsPage = () => {
 
         filteredCommissions.forEach(c => {
           const rawDate = c.date || c.createdAt || c.paymentDate;
-          const commissionDate = parseFirebaseDate(rawDate);
+          const commissionDate = robustParseDate(rawDate);
           const formattedDate = commissionDate ? format(commissionDate, 'yyyy-MM-dd') : 'N/A';
 
           const row = [
@@ -211,19 +229,24 @@ const ReportsPage = () => {
                                     <TableBody>
                                         {filteredCommissions.map(c => (
                                             <TableRow key={c.id}>
-                                                <TableCell className="font-medium">{partnerNames[c.partnerId] || c.partnerId}</TableCell>
-                                                <TableCell>{c.product}</TableCell>
+                                                <TableCell className="font-medium">{partnerNames[c.partnerId] || c.partner || c.partnerId}</TableCell>
+                                                <TableCell>{c.product || 'Venta Directa'}</TableCell>
                                                 <TableCell>${(c.saleAmount || 0).toLocaleString()}</TableCell>
-                                                <TableCell className="font-semibold text-primary">${(c.earning || 0).toLocaleString()}</TableCell>
-                                                <TableCell><Badge variant={(c.status || '').toLowerCase() === 'pagado' ? 'default' : 'secondary'}>{c.status}</Badge></TableCell>
+                                                <TableCell className="font-semibold text-primary">${(c.earning || c.monto || 0).toLocaleString()}</TableCell>
+                                                <TableCell>
+                                                  <Badge variant={(c.status || c.estado || '').toLowerCase().includes('pagado') ? 'default' : 'secondary'}>
+                                                      {c.status || c.estado}
+                                                  </Badge>
+                                                </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             )}
                              {!isLoading && filteredCommissions.length === 0 && (
-                                <div className="flex items-center justify-center h-48 border-2 border-dashed rounded-lg">
+                                <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
                                     <p className="text-muted-foreground">No se encontraron comisiones con los filtros seleccionados.</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Verifica el rango de fechas y los filtros aplicados.</p>
                                 </div>
                             )}
                         </CardContent>

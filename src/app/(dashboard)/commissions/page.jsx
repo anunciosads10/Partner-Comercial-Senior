@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/use-toast";
 
 
 const CommissionsTable = ({ commissions }) => {
+  const { toast } = useToast();
+
   if (!commissions || commissions.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 border-2 border-dashed rounded-lg bg-secondary">
@@ -52,8 +54,12 @@ const CommissionsTable = ({ commissions }) => {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                        <DropdownMenuItem>Ver Detalle</DropdownMenuItem>
-                        <DropdownMenuItem>Notificar Partner</DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => toast({ title: "Mostrando detalles de la comisión...", description: `ID: ${commission.id}` })}>
+                          Ver Detalle
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => toast({ title: "Notificación enviada", description: `Se ha notificado al partner ${commission.partnerName}.` })}>
+                          Notificar Partner
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
             </TableCell>
@@ -99,7 +105,7 @@ export default function CommissionsPage() {
     return allCommissions.filter(commission =>
       commission.id.toLowerCase().includes(lowerCaseSearch) ||
       (commission.partnerName || '').toLowerCase().includes(lowerCaseSearch) ||
-      commission.status.toLowerCase().includes(lowerCaseSearch)
+      (commission.status || '').toLowerCase().includes(lowerCaseSearch)
     );
   }, [allCommissions, searchTerm]);
 

@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
+import { doc, collection, query, where, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
 import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle, Edit, Trash2, Pencil, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -311,20 +311,26 @@ export default function CommissionsPage() {
   };
   
   const handleSendNotification = async () => {
-    if (!notificationMessage.trim()) {
+    if (!notificationMessage.trim() || !firestore || !commissionToNotify) {
         toast({ variant: "destructive", title: "El mensaje no puede estar vacío" });
         return;
     }
 
     setIsSending(true);
     try {
-        // En una app real, aquí se llamaría a Firebase para crear una notificación.
-        // await addDoc(collection(firestore, `partners/${commissionToNotify.partnerId}/notifications`), { ... });
-        console.log(`Enviando a ${commissionToNotify.partnerId}: ${notificationMessage}`);
+        const notificationsRef = collection(firestore, `partners/${commissionToNotify.partnerId}/notifications`);
+        await addDoc(notificationsRef, {
+            partnerId: commissionToNotify.partnerId,
+            type: "Comisión",
+            title: `Actualización sobre tu comisión de $${commissionToNotify.amount.toLocaleString()}`,
+            message: notificationMessage,
+            timestamp: new Date().toISOString(),
+            isRead: false,
+        });
         
         toast({ 
-        title: "Notificación enviada", 
-        description: `Se ha enviado el mensaje a ${commissionToNotify.partnerName || commissionToNotify.partnerId}` 
+            title: "Notificación enviada", 
+            description: `Se ha enviado el mensaje a ${commissionToNotify.partnerName || commissionToNotify.partnerId}` 
         });
         
         setNotifyDialogOpen(false); // Cierra el modal

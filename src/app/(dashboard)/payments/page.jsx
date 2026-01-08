@@ -108,7 +108,7 @@ export default function PaymentsPage() {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = ["ID Transacción", "Partner", "Fecha", "Monto", "Estado", "Descripción"];
+    const headers = ["ID Transacción", "Partner", "Fecha Creación", "Fecha Pago", "Monto", "Estado", "Descripción"];
     csvContent += headers.join(",") + "\r\n";
 
     payments.forEach(payment => {
@@ -116,6 +116,7 @@ export default function PaymentsPage() {
         payment.id,
         payment.partnerName || 'N/A',
         new Date(payment.paymentDate).toLocaleDateString(),
+        payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : 'N/A',
         payment.amount,
         payment.status,
         `"${payment.description || ''}"`
@@ -328,7 +329,8 @@ export default function PaymentsPage() {
                     <TableRow>
                       <TableHead>ID Transacción</TableHead>
                       {role === 'superadmin' && <TableHead>Partner</TableHead>}
-                      <TableHead>Fecha</TableHead>
+                      <TableHead>Fecha de Creación</TableHead>
+                      <TableHead>Fecha de Pago</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead>Estado</TableHead>
                       {role === 'superadmin' && <TableHead className="text-right">Acciones</TableHead>}
@@ -340,6 +342,9 @@ export default function PaymentsPage() {
                         <TableCell className="font-mono">{payment.id}</TableCell>
                         {role === 'superadmin' && <TableCell className="font-medium">{payment.partnerName}</TableCell>}
                         <TableCell>{new Date(payment.paymentDate).toLocaleDateString()}</TableCell>
+                        <TableCell>
+                            {payment.paidAt ? new Date(payment.paidAt).toLocaleDateString() : '-'}
+                        </TableCell>
                         <TableCell className="font-semibold">${payment.amount.toLocaleString()}</TableCell>
                         <TableCell>
                           <PaymentStatusBadge status={payment.status} />

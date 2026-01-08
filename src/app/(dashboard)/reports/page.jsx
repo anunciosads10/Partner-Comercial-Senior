@@ -12,8 +12,9 @@ import { DollarSign, CheckCircle, Clock, Download, BarChart3, Loader2 } from "lu
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format, subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
+import { SalesChart } from '@/components/dashboard/sales-chart';
 
 const ReportsPage = () => {
     const firestore = useFirestore();
@@ -157,37 +158,44 @@ const ReportsPage = () => {
                         <KpiCard title="Total Pendiente" value={isLoading ? <Loader2 className="animate-spin" /> : `$${pending.toLocaleString()}`} Icon={Clock} />
                     </div>
 
-                    <Card className="bg-secondary/50">
-                        <CardContent className="pt-6">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <div className="grid gap-2">
-                                    <Label>Partner</Label>
-                                    <Select value={selectedPartner} onValueChange={setSelectedPartner}>
-                                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos los Partners</SelectItem>
-                                            {partners?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                         <Card className="bg-secondary/50 col-span-1 lg:col-span-2">
+                            <CardContent className="pt-6">
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <div className="grid gap-2">
+                                        <Label>Partner</Label>
+                                        <Select value={selectedPartner} onValueChange={setSelectedPartner}>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos los Partners</SelectItem>
+                                                {partners?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Estado</Label>
+                                        <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Todos los Estados</SelectItem>
+                                                <SelectItem value="Pendiente">Pendiente</SelectItem>
+                                                <SelectItem value="Pagado">Pagado</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="grid gap-2">
+                                        <Label>Rango de Fechas</Label>
+                                        <DateRangePicker date={date} onDateChange={setDate} />
+                                    </div>
                                 </div>
-                                <div className="grid gap-2">
-                                    <Label>Estado</Label>
-                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-                                        <SelectTrigger><SelectValue /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">Todos los Estados</SelectItem>
-                                            <SelectItem value="Pendiente">Pendiente</SelectItem>
-                                            <SelectItem value="Pagado">Pagado</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label>Rango de Fechas</Label>
-                                    <DateRangePicker date={date} onDateChange={setDate} />
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
+                            </CardContent>
+                        </Card>
+
+                        <div className="col-span-1 lg:col-span-2">
+                            <SalesChart />
+                        </div>
+                    </div>
+
 
                     <Card>
                         <CardHeader><CardTitle>Detalle de Movimientos</CardTitle></CardHeader>

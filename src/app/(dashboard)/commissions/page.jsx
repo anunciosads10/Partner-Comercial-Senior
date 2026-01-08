@@ -80,7 +80,7 @@ const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
 };
 
 
-const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectDelete }) => {
+const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectDelete, openMenuId, setOpenMenuId }) => {
   const { toast } = useToast();
 
   if (!commissions || commissions.length === 0) {
@@ -114,7 +114,7 @@ const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectD
               <Badge variant={commission.status === 'Pagado' ? 'default' : 'secondary'}>{commission.status}</Badge>
             </TableCell>
             <TableCell className="text-right">
-                <DropdownMenu>
+                <DropdownMenu open={openMenuId === commission.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? commission.id : null)}>
                     <DropdownMenuTrigger asChild>
                         <Button size="icon" variant="ghost">
                             <MoreHorizontal className="h-4 w-4" />
@@ -160,7 +160,7 @@ export default function CommissionsPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
   
-  // State for dialogs
+  // State for dialogs and menus
   const [selectedCommission, setSelectedCommission] = React.useState(null);
   const [commissionToEdit, setCommissionToEdit] = React.useState(null);
   const [commissionToDelete, setCommissionToDelete] = React.useState(null);
@@ -168,6 +168,7 @@ export default function CommissionsPage() {
   const [isDetailDialogOpen, setDetailDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [isAlertOpen, setAlertOpen] = React.useState(false);
+  const [openMenuId, setOpenMenuId] = React.useState(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -245,16 +246,19 @@ export default function CommissionsPage() {
   const handleSelectDetail = (commission) => {
     setSelectedCommission(commission);
     setDetailDialogOpen(true);
+    setOpenMenuId(null);
   };
 
   const handleSelectEdit = (commission) => {
     setCommissionToEdit(commission);
     setEditDialogOpen(true);
+    setOpenMenuId(null);
   };
   
   const handleSelectDelete = (commission) => {
     setCommissionToDelete(commission);
     setAlertOpen(true);
+    setOpenMenuId(null);
   };
 
   const handleUpdateCommission = async (e) => {
@@ -333,6 +337,8 @@ export default function CommissionsPage() {
             onSelectDetail={handleSelectDetail}
             onSelectEdit={handleSelectEdit}
             onSelectDelete={handleSelectDelete}
+            openMenuId={openMenuId}
+            setOpenMenuId={setOpenMenuId}
           />
         </CardContent>
       </Card>

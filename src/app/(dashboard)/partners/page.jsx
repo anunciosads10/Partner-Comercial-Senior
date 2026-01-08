@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye, Copy, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye, Copy, Link as LinkIcon, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,8 +57,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, useStorage } from "@/firebase";
 import { collection, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -556,8 +557,10 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
 };
 
 const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
+    const storage = useStorage();
     const { toast } = useToast();
     const [method, setMethod] = React.useState(paymentInfo?.method || 'nequi');
+    const [isSaving, setIsSaving] = React.useState(false);
     const [formData, setFormData] = React.useState({
         holderName: paymentInfo?.holderName || '',
         phone: paymentInfo?.phone || '',
@@ -566,7 +569,7 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
         accountType: paymentInfo?.accountType || 'Ahorros',
     });
     const fileInputRef = React.useRef(null);
-    const [qrImage, setQrImage] = React.useState(null);
+    const [qrImageFile, setQrImageFile] = React.useState(null);
     const [qrPreview, setQrPreview] = React.useState(paymentInfo?.qrCodeUrl || null);
 
     const handleChange = (e) => {
@@ -577,54 +580,59 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            setQrImage(file);
+            setQrImageFile(file);
             const previewUrl = URL.createObjectURL(file);
             setQrPreview(previewUrl);
             toast({ title: `Archivo QR seleccionado: ${file.name}` });
         }
     };
 
-
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!firestore || !partnerId) return;
-        
-        let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
-
-        // Placeholder para la lógica de subida de archivos
-        if (qrImage) {
-            // 1. Subir qrImage a Firebase Storage.
-            // 2. Obtener la URL de descarga (qrCodeUrl).
-            // Por ahora, solo mostraremos un mensaje.
-            console.log("Simulando subida de archivo a Firebase Storage:", qrImage.name);
-            qrCodeUrl = qrPreview; // Usamos la URL de previsualización como placeholder
-            toast({ title: "Subida de archivos no implementada", description: "La imagen del QR no se guardará permanentemente."})
+        if (!firestore || !partnerId || !storage) {
+            toast({ variant: "destructive", title: "Error de configuración", description: "Los servicios de Firebase no están disponibles." });
+            return;
         }
 
-
-        const dataToSave = {
-            method,
-            status: 'pending', // Siempre se guarda como pendiente para verificación
-            updatedAt: new Date().toISOString(),
-            qrCodeUrl: qrCodeUrl,
-            ...formData,
-        };
+        setIsSaving(true);
+        let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
 
         try {
+            if (qrImageFile) {
+                toast({ title: "Subiendo imagen...", description: "Por favor espera." });
+                const imageRef = storageRef(storage, `qrcodes/${partnerId}/${qrImageFile.name}`);
+                const snapshot = await uploadBytes(imageRef, qrImageFile);
+                qrCodeUrl = await getDownloadURL(snapshot.ref);
+                toast({ title: "Imagen subida", description: "El código QR se ha guardado en la nube." });
+            }
+
+            const dataToSave = {
+                method,
+                status: 'pending',
+                updatedAt: new Date().toISOString(),
+                qrCodeUrl: qrCodeUrl,
+                ...formData,
+            };
+
             const partnerRef = doc(firestore, 'partners', partnerId);
             await updateDoc(partnerRef, { paymentInfo: dataToSave });
+            
             toast({
                 title: "Datos de Pago Guardados",
-                description: "Tu información de pago ha sido guardada y está pendiente de verificación.",
+                description: "Tu información ha sido guardada y está pendiente de verificación.",
             });
+            
             onFinished();
+
         } catch (error) {
             console.error("Error al guardar datos de pago:", error);
             toast({
                 variant: "destructive",
-                title: "Error",
-                description: "No se pudieron guardar tus datos de pago.",
+                title: "Error al guardar",
+                description: "No se pudieron guardar tus datos de pago. Revisa la consola para más detalles.",
             });
+        } finally {
+            setIsSaving(false);
         }
     };
 
@@ -717,8 +725,11 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
 
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onFinished}>Cancelar</Button>
-          <Button type="submit">Guardar Datos</Button>
+          <Button type="button" variant="secondary" onClick={onFinished} disabled={isSaving}>Cancelar</Button>
+          <Button type="submit" disabled={isSaving}>
+            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {isSaving ? 'Guardando...' : 'Guardar Datos'}
+          </Button>
         </DialogFooter>
       </form>
     )
@@ -1023,6 +1034,14 @@ const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
                                 <span className="font-medium">{paymentInfo.accountNumber}</span>
                             </div>
                          </>
+                    )}
+                    {paymentInfo.qrCodeUrl && (
+                       <div className="space-y-2">
+                           <span className="text-muted-foreground">Código QR</span>
+                           <div className="relative w-40 h-40 mx-auto border rounded-md">
+                               <Image src={paymentInfo.qrCodeUrl} alt="Código QR de pago" layout="fill" objectFit="contain"/>
+                           </div>
+                       </div>
                     )}
                 </div>
             ) : (

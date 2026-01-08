@@ -15,6 +15,7 @@ export const FirebaseProvider = ({
   firebaseApp,
   firestore,
   auth,
+  storage
 }) => {
   const [userAuthState, setUserAuthState] = useState({
     user: null,
@@ -46,17 +47,18 @@ export const FirebaseProvider = ({
 
   // Memoize the context value
   const contextValue = useMemo(() => {
-    const servicesAvailable = !!(firebaseApp && firestore && auth);
+    const servicesAvailable = !!(firebaseApp && firestore && auth && storage);
     return {
       areServicesAvailable: servicesAvailable,
       firebaseApp: servicesAvailable ? firebaseApp : null,
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
+      storage: servicesAvailable ? storage : null,
       user: userAuthState.user,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, storage, userAuthState]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -77,7 +79,7 @@ export const useFirebase = () => {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth) {
+  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage) {
     throw new Error('Firebase core services not available. Check FirebaseProvider props.');
   }
 
@@ -85,6 +87,7 @@ export const useFirebase = () => {
     firebaseApp: context.firebaseApp,
     firestore: context.firestore,
     auth: context.auth,
+    storage: context.storage,
     user: context.user,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
@@ -102,6 +105,13 @@ export const useFirestore = () => {
   const { firestore } = useFirebase();
   return firestore;
 };
+
+/** Hook to access Firebase Storage instance. */
+export const useStorage = () => {
+  const { storage } = useFirebase();
+  return storage;
+};
+
 
 /** Hook to access Firebase App instance. */
 export const useFirebaseApp = () => {

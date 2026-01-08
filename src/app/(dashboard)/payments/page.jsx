@@ -1,10 +1,10 @@
 'use client';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { KpiCard } from "@/components/dashboard/kpi-card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { DollarSign, Download, Clock, CreditCard, Loader2, CheckCircle } from "lucide-react";
+import { DollarSign, Download, Clock, CreditCard, Loader2, CheckCircle, PlusCircle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,6 +15,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogClose
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { collection, doc, addDoc, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -42,8 +56,18 @@ export default function PaymentsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   
+  // State for dialogs
   const [paymentToPay, setPaymentToPay] = React.useState(null);
   const [isAlertOpen, setAlertOpen] = React.useState(false);
+  const [isNewPaymentDialogOpen, setNewPaymentDialogOpen] = React.useState(false);
+
+  // State for new payment form
+  const [newPaymentData, setNewPaymentData] = React.useState({
+    partnerId: '',
+    amount: '',
+    description: ''
+  });
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -51,9 +75,9 @@ export default function PaymentsPage() {
   }, [firestore, user]);
 
   const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
-
   const { role, uid } = userData || {};
 
+  // Query for payments based on user role
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     if (role === 'superadmin') {
@@ -67,6 +91,10 @@ export default function PaymentsPage() {
   
   const { data: payments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
 
+  // Query for partners to populate the select dropdown
+  const partnersCollectionRef = useMemoFirebase(() => firestore && role === 'superadmin' ? collection(firestore, 'partners') : null, [firestore, role]);
+  const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollectionRef);
+
   const totalPaid = payments?.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0) || 0;
   const totalPending = payments?.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0) || 0;
   
@@ -75,13 +103,12 @@ export default function PaymentsPage() {
       toast({
         variant: "destructive",
         title: "No hay datos para exportar",
-        description: "El historial de pagos está vacío.",
       });
       return;
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
-    const headers = ["ID Transacción", "Partner", "Fecha", "Monto", "Estado"];
+    const headers = ["ID Transacción", "Partner", "Fecha", "Monto", "Estado", "Descripción"];
     csvContent += headers.join(",") + "\r\n";
 
     payments.forEach(payment => {
@@ -90,7 +117,8 @@ export default function PaymentsPage() {
         payment.partnerName || 'N/A',
         new Date(payment.paymentDate).toLocaleDateString(),
         payment.amount,
-        payment.status
+        payment.status,
+        `"${payment.description || ''}"`
       ];
       csvContent += row.join(",") + "\r\n";
     });
@@ -100,55 +128,46 @@ export default function PaymentsPage() {
     link.setAttribute("href", encodedUri);
     link.setAttribute("download", "reporte_de_pagos.csv");
     document.body.appendChild(link);
-    
     link.click();
     document.body.removeChild(link);
-    
-    toast({
-        title: "Reporte Generado",
-        description: "La descarga de tu reporte de pagos ha comenzado.",
-    });
+    toast({ title: "Reporte Generado" });
   };
 
-  const handleNewPayment = async () => {
-    if (!firestore || role !== 'superadmin') {
-        toast({ variant: "destructive", title: "Acción no permitida" });
+  const handleNewPaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!firestore || !newPaymentData.partnerId || !newPaymentData.amount) {
+        toast({ variant: "destructive", title: "Error", description: "Por favor, selecciona un partner y un monto." });
         return;
     }
+    
+    setIsSubmitting(true);
+    const selectedPartner = partners.find(p => p.id === newPaymentData.partnerId);
 
     try {
-        const partnersSnapshot = await getDocs(collection(firestore, 'partners'));
-        if (partnersSnapshot.empty) {
-            toast({ variant: "destructive", title: "Error", description: "No hay partners para asignar el pago." });
-            return;
-        }
-        const firstPartner = partnersSnapshot.docs[0].data();
-        const targetPartnerId = firstPartner.id;
-        const partnerName = firstPartner.name;
-        
-        const newPayment = {
-            amount: Math.floor(Math.random() * (2000 - 100 + 1)) + 100,
+        const paymentData = {
+            amount: Number(newPaymentData.amount),
+            description: newPaymentData.description || 'Pago de comisión',
             paymentDate: new Date().toISOString(),
             status: 'Pendiente',
-            partnerId: targetPartnerId,
-            partnerName: partnerName,
+            partnerId: selectedPartner.id,
+            partnerName: selectedPartner.name,
         };
 
-        const paymentCollection = collection(firestore, 'payments');
-        await addDoc(paymentCollection, newPayment);
+        await addDoc(collection(firestore, 'payments'), paymentData);
         
         toast({
-            title: "Pago Iniciado",
-            description: `Se ha creado un nuevo pago pendiente para ${partnerName}.`,
+            title: "Pago Creado",
+            description: `Se ha creado un pago pendiente de $${paymentData.amount} para ${selectedPartner.name}.`,
         });
+        
+        setNewPaymentDialogOpen(false);
+        setNewPaymentData({ partnerId: '', amount: '', description: '' });
 
     } catch (error) {
-        console.error("Error al crear el pago:", error);
-        toast({
-            variant: "destructive",
-            title: "Error al crear pago",
-            description: error.message || "Ocurrió un error inesperado.",
-        });
+        console.error("Error creando el pago:", error);
+        toast({ variant: "destructive", title: "Error al crear pago" });
+    } finally {
+        setIsSubmitting(false);
     }
   };
 
@@ -174,19 +193,14 @@ export default function PaymentsPage() {
         });
     } catch (error) {
         console.error("Error al marcar como pagado:", error);
-        toast({
-            variant: "destructive",
-            title: "Error al actualizar",
-            description: "No se pudo actualizar el estado del pago."
-        });
+        toast({ variant: "destructive", title: "Error", description: "No se pudo actualizar el estado del pago." });
     } finally {
         setAlertOpen(false);
         setPaymentToPay(null);
     }
   };
 
-
-  const isLoading = isRoleLoading || arePaymentsLoading;
+  const isLoading = isRoleLoading || arePaymentsLoading || (role === 'superadmin' && arePartnersLoading);
 
   return (
     <>
@@ -208,10 +222,73 @@ export default function PaymentsPage() {
                   <Download className="mr-2 h-4 w-4" />
                   Exportar Reporte
                 </Button>
-                <Button onClick={handleNewPayment}>
-                  <CreditCard className="mr-2 h-4 w-4" />
-                  Iniciar Nuevo Pago
-                </Button>
+                <Dialog open={isNewPaymentDialogOpen} onOpenChange={setNewPaymentDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Iniciar Nuevo Pago
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <form onSubmit={handleNewPaymentSubmit}>
+                      <DialogHeader>
+                        <DialogTitle>Crear Nuevo Pago</DialogTitle>
+                        <DialogDescription>
+                          Selecciona un partner y el monto a pagar. El pago se creará como "Pendiente".
+                        </DialogDescription>
+                      </DialogHeader>
+                      <div className="grid gap-4 py-4">
+                        <div className="grid gap-2">
+                          <Label htmlFor="partner">Partner</Label>
+                          <Select
+                            value={newPaymentData.partnerId}
+                            onValueChange={(value) => setNewPaymentData({ ...newPaymentData, partnerId: value })}
+                          >
+                            <SelectTrigger id="partner">
+                              <SelectValue placeholder={arePartnersLoading ? "Cargando partners..." : "Selecciona un partner"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {partners?.map((partner) => (
+                                <SelectItem key={partner.id} value={partner.id}>
+                                  {partner.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="amount">Monto</Label>
+                          <Input
+                            id="amount"
+                            type="number"
+                            placeholder="0.00"
+                            value={newPaymentData.amount}
+                            onChange={(e) => setNewPaymentData({ ...newPaymentData, amount: e.target.value })}
+                            required
+                          />
+                        </div>
+                        <div className="grid gap-2">
+                          <Label htmlFor="description">Descripción (Opcional)</Label>
+                          <Textarea
+                            id="description"
+                            placeholder="Ej: Pago de comisiones de Junio"
+                            value={newPaymentData.description}
+                            onChange={(e) => setNewPaymentData({ ...newPaymentData, description: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <DialogFooter>
+                        <DialogClose asChild>
+                          <Button type="button" variant="secondary">Cancelar</Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                          Crear Pago
+                        </Button>
+                      </DialogFooter>
+                    </form>
+                  </DialogContent>
+                </Dialog>
               </div>
             )}
           </div>
@@ -254,7 +331,7 @@ export default function PaymentsPage() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Monto</TableHead>
                       <TableHead>Estado</TableHead>
-                       {role === 'superadmin' && <TableHead className="text-right">Acciones</TableHead>}
+                      {role === 'superadmin' && <TableHead className="text-right">Acciones</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>

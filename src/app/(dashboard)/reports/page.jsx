@@ -12,17 +12,20 @@ import { DollarSign, CheckCircle, Clock, Download, BarChart3, Loader2 } from "lu
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { format, subYears, startOfDay, endOfDay, isWithinInterval, parse } from "date-fns";
+import { format, subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 
 const ReportsPage = () => {
     const firestore = useFirestore();
     const { toast } = useToast();
     
+    // FETCH DE AMBAS COLECCIONES: Comisiones y Pagos
     const commissionsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'commissions') : null, [firestore]);
+    const paymentsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'payments') : null, [firestore]);
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
     
     const { data: commissions, isLoading: isLoadingCommissions } = useCollection(commissionsCollection);
+    const { data: payments, isLoading: isLoadingPayments } = useCollection(paymentsCollection);
     const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
     
     const [date, setDate] = React.useState({ from: subYears(new Date(), 1), to: new Date() });
@@ -34,113 +37,60 @@ const ReportsPage = () => {
         return partners.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
     }, [partners]);
 
-    // FUNCIÓN CRÍTICA: Parsea fechas asumiendo formato latino (5/1/2026 = 5 de Enero)
+    // Función para procesar fechas de forma flexible (ISO String, Timestamp o Date)
     const robustParseDate = (dateValue) => {
         if (!dateValue) return null;
-        if (dateValue.toDate) return dateValue.toDate(); // Firebase Timestamp
-        if (dateValue instanceof Date) return dateValue;
-        
-        if (typeof dateValue === 'string') {
-            // Si tiene "/" probamos primero formato latino DD/MM/YYYY
-            if (dateValue.includes('/')) {
-                const parts = dateValue.split('/');
-                if (parts.length === 3) {
-                    // Forzamos interpretación DD/MM/YYYY
-                    const d = parseInt(parts[0], 10);
-                    const m = parseInt(parts[1], 10) - 1;
-                    const y = parseInt(parts[2], 10);
-                    const parsed = new Date(y, m, d);
-                    if (!isNaN(parsed.getTime())) return parsed;
-                }
-            }
-            // Fallback para otros formatos de string como ISO
-            const native = new Date(dateValue);
-            return isNaN(native.getTime()) ? null : native;
-        }
-        return null;
+        if (dateValue.toDate) return dateValue.toDate();
+        const parsed = new Date(dateValue);
+        return isNaN(parsed.getTime()) ? null : parsed;
     };
 
-    const filteredCommissions = React.useMemo(() => {
-        if (!commissions) return [];
+    const combinedAndFilteredData = React.useMemo(() => {
+        // Combinamos ambas colecciones para tener el panorama completo
+        const allData = [...(commissions || []), ...(payments || [])];
+        if (allData.length === 0) return [];
 
         const rangeStart = date?.from ? startOfDay(date.from) : null;
         const rangeEnd = date?.to ? endOfDay(date.to) : null;
 
-        return commissions.filter(c => {
-            // 1. Obtener y parsear fecha
-            const rawDate = c.date || c.createdAt || c.paymentDate || c.fecha;
-            const commissionDate = robustParseDate(rawDate);
-            if (!commissionDate) return false;
+        return allData.filter(item => {
+            // 1. Fecha: verificamos campos de ambas colecciones
+            const rawDate = item.paymentDate || item.paidAt || item.date || item.createdAt;
+            const itemDate = robustParseDate(rawDate);
+            if (!itemDate) return false;
 
-            // 2. Filtro de Rango de Fechas
             const dateMatch = (rangeStart && rangeEnd) 
-                ? isWithinInterval(commissionDate, { start: rangeStart, end: rangeEnd })
+                ? isWithinInterval(itemDate, { start: rangeStart, end: rangeEnd })
                 : true;
 
-            // 3. Filtro de Partner (compara contra ID y contra el nombre por si acaso)
-            const cPartnerId = (c.partnerId || c.partner || '').toString().toLowerCase();
-            const fPartnerId = selectedPartner.toLowerCase();
-            const partnerMatch = selectedPartner === 'all' || cPartnerId === fPartnerId;
+            // 2. Partner: Comparamos contra ID y contra el nombre directo (como "alexjf")
+            const partnerId = (item.partnerId || '').toLowerCase();
+            const partnerName = (item.partnerName || item.partner || '').toLowerCase();
+            const filterValue = selectedPartner.toLowerCase();
             
-            // 4. Filtro de Estado (insensible a mayúsculas)
-            const cStatus = (c.status || c.estado || '').toString().toLowerCase();
-            const fStatus = selectedStatus.toLowerCase();
-            const statusMatch = selectedStatus === 'all' || cStatus === fStatus;
+            const partnerMatch = selectedPartner === 'all' || 
+                                 partnerId === filterValue || 
+                                 partnerName === filterValue;
+            
+            // 3. Estado
+            const status = (item.status || '').toLowerCase();
+            const statusFilter = selectedStatus.toLowerCase();
+            const statusMatch = selectedStatus === 'all' || status === statusFilter;
             
             return dateMatch && partnerMatch && statusMatch;
         });
-    }, [commissions, date, selectedPartner, selectedStatus]);
+    }, [commissions, payments, date, selectedPartner, selectedStatus]);
 
-    // KPIs asegurando que los valores sean numéricos
-    const totalCommissions = filteredCommissions.reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
-    const paidCommissions = filteredCommissions
-        .filter(c => (c.status || c.estado || '').toLowerCase().includes('pagado'))
-        .reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
-    const pendingCommissions = filteredCommissions
-        .filter(c => (c.status || c.estado || '').toLowerCase().includes('pendiente'))
-        .reduce((acc, c) => acc + (Number(c.earning || c.monto || 0)), 0);
+    // KPIs usando 'amount' o 'earning' indistintamente
+    const total = combinedAndFilteredData.reduce((acc, item) => acc + (Number(item.amount || item.earning || 0)), 0);
+    const paid = combinedAndFilteredData
+        .filter(item => (item.status || '').toLowerCase().includes('pagado'))
+        .reduce((acc, item) => acc + (Number(item.amount || item.earning || 0)), 0);
+    const pending = combinedAndFilteredData
+        .filter(item => (item.status || '').toLowerCase().includes('pendiente'))
+        .reduce((acc, item) => acc + (Number(item.amount || item.earning || 0)), 0);
 
-
-    const isLoading = isLoadingCommissions || isLoadingPartners;
-    
-    const handleExport = () => {
-        if (!filteredCommissions || filteredCommissions.length === 0) {
-          toast({ variant: "destructive", title: "No hay datos para exportar." });
-          return;
-        }
-
-        let csvContent = "data:text/csv;charset=utf-8,";
-        const headers = ["ID Venta", "Partner", "Fecha", "Producto", "Monto Venta", "Tasa Comision (%)", "Ganancia", "Estado"];
-        csvContent += headers.join(",") + "\r\n";
-
-        filteredCommissions.forEach(c => {
-          const rawDate = c.date || c.createdAt || c.paymentDate || c.fecha;
-          const commissionDate = robustParseDate(rawDate);
-          const formattedDate = commissionDate ? format(commissionDate, 'yyyy-MM-dd') : 'N/A';
-
-          const row = [
-            c.id,
-            partnerNames[c.partnerId] || c.partnerId,
-            formattedDate,
-            c.product || 'N/A',
-            c.saleAmount || 0,
-            c.commissionRate || 0,
-            c.earning || 0,
-            c.status || 'N/A'
-          ];
-          csvContent += row.join(",") + "\r\n";
-        });
-
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement("a");
-        link.setAttribute("href", encodedUri);
-        link.setAttribute("download", `reporte_comisiones_${format(new Date(), 'yyyy-MM-dd')}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        toast({ title: "Reporte Generado", description: "La descarga de tu reporte ha comenzado." });
-    };
+    const isLoading = isLoadingCommissions || isLoadingPayments || isLoadingPartners;
 
     return (
         <div className="flex flex-col gap-8">
@@ -152,34 +102,24 @@ const ReportsPage = () => {
                                 <BarChart3 className="h-6 w-6" />
                                 Reportes Financieros
                             </CardTitle>
-                            <CardDescription>
-                                Analiza el rendimiento de las comisiones y los pagos a tus partners.
-                            </CardDescription>
+                            <CardDescription>Análisis consolidado de comisiones y pagos realizados.</CardDescription>
                         </div>
-                        <Button onClick={handleExport} disabled={isLoading || !filteredCommissions || filteredCommissions.length === 0}>
-                            <Download className="mr-2 h-4 w-4" />
-                            Exportar a CSV
-                        </Button>
                     </div>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    {/* KPIs */}
                     <div className="grid gap-4 md:grid-cols-3">
-                        <KpiCard title="Comisiones Totales" value={isLoading ? <Loader2 className="animate-spin" /> : `$${totalCommissions.toLocaleString()}`} Icon={DollarSign} />
-                        <KpiCard title="Comisiones Pagadas" value={isLoading ? <Loader2 className="animate-spin" /> : `$${paidCommissions.toLocaleString()}`} Icon={CheckCircle} />
-                        <KpiCard title="Comisiones Pendientes" value={isLoading ? <Loader2 className="animate-spin" /> : `$${pendingCommissions.toLocaleString()}`} Icon={Clock} />
+                        <KpiCard title="Total General" value={isLoading ? <Loader2 className="animate-spin" /> : `$${total.toLocaleString()}`} Icon={DollarSign} />
+                        <KpiCard title="Total Pagado" value={isLoading ? <Loader2 className="animate-spin" /> : `$${paid.toLocaleString()}`} Icon={CheckCircle} />
+                        <KpiCard title="Total Pendiente" value={isLoading ? <Loader2 className="animate-spin" /> : `$${pending.toLocaleString()}`} Icon={Clock} />
                     </div>
 
-                    {/* Filtros */}
                     <Card className="bg-secondary/50">
                         <CardContent className="pt-6">
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                 <div className="grid gap-2">
                                     <Label>Partner</Label>
-                                    <Select value={selectedPartner} onValueChange={setSelectedPartner} disabled={isLoading}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar partner..." />
-                                        </SelectTrigger>
+                                    <Select value={selectedPartner} onValueChange={setSelectedPartner}>
+                                        <SelectTrigger><SelectValue placeholder="Seleccionar..." /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Partners</SelectItem>
                                             {partners?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
@@ -187,11 +127,9 @@ const ReportsPage = () => {
                                     </Select>
                                 </div>
                                 <div className="grid gap-2">
-                                    <Label>Estado de Comisión</Label>
-                                    <Select value={selectedStatus} onValueChange={setSelectedStatus} disabled={isLoading}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Seleccionar estado..." />
-                                        </SelectTrigger>
+                                    <Label>Estado</Label>
+                                    <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">Todos los Estados</SelectItem>
                                             <SelectItem value="Pendiente">Pendiente</SelectItem>
@@ -199,54 +137,54 @@ const ReportsPage = () => {
                                         </SelectContent>
                                     </Select>
                                 </div>
-                                 <div className="grid gap-2">
-                                     <Label>Rango de Fechas</Label>
-                                     <DateRangePicker date={date} onDateChange={setDate} />
-                                 </div>
+                                <div className="grid gap-2">
+                                    <Label>Rango de Fechas</Label>
+                                    <DateRangePicker date={date} onDateChange={setDate} />
+                                </div>
                             </div>
                         </CardContent>
                     </Card>
 
-                    {/* Tabla de Datos */}
                     <Card>
-                        <CardHeader>
-                          <CardTitle>Detalle de Comisiones</CardTitle>
-                        </CardHeader>
+                        <CardHeader><CardTitle>Detalle de Movimientos</CardTitle></CardHeader>
                         <CardContent>
                             {isLoading ? (
-                                <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin" /></div>
+                                <div className="flex items-center justify-center h-48"><Loader2 className="h-8 w-8 animate-spin" /></div>
                             ) : (
                                 <Table>
                                     <TableHeader>
                                         <TableRow>
                                             <TableHead>Partner</TableHead>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead>Monto Venta</TableHead>
-                                            <TableHead>Ganancia</TableHead>
+                                            <TableHead>Concepto</TableHead>
+                                            <TableHead>Fecha</TableHead>
+                                            <TableHead>Monto</TableHead>
                                             <TableHead>Estado</TableHead>
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {filteredCommissions.map(c => (
-                                            <TableRow key={c.id}>
-                                                <TableCell className="font-medium">{partnerNames[c.partnerId] || c.partner || c.partnerId}</TableCell>
-                                                <TableCell>{c.product || 'Venta Directa'}</TableCell>
-                                                <TableCell>${(c.saleAmount || 0).toLocaleString()}</TableCell>
-                                                <TableCell className="font-semibold text-primary">${(c.earning || c.monto || 0).toLocaleString()}</TableCell>
+                                        {combinedAndFilteredData.map((item, idx) => (
+                                            <TableRow key={item.id || idx}>
+                                                <TableCell className="font-medium">
+                                                    {item.partnerName || partnerNames[item.partnerId] || item.partner || 'N/A'}
+                                                </TableCell>
+                                                <TableCell>{item.product || 'Pago Registrado'}</TableCell>
+                                                <TableCell>{robustParseDate(item.paymentDate || item.paidAt || item.date)?.toLocaleDateString()}</TableCell>
+                                                <TableCell className="font-semibold text-primary">
+                                                    ${(Number(item.amount || item.earning || 0)).toLocaleString()}
+                                                </TableCell>
                                                 <TableCell>
-                                                  <Badge variant={(c.status || c.estado || '').toLowerCase().includes('pagado') ? 'default' : 'secondary'}>
-                                                      {c.status || c.estado}
-                                                  </Badge>
+                                                    <Badge variant={(item.status || '').toLowerCase() === 'pagado' ? 'default' : 'secondary'}>
+                                                        {item.status || 'Pendiente'}
+                                                    </Badge>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
                                     </TableBody>
                                 </Table>
                             )}
-                             {!isLoading && filteredCommissions.length === 0 && (
+                            {!isLoading && combinedAndFilteredData.length === 0 && (
                                 <div className="flex flex-col items-center justify-center h-48 border-2 border-dashed rounded-lg">
-                                    <p className="text-muted-foreground">No se encontraron comisiones con los filtros seleccionados.</p>
-                                    <p className="text-xs text-muted-foreground mt-1">Verifica el rango de fechas y los filtros aplicados.</p>
+                                    <p className="text-muted-foreground">No se encontraron registros financieros.</p>
                                 </div>
                             )}
                         </CardContent>

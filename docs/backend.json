@@ -349,6 +349,27 @@
         "category",
         "status"
       ]
+    },
+     "Setting": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Setting",
+      "type": "object",
+      "description": "Represents a general-purpose settings document.",
+      "properties": {
+        "paymentCycles": {
+          "type": "object",
+          "description": "Configuration for payment cycles.",
+          "properties": {
+            "frequency": {
+              "type": "string",
+              "enum": ["monthly", "biweekly", "weekly"]
+            },
+            "paymentDay": {
+              "type": "string"
+            }
+          }
+        }
+      }
     }
   },
   "auth": {
@@ -511,6 +532,22 @@
             {
               "name": "saasPlatformId",
               "description": "The unique identifier of the SaaS platform."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/settings/{settingId}",
+        "definition": {
+          "entityName": "Setting",
+          "schema": {
+            "$ref": "#/entities/Setting"
+          },
+          "description": "Stores global application settings. Each document represents a specific settings area.",
+          "params": [
+            {
+              "name": "settingId",
+              "description": "The unique identifier for the settings document (e.g., 'paymentCycles')."
             }
           ]
         }

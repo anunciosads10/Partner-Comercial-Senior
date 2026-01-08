@@ -9,10 +9,12 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Upload, ChevronRight, QrCode, CheckCircle, CalendarDays } from 'lucide-react';
+import { Upload, ChevronRight, QrCode, CheckCircle, CalendarDays, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 
 
 const ProfileSettings = () => {
@@ -428,8 +430,47 @@ const CodConfigPanel = () => {
 
 
 const PaymentSettings = () => {
+    const firestore = useFirestore();
     const { toast } = useToast();
     const [activeOption, setActiveOption] = React.useState('nequi');
+    const [isSaving, setIsSaving] = React.useState(false);
+
+    // State for payment cycle settings
+    const [frequency, setFrequency] = React.useState('monthly');
+    const [paymentDay, setPaymentDay] = React.useState('15');
+
+    // Load data from Firestore
+    const settingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'paymentCycles') : null, [firestore]);
+    const { data: paymentSettings, isLoading } = useDoc(settingsRef);
+
+    // Update local state when data is loaded from Firestore
+    React.useEffect(() => {
+        if (paymentSettings) {
+            setFrequency(paymentSettings.frequency || 'monthly');
+            setPaymentDay(paymentSettings.paymentDay || '15');
+        }
+    }, [paymentSettings]);
+    
+    const handleSavePaymentCycles = async () => {
+      if (!firestore) {
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo conectar a la base de datos.' });
+        return;
+      }
+
+      setIsSaving(true);
+      const settingsData = { frequency, paymentDay };
+      
+      try {
+        await setDoc(settingsRef, settingsData, { merge: true });
+        toast({ title: 'Configuración Guardada', description: 'Los ciclos de pago han sido actualizados.' });
+      } catch (error) {
+        console.error("Error saving payment cycles:", error);
+        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar la configuración.' });
+      } finally {
+        setIsSaving(false);
+      }
+    };
+
 
     return (
         <div className="space-y-6">
@@ -441,29 +482,42 @@ const PaymentSettings = () => {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="grid md:grid-cols-2 gap-6">
-                    <div className="space-y-2">
-                        <Label htmlFor="payment-frequency">Frecuencia de Pago</Label>
-                        <Select defaultValue="monthly">
-                            <SelectTrigger id="payment-frequency">
-                                <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="monthly">Mensual</SelectItem>
-                                <SelectItem value="biweekly">Quincenal</SelectItem>
-                                <SelectItem value="weekly">Semanal</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="payment-day">Día de Pago</Label>
-                        <Input id="payment-day" type="number" placeholder="Ej: 15" />
-                        <p className="text-xs text-muted-foreground">
-                            Introduce el día del mes (1-31) o de la semana (1-7) para el pago.
-                        </p>
-                    </div>
+                    {isLoading ? <Loader2 className="animate-spin" /> : (
+                      <>
+                        <div className="space-y-2">
+                            <Label htmlFor="payment-frequency">Frecuencia de Pago</Label>
+                            <Select value={frequency} onValueChange={setFrequency}>
+                                <SelectTrigger id="payment-frequency">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="monthly">Mensual</SelectItem>
+                                    <SelectItem value="biweekly">Quincenal</SelectItem>
+                                    <SelectItem value="weekly">Semanal</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="payment-day">Día de Pago</Label>
+                            <Input 
+                                id="payment-day" 
+                                type="number" 
+                                placeholder="Ej: 15"
+                                value={paymentDay}
+                                onChange={(e) => setPaymentDay(e.target.value)}
+                            />
+                            <p className="text-xs text-muted-foreground">
+                                Introduce el día del mes (1-31) o de la semana (1-7) para el pago.
+                            </p>
+                        </div>
+                      </>
+                    )}
                 </CardContent>
                 <CardFooter>
-                    <Button onClick={() => toast({ title: "Configuración de Ciclos Guardada"})}>Guardar Ciclos de Pago</Button>
+                    <Button onClick={handleSavePaymentCycles} disabled={isSaving || isLoading}>
+                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Guardar Ciclos de Pago
+                    </Button>
                 </CardFooter>
             </Card>
 

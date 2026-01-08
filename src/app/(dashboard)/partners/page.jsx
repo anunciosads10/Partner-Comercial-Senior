@@ -740,7 +740,7 @@ const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Comisión</Label>
-            <span className="col-span-2 font-bold text-primary">{affiliation.recurringCommission}%</span>
+            <span className="col-span-2 font-bold text-primary">{(affiliation.recurringCommission || 0)}%</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Estado</Label>
@@ -985,7 +985,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
                       <div className="text-center">
-                          <p className="font-semibold text-lg">{aff.recurringCommission}%</p>
+                          <p className="font-semibold text-lg">{(aff.recurringCommission || 0)}%</p>
                           <p className="text-muted-foreground text-xs">Comisión</p>
                       </div>
                        <div className="text-center">

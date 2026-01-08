@@ -740,7 +740,7 @@ const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Comisión</Label>
-            <span className="col-span-2 font-bold text-primary">{affiliation.firstSubscriptionCommission}%</span>
+            <span className="col-span-2 font-bold text-primary">{affiliation.recurringCommission}%</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Estado</Label>
@@ -972,7 +972,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
-              {affiliations?.map((aff, index) => (
+              {affiliations?.map((aff) => (
                 <div key={aff.id} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center gap-4 flex-grow">
                     <div className="bg-primary/10 text-primary p-3 rounded-full">
@@ -980,12 +980,12 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                     </div>
                     <div>
                       <p className="font-bold">{aff.name}</p>
-                      <p className="text-sm text-muted-foreground">{aff.category}</p>
+                      <p className="text-sm text-muted-foreground">{aff.description}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
                       <div className="text-center">
-                          <p className="font-semibold text-lg">{aff.firstSubscriptionCommission}%</p>
+                          <p className="font-semibold text-lg">{aff.recurringCommission}%</p>
                           <p className="text-muted-foreground text-xs">Comisión</p>
                       </div>
                        <div className="text-center">

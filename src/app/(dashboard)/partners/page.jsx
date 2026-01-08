@@ -658,15 +658,8 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
     )
 };
 
-const RequestAffiliationForm = ({ onFinished, toast }) => {
+const RequestAffiliationForm = ({ onFinished, toast, availablePlatforms }) => {
   const [selectedPlatform, setSelectedPlatform] = React.useState(null);
-
-  // Datos de ejemplo
-  const availablePlatforms = [
-    { id: 'saas-ecom', name: 'SaaS E-commerce Pro', description: 'Solución completa para tiendas online.' },
-    { id: 'saas-booking', name: 'SaaS Booking System', description: 'Gestión de reservas para hoteles y servicios.' },
-    { id: 'saas-learning', name: 'SaaS Learning Platform', description: 'Plataforma para cursos y formación online.' },
-  ];
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -701,7 +694,7 @@ const RequestAffiliationForm = ({ onFinished, toast }) => {
       <div className="py-4">
         <RadioGroup onValueChange={(value) => setSelectedPlatform(availablePlatforms.find(p => p.id === value))}>
           <div className="space-y-3">
-            {availablePlatforms.map((platform) => (
+            {availablePlatforms?.map((platform) => (
               <Label
                 key={platform.id}
                 htmlFor={platform.id}
@@ -733,21 +726,21 @@ const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
         <DialogHeader>
           <DialogTitle>Detalles de la Afiliación</DialogTitle>
           <DialogDescription>
-            Información detallada sobre tu afiliación a la plataforma {affiliation.platform}.
+            Información detallada sobre tu afiliación a la plataforma {affiliation.name}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4 text-sm">
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Plataforma</Label>
-            <span className="col-span-2 font-medium">{affiliation.platform}</span>
+            <span className="col-span-2 font-medium">{affiliation.name}</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label className="text-muted-foreground">Tipo de Afiliación</Label>
-            <span className="col-span-2">{affiliation.type}</span>
+            <Label className="text-muted-foreground">Categoría</Label>
+            <span className="col-span-2">{affiliation.category}</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label className="text-muted-foreground">Tasa de Comisión</Label>
-            <span className="col-span-2 font-bold text-primary">{affiliation.commission}</span>
+            <Label className="text-muted-foreground">Comisión</Label>
+            <span className="col-span-2 font-bold text-primary">{affiliation.firstSubscriptionCommission}%</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Estado</Label>
@@ -773,7 +766,7 @@ const CancelAffiliationDialog = ({ affiliation, isOpen, onOpenChange, onConfirm 
           <AlertDialogTitle>¿Estás seguro de cancelar la afiliación?</AlertDialogTitle>
           <AlertDialogDescription>
             Esta acción no se puede deshacer. Perderás la capacidad de generar comisiones de la plataforma 
-            <span className="font-bold"> {affiliation.platform}</span>.
+            <span className="font-bold"> {affiliation.name}</span>.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
@@ -789,6 +782,10 @@ const CancelAffiliationDialog = ({ affiliation, isOpen, onOpenChange, onConfirm 
 const AdminPartnerView = ({ partnerData, isLoading }) => {
   const firestore = useFirestore();
   const { toast } = useToast();
+
+  const platformsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'saasPlatforms') : null, [firestore]);
+  const { data: affiliations, isLoading: isLoadingAffiliations } = useCollection(platformsCollection);
+
   const [isPaymentInfoOpen, setPaymentInfoOpen] = React.useState(false);
   const [isAffiliationOpen, setAffiliationOpen] = React.useState(false);
   const [openMenuId, setOpenMenuId] = React.useState(null);
@@ -797,24 +794,9 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
   const [isDetailsOpen, setDetailsOpen] = React.useState(false);
   const [isCancelAlertOpen, setCancelAlertOpen] = React.useState(false);
   const [selectedAffiliation, setSelectedAffiliation] = React.useState(null);
+  
 
-  // Datos de ejemplo para las afiliaciones
-  const affiliations = [
-    {
-      platform: 'Restaurante POS',
-      type: 'Comercial',
-      commission: '20%',
-      status: 'Active',
-    },
-    {
-      platform: 'Autoservicios SaaS',
-      type: 'Referido',
-      commission: '15%',
-      status: 'Inactive',
-    },
-  ];
-
-  if (isLoading) {
+  if (isLoading || isLoadingAffiliations) {
     return <p>Cargando tu perfil...</p>;
   }
 
@@ -845,10 +827,10 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
   
   const confirmCancelAffiliation = (affiliation) => {
     // Aquí iría la lógica para eliminar la afiliación en Firestore
-    console.log("Cancelando afiliación para:", affiliation.platform);
+    console.log("Cancelando afiliación para:", affiliation.name);
     toast({
       title: "Afiliación Cancelada",
-      description: `Has cancelado tu afiliación a ${affiliation.platform}.`,
+      description: `Has cancelado tu afiliación a ${affiliation.name}.`,
       variant: "destructive"
     });
     setCancelAlertOpen(false);
@@ -983,26 +965,27 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                     <RequestAffiliationForm 
                         onFinished={() => setAffiliationOpen(false)}
                         toast={toast}
+                        availablePlatforms={affiliations}
                     />
                 </DialogContent>
             </Dialog>
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
-              {affiliations.map((aff, index) => (
-                <div key={index} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              {affiliations?.map((aff, index) => (
+                <div key={aff.id} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div className="flex items-center gap-4 flex-grow">
                     <div className="bg-primary/10 text-primary p-3 rounded-full">
                       <Puzzle className="h-6 w-6" />
                     </div>
                     <div>
-                      <p className="font-bold">{aff.platform}</p>
-                      <p className="text-sm text-muted-foreground">{aff.type}</p>
+                      <p className="font-bold">{aff.name}</p>
+                      <p className="text-sm text-muted-foreground">{aff.category}</p>
                     </div>
                   </div>
                   <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
                       <div className="text-center">
-                          <p className="font-semibold text-lg">{aff.commission}</p>
+                          <p className="font-semibold text-lg">{aff.firstSubscriptionCommission}%</p>
                           <p className="text-muted-foreground text-xs">Comisión</p>
                       </div>
                        <div className="text-center">
@@ -1010,7 +993,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                           <p className="text-muted-foreground text-xs mt-1">Estado</p>
                       </div>
                       <div className="text-center">
-                         <DropdownMenu open={openMenuId === aff.platform} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? aff.platform : null)}>
+                         <DropdownMenu open={openMenuId === aff.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? aff.id : null)}>
                             <DropdownMenuTrigger asChild>
                                 <Button size="icon" variant="ghost">
                                     <MoreHorizontal className="h-4 w-4" />
@@ -1033,7 +1016,7 @@ const AdminPartnerView = ({ partnerData, isLoading }) => {
                 </div>
               ))}
             </div>
-             {affiliations.length === 0 && (
+             {affiliations?.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
                   <Puzzle className="mx-auto h-12 w-12 mb-4" />
                   <p>Aún no estás afiliado a ninguna plataforma.</p>

@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye, Copy } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye, Copy, Link as LinkIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -379,7 +379,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                       </TableCell>
                        <TableCell>
                           <div className="flex items-center gap-2">
-                            <code className="text-[0.7rem] bg-muted p-1 rounded max-w-xs truncate">
+                            <code className="text-xs bg-muted p-1 rounded max-w-[200px] truncate">
                               {link}
                             </code>
                             <Button 
@@ -760,8 +760,11 @@ const RequestAffiliationForm = ({ onFinished, toast, availablePlatforms }) => {
   );
 };
 
-const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
-  if (!affiliation) return null;
+const AffiliationDetailsDialog = ({ affiliation, partner, isOpen, onOpenChange, toast }) => {
+  if (!affiliation || !partner) return null;
+
+  const link = generateAffiliateLink(affiliation.websiteUrl, partner);
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -781,8 +784,24 @@ const AffiliationDetailsDialog = ({ affiliation, isOpen, onOpenChange }) => {
             <span className="col-span-2">{affiliation.category}</span>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
-            <Label className="text-muted-foreground">Comisión</Label>
+            <Label className="text-muted-foreground">Comisión Recurrente</Label>
             <span className="col-span-2 font-bold text-primary">{(affiliation.recurringCommission || 0)}%</span>
+          </div>
+           <div className="grid grid-cols-3 items-start gap-4">
+            <Label className="text-muted-foreground pt-1">Tu Link de Afiliado</Label>
+            <div className="col-span-2 flex items-center gap-2">
+              <code className="text-xs bg-muted p-1 rounded max-w-[200px] truncate">{link}</code>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  navigator.clipboard.writeText(link);
+                  toast({ title: "Enlace copiado", description: "Listo para compartir." });
+                }}
+              >
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
           <div className="grid grid-cols-3 items-center gap-4">
             <Label className="text-muted-foreground">Estado</Label>
@@ -1013,49 +1032,70 @@ const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
         </CardHeader>
         <CardContent>
             <div className="space-y-4">
-              {affiliations?.map((aff) => (
-                <div key={aff.id} className="p-4 rounded-lg border bg-secondary/50 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-4 flex-grow">
-                    <div className="bg-primary/10 text-primary p-3 rounded-full">
-                      <Puzzle className="h-6 w-6" />
+              {affiliations?.map((aff) => {
+                const link = generateAffiliateLink(aff.websiteUrl, partnerData);
+                return (
+                  <div key={aff.id} className="p-4 rounded-lg border bg-secondary/50 flex flex-col gap-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+                      <div className="flex items-center gap-4 flex-grow">
+                        <div className="bg-primary/10 text-primary p-3 rounded-full">
+                          <Puzzle className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <p className="font-bold">{aff.name}</p>
+                          <p className="text-sm text-muted-foreground">{aff.description}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between sm:justify-end gap-6 text-sm mt-4 sm:mt-0">
+                          <div className="text-center">
+                              <p className="font-semibold text-lg">{(aff.recurringCommission || 0)}%</p>
+                              <p className="text-muted-foreground text-xs">Comisión</p>
+                          </div>
+                           <div className="text-center">
+                              <Badge variant={getStatusBadgeVariant(aff.status)}>{aff.status}</Badge>
+                              <p className="text-muted-foreground text-xs mt-1">Estado</p>
+                          </div>
+                          <div className="text-center">
+                             <DropdownMenu open={openMenuId === aff.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? aff.id : null)}>
+                                <DropdownMenuTrigger asChild>
+                                    <Button size="icon" variant="ghost">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuLabel>Acciones</DropdownMenuLabel>
+                                    <DropdownMenuItem onSelect={() => handleViewDetails(aff)}>
+                                        <Eye className="mr-2 h-4 w-4" /> Ver Detalles
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onSelect={() => handleCancelAffiliation(aff)}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Cancelar Afiliación
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                              <p className="text-muted-foreground text-xs mt-1">Acciones</p>
+                          </div>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold">{aff.name}</p>
-                      <p className="text-sm text-muted-foreground">{aff.description}</p>
+                    <div className="border-t pt-4 flex flex-col sm:flex-row sm:items-center gap-2">
+                       <Label className="flex-shrink-0 flex items-center gap-2"><LinkIcon className="h-4 w-4" /> Tu Link de Afiliado:</Label>
+                       <div className="flex items-center gap-2 w-full">
+                          <code className="text-xs bg-muted p-2 rounded w-full truncate">{link}</code>
+                           <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                navigator.clipboard.writeText(link);
+                                toast({ title: "Enlace copiado", description: "Listo para compartir." });
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center justify-between sm:justify-end gap-6 text-sm">
-                      <div className="text-center">
-                          <p className="font-semibold text-lg">{(aff.recurringCommission || 0)}%</p>
-                          <p className="text-muted-foreground text-xs">Comisión</p>
-                      </div>
-                       <div className="text-center">
-                          <Badge variant={getStatusBadgeVariant(aff.status)}>{aff.status}</Badge>
-                          <p className="text-muted-foreground text-xs mt-1">Estado</p>
-                      </div>
-                      <div className="text-center">
-                         <DropdownMenu open={openMenuId === aff.id} onOpenChange={(isOpen) => setOpenMenuId(isOpen ? aff.id : null)}>
-                            <DropdownMenuTrigger asChild>
-                                <Button size="icon" variant="ghost">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Acciones</DropdownMenuLabel>
-                                <DropdownMenuItem onSelect={() => handleViewDetails(aff)}>
-                                    <Eye className="mr-2 h-4 w-4" /> Ver Detalles
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onSelect={() => handleCancelAffiliation(aff)}>
-                                    <Trash2 className="mr-2 h-4 w-4" /> Cancelar Afiliación
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
-                          <p className="text-muted-foreground text-xs mt-1">Acciones</p>
-                      </div>
-                  </div>
-                </div>
-              ))}
+                )
+              })}
             </div>
              {affiliations?.length === 0 && (
                 <div className="text-center text-muted-foreground py-8">
@@ -1069,8 +1109,10 @@ const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
 
       <AffiliationDetailsDialog 
         affiliation={selectedAffiliation}
+        partner={partnerData}
         isOpen={isDetailsOpen}
         onOpenChange={setDetailsOpen}
+        toast={toast}
       />
       <CancelAffiliationDialog
         affiliation={selectedAffiliation}
@@ -1113,9 +1155,9 @@ export default function PartnersPage() {
   const filteredPartners = React.useMemo(() => {
     if (!partners) return [];
     return partners.filter(partner =>
-        partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        partner.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (partner.pais && partner.pais.toLowerCase().includes(searchTerm.toLowerCase()))
+        (partner.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (partner.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (partner.pais || '').toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [partners, searchTerm]);
 

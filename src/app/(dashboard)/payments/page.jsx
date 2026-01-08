@@ -230,7 +230,7 @@ export default function PaymentsPage() {
             />
             <KpiCard
               title="Próximo Ciclo de Pago"
-              value="Julio 25, 2024"
+              value="Según configuración"
               Icon={CreditCard}
             />
           </div>

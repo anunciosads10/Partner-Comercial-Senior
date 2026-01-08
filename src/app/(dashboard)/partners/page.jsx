@@ -556,8 +556,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
   );
 };
 
-const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
-    const storage = useStorage();
+const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinished }) => {
     const { toast } = useToast();
     const [method, setMethod] = React.useState(paymentInfo?.method || 'nequi');
     const [isSaving, setIsSaving] = React.useState(false);
@@ -595,29 +594,38 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, onFinished }) => {
         }
 
         setIsSaving(true);
-        
-        let qrCodeUrl = paymentInfo?.qrCodeUrl || '';
+        let finalQrCodeUrl = paymentInfo?.qrCodeUrl || '';
 
         try {
             if (qrImageFile) {
                 toast({ title: "Subiendo imagen...", description: "Por favor espera." });
                 const imageRef = storageRef(storage, `qrcodes/${partnerId}/${qrImageFile.name}`);
                 const snapshot = await uploadBytes(imageRef, qrImageFile);
-                qrCodeUrl = await getDownloadURL(snapshot.ref);
+                finalQrCodeUrl = await getDownloadURL(snapshot.ref);
                 toast({ title: "Imagen subida", description: "El código QR se ha guardado en la nube." });
             }
 
-            const dataToSave = {
-                method,
-                status: 'pending',
-                updatedAt: new Date().toISOString(),
-                qrCodeUrl: qrCodeUrl,
-                ...formData,
+            const dataToUpdate = {
+                'paymentInfo.method': method,
+                'paymentInfo.status': 'pending',
+                'paymentInfo.updatedAt': new Date().toISOString(),
+                'paymentInfo.qrCodeUrl': finalQrCodeUrl,
+                'paymentInfo.holderName': formData.holderName,
             };
 
+            if (method === 'nequi' || method === 'daviplata' || method === 'bre-b') {
+                dataToUpdate['paymentInfo.phone'] = formData.phone;
+            }
+
+            if (method === 'bancolombia') {
+                dataToUpdate['paymentInfo.bank'] = formData.bank;
+                dataToUpdate['paymentInfo.accountNumber'] = formData.accountNumber;
+                dataToUpdate['paymentInfo.accountType'] = formData.accountType;
+            }
+
             const partnerRef = doc(firestore, 'partners', partnerId);
-            await updateDoc(partnerRef, { paymentInfo: dataToSave });
-            
+            await updateDoc(partnerRef, dataToUpdate);
+
             toast({
                 title: "Datos de Pago Guardados",
                 description: "Tu información ha sido guardada y está pendiente de verificación.",
@@ -876,7 +884,7 @@ const CancelAffiliationDialog = ({ affiliation, isOpen, onOpenChange, onConfirm 
 };
 
 
-const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
+const AdminPartnerView = ({ partnerData, isLoading, firestore, storage }) => {
   const { toast } = useToast();
 
   const platformsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'saasPlatforms') : null, [firestore]);
@@ -998,6 +1006,7 @@ const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
                         paymentInfo={paymentInfo} 
                         partnerId={partnerData.id} 
                         firestore={firestore} 
+                        storage={storage}
                         onFinished={() => setPaymentInfoOpen(false)}
                     />
                 </DialogContent>
@@ -1171,6 +1180,7 @@ const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
 
 export default function PartnersPage() {
   const firestore = useFirestore();
+  const storage = useStorage();
   const { user } = useUser();
   const [searchTerm, setSearchTerm] = React.useState('');
 
@@ -1224,7 +1234,7 @@ export default function PartnersPage() {
   }
   
   if (role === 'admin') {
-    return <AdminPartnerView partnerData={partnerData} isLoading={isLoading} firestore={firestore} />;
+    return <AdminPartnerView partnerData={partnerData} isLoading={isLoading} firestore={firestore} storage={storage} />;
   }
 
   return null; // O un mensaje de 'Acceso no autorizado'

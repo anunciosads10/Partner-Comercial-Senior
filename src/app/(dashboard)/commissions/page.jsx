@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
 import { doc, collection, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
-import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle, Edit, Trash2, Pencil } from 'lucide-react';
+import { Search, Download, MoreHorizontal, Eye, Bell, Info, Calendar, User, Tag, CircleDollarSign, CheckCircle, Edit, Trash2, Pencil, Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuTrigger, DropdownMenuSeparator } from '@/components/ui/dropdown-menu';
 import { useToast } from "@/hooks/use-toast";
@@ -29,6 +29,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+
 
 const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
     if (!commission) return null;
@@ -80,8 +82,7 @@ const CommissionDetailsDialog = ({ commission, isOpen, onOpenChange }) => {
 };
 
 
-const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectDelete, openMenuId, setOpenMenuId }) => {
-  const { toast } = useToast();
+const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectDelete, onSelectNotify, openMenuId, setOpenMenuId }) => {
 
   if (!commissions || commissions.length === 0) {
     return (
@@ -140,7 +141,7 @@ const CommissionsTable = ({ commissions, onSelectDetail, onSelectEdit, onSelectD
                           </>
                         )}
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => toast({ title: "Notificación enviada", description: `Se ha notificado al partner ${commission.partnerName}.` })}>
+                        <DropdownMenuItem onSelect={() => onSelectNotify(commission)}>
                           <Bell className="mr-2 h-4 w-4" /> Notificar Partner
                         </DropdownMenuItem>
                     </DropdownMenuContent>
@@ -164,11 +165,18 @@ export default function CommissionsPage() {
   const [selectedCommission, setSelectedCommission] = React.useState(null);
   const [commissionToEdit, setCommissionToEdit] = React.useState(null);
   const [commissionToDelete, setCommissionToDelete] = React.useState(null);
+  const [commissionToNotify, setCommissionToNotify] = React.useState(null);
 
   const [isDetailDialogOpen, setDetailDialogOpen] = React.useState(false);
   const [isEditDialogOpen, setEditDialogOpen] = React.useState(false);
   const [isAlertOpen, setAlertOpen] = React.useState(false);
+  const [isNotifyDialogOpen, setNotifyDialogOpen] = React.useState(false);
   const [openMenuId, setOpenMenuId] = React.useState(null);
+
+  // State for notification modal
+  const [notificationMessage, setNotificationMessage] = React.useState("");
+  const [isSending, setIsSending] = React.useState(false);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -261,6 +269,13 @@ export default function CommissionsPage() {
     setOpenMenuId(null);
   };
 
+  const handleSelectNotify = (commission) => {
+    setCommissionToNotify(commission);
+    setNotificationMessage(""); // Reset message
+    setNotifyDialogOpen(true);
+    setOpenMenuId(null);
+  };
+
   const handleUpdateCommission = async (e) => {
     e.preventDefault();
     if (!firestore || !commissionToEdit) return;
@@ -292,6 +307,32 @@ export default function CommissionsPage() {
     } catch (error) {
       console.error("Error deleting commission:", error);
       toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar la comisión." });
+    }
+  };
+  
+  const handleSendNotification = async () => {
+    if (!notificationMessage.trim()) {
+        toast({ variant: "destructive", title: "El mensaje no puede estar vacío" });
+        return;
+    }
+
+    setIsSending(true);
+    try {
+        // En una app real, aquí se llamaría a Firebase para crear una notificación.
+        // await addDoc(collection(firestore, `partners/${commissionToNotify.partnerId}/notifications`), { ... });
+        console.log(`Enviando a ${commissionToNotify.partnerId}: ${notificationMessage}`);
+        
+        toast({ 
+        title: "Notificación enviada", 
+        description: `Se ha enviado el mensaje a ${commissionToNotify.partnerName || commissionToNotify.partnerId}` 
+        });
+        
+        setNotifyDialogOpen(false); // Cierra el modal
+    } catch (error) {
+        console.error("Error enviando notificación:", error);
+        toast({ variant: "destructive", title: "Error al enviar la notificación" });
+    } finally {
+        setIsSending(false);
     }
   };
 
@@ -337,6 +378,7 @@ export default function CommissionsPage() {
             onSelectDetail={handleSelectDetail}
             onSelectEdit={handleSelectEdit}
             onSelectDelete={handleSelectDelete}
+            onSelectNotify={handleSelectNotify}
             openMenuId={openMenuId}
             setOpenMenuId={setOpenMenuId}
           />
@@ -414,6 +456,35 @@ export default function CommissionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Notify Partner Dialog */}
+        <Dialog open={isNotifyDialogOpen} onOpenChange={setNotifyDialogOpen}>
+            <DialogContent>
+                <DialogHeader>
+                <DialogTitle>Notificar a {commissionToNotify?.partnerName || 'Partner'}</DialogTitle>
+                <DialogDescription>
+                    Escribe el mensaje que recibirá el partner sobre su comisión de ${commissionToNotify?.amount?.toLocaleString()}.
+                </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                <Label htmlFor="message">Mensaje personalizado</Label>
+                <Textarea 
+                    id="message" 
+                    placeholder="Ej: Tu comisión de este mes ya ha sido aprobada..." 
+                    value={notificationMessage}
+                    onChange={(e) => setNotificationMessage(e.target.value)}
+                    rows={4}
+                    className="mt-2"
+                />
+                </div>
+                <DialogFooter>
+                <Button variant="outline" onClick={() => setNotifyDialogOpen(false)}>Cancelar</Button>
+                <Button onClick={handleSendNotification} disabled={isSending}>
+                    {isSending ? "Enviando..." : <><Send className="mr-2 h-4 w-4"/> Enviar Notificación</>}
+                </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
 
     </div>
   );

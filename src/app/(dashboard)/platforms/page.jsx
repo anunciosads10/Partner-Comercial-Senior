@@ -81,6 +81,10 @@ const PlatformDetailsDialog = ({ platform, isOpen, onOpenChange }) => {
                         <Label className="text-muted-foreground pt-1">Descripción</Label>
                         <span className="col-span-2">{platform.description}</span>
                     </div>
+                     <div className="grid grid-cols-3 items-start gap-4">
+                        <Label className="text-muted-foreground pt-1">Sitio Web</Label>
+                        <span className="col-span-2 text-primary underline">{platform.websiteUrl || 'No configurado'}</span>
+                    </div>
                     <div className="grid grid-cols-3 items-center gap-4">
                         <Label className="text-muted-foreground">Categoría</Label>
                         <span className="col-span-2">{platform.category}</span>
@@ -166,6 +170,7 @@ const PlatformsPage = () => {
       category: formData.get('category'),
       description: formData.get('description'),
       status: formData.get('status'),
+      websiteUrl: formData.get('websiteUrl'),
       firstSubscriptionCommission: Number(formData.get('firstSubscriptionCommission')) || 0,
       recurringCommission: Number(formData.get('recurringCommission')) || 0,
     };
@@ -303,6 +308,18 @@ const PlatformsPage = () => {
                 <div className="grid gap-2">
                   <Label htmlFor="category">Categoría</Label>
                   <Input id="category" name="category" defaultValue={currentPlatform?.category} placeholder="Ej: Restaurante, Ecommerce" required />
+                </div>
+                 <div className="grid gap-2">
+                  <Label htmlFor="websiteUrl">Sitio Web Oficial (URL Base)</Label>
+                  <Input 
+                    id="websiteUrl" 
+                    name="websiteUrl"
+                    placeholder="https://menudigital.com" 
+                    defaultValue={currentPlatform?.websiteUrl}
+                  />
+                  <p className="text-[0.7rem] text-muted-foreground italic">
+                    * Los enlaces de afiliados se construirán sobre esta URL.
+                  </p>
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="description">Descripción Corta</Label>

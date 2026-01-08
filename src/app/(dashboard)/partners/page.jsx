@@ -48,7 +48,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye } from "lucide-react";
+import { MoreHorizontal, PlusCircle, User, FileText, Calendar, Globe, Award, Shield, Trash2, Search, Edit, CreditCard, Banknote, QrCode, Puzzle, Eye, Copy } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,6 +63,21 @@ import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { seedAllData } from "@/lib/seed-data";
+import { slugify } from "@/lib/utils";
+
+const generateAffiliateLink = (platformUrl, partner) => {
+  if (!platformUrl) return "Configura la URL en la Plataforma";
+  if (!partner) return "";
+
+  // PRIORIDAD: 1. Código personalizado 2. ID de Firebase
+  const identifier = partner.referralCode || partner.id;
+  
+  // Limpieza de barras diagonales para evitar "com//?ref="
+  const cleanBase = platformUrl.endsWith('/') ? platformUrl.slice(0, -1) : platformUrl;
+  
+  return `${cleanBase}?ref=${identifier}`;
+};
+
 
 function getTierBadgeVariant(tier) {
   switch (tier) {
@@ -90,7 +105,7 @@ function getStatusBadgeVariant(status) {
   }
 }
 
-const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, setSearchTerm }) => {
+const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, setSearchTerm, allPlatforms }) => {
   const { toast } = useToast();
   const [partnerToDelete, setPartnerToDelete] = React.useState(null);
   const [isCreateDialogOpen, setCreateDialogOpen] = React.useState(false);
@@ -335,8 +350,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                 <TableHeader>
                   <TableRow>
                     <TableHead>Partner</TableHead>
-                    <TableHead>Nivel</TableHead>
-                    <TableHead>País</TableHead>
+                    <TableHead>Link de Afiliado</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead>
                       <span className="sr-only">Acciones</span>
@@ -344,7 +358,10 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {partners?.map((partner) => (
+                  {partners?.map((partner) => {
+                    const platform = allPlatforms?.[0] || {}; // Usa la primera plataforma como ejemplo
+                    const link = generateAffiliateLink(platform.websiteUrl, partner);
+                    return (
                     <TableRow key={partner.id}>
                       <TableCell>
                         <div className="flex items-center gap-4">
@@ -360,12 +377,23 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant={getTierBadgeVariant(partner.tier)}>
-                          {partner.tier}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>{partner.pais}</TableCell>
+                       <TableCell>
+                          <div className="flex items-center gap-2">
+                            <code className="text-[0.7rem] bg-muted p-1 rounded max-w-xs truncate">
+                              {link}
+                            </code>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              onClick={() => {
+                                navigator.clipboard.writeText(link);
+                                toast({ title: "Enlace copiado", description: "Listo para compartir." });
+                              }}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                       </TableCell>
                       <TableCell>
                         <Badge variant={getStatusBadgeVariant(partner.status)}>
                           {partner.status}
@@ -397,7 +425,7 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))}
+                  )})}
                 </TableBody>
               </Table>
               {partners?.length === 0 && (
@@ -466,6 +494,20 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
                       required
                     />
                   </div>
+                   <div className="grid grid-cols-4 items-center gap-4">
+                      <Label htmlFor="edit-referralCode" className="text-right">
+                        Alias de Referido
+                      </Label>
+                      <Input
+                        id="edit-referralCode"
+                        value={partnerToEdit.referralCode || ''}
+                        onChange={(e) => {
+                            const cleanValue = slugify(e.target.value);
+                            setPartnerToEdit({ ...partnerToEdit, referralCode: cleanValue });
+                        }}
+                        className="col-span-3"
+                      />
+                    </div>
                   <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="edit-pais" className="text-right">
                       País
@@ -779,8 +821,7 @@ const CancelAffiliationDialog = ({ affiliation, isOpen, onOpenChange, onConfirm 
 };
 
 
-const AdminPartnerView = ({ partnerData, isLoading }) => {
-  const firestore = useFirestore();
+const AdminPartnerView = ({ partnerData, isLoading, firestore }) => {
   const { toast } = useToast();
 
   const platformsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'saasPlatforms') : null, [firestore]);
@@ -1063,6 +1104,12 @@ export default function PartnersPage() {
   }, [firestore, role]);
   const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollection);
   
+  const platformsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'saasPlatforms');
+  }, [firestore]);
+  const { data: allPlatforms, isLoading: arePlatformsLoading } = useCollection(platformsCollection);
+  
   const filteredPartners = React.useMemo(() => {
     if (!partners) return [];
     return partners.filter(partner =>
@@ -1080,18 +1127,18 @@ export default function PartnersPage() {
   }, [firestore, role, user]);
   const { data: partnerData, isLoading: isPartnerDataLoading } = useDoc(partnerDocRef);
 
-  const isLoading = isRoleLoading || (role === 'superadmin' && arePartnersLoading) || (role === 'admin' && isPartnerDataLoading);
+  const isLoading = isRoleLoading || (role === 'superadmin' && arePartnersLoading) || (role === 'admin' && isPartnerDataLoading) || arePlatformsLoading;
 
   if (isRoleLoading) {
     return <p>Cargando...</p>;
   }
 
   if (role === 'superadmin') {
-    return <SuperAdminPartnersView partners={filteredPartners} isLoading={isLoading} firestore={firestore} searchTerm={searchTerm} setSearchTerm={setSearchTerm}/>;
+    return <SuperAdminPartnersView partners={filteredPartners} isLoading={isLoading} firestore={firestore} searchTerm={searchTerm} setSearchTerm={setSearchTerm} allPlatforms={allPlatforms} />;
   }
   
   if (role === 'admin') {
-    return <AdminPartnerView partnerData={partnerData} isLoading={isLoading} />;
+    return <AdminPartnerView partnerData={partnerData} isLoading={isLoading} firestore={firestore} />;
   }
 
   return null; // O un mensaje de 'Acceso no autorizado'

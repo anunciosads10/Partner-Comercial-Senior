@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, collection } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { Input } from '@/components/ui/input';
 import { Search } from 'lucide-react';
 
@@ -21,11 +21,10 @@ const CommissionsTable = ({ commissions }) => {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>ID Venta</TableHead>
-          <TableHead>Producto</TableHead>
-          <TableHead>Monto Venta</TableHead>
-          <TableHead>Tasa Comisión</TableHead>
-          <TableHead>Ganancia</TableHead>
+          <TableHead>ID Transacción</TableHead>
+          <TableHead>Partner</TableHead>
+          <TableHead>Monto</TableHead>
+          <TableHead>Fecha</TableHead>
           <TableHead>Estado</TableHead>
         </TableRow>
       </TableHeader>
@@ -33,12 +32,11 @@ const CommissionsTable = ({ commissions }) => {
         {commissions.map((commission) => (
           <TableRow key={commission.id}>
             <TableCell className="font-medium">{commission.id}</TableCell>
-            <TableCell>{commission.product}</TableCell>
-            <TableCell>${commission.saleAmount.toLocaleString()}</TableCell>
-            <TableCell>{commission.commissionRate}%</TableCell>
-            <TableCell className="font-semibold text-green-600">${commission.earning.toLocaleString()}</TableCell>
+            <TableCell>{commission.partnerName || 'N/A'}</TableCell>
+            <TableCell className="font-semibold text-green-600">${commission.amount.toLocaleString()}</TableCell>
+            <TableCell>{new Date(commission.paymentDate).toLocaleDateString()}</TableCell>
             <TableCell>
-              <Badge variant={commission.status === 'Paid' ? 'default' : 'secondary'}>{commission.status === 'Paid' ? 'Pagada' : 'Pendiente'}</Badge>
+              <Badge variant={commission.status === 'Pagado' ? 'default' : 'secondary'}>{commission.status}</Badge>
             </TableCell>
           </TableRow>
         ))}
@@ -60,31 +58,34 @@ export default function CommissionsPage() {
 
   const { data: userData, isLoading: isRoleLoading } = useDoc(userDocRef);
 
-  const commissionsCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'commissions');
-  }, [firestore]);
-
-  const { data: allCommissions, isLoading: areCommissionsLoading } = useCollection(commissionsCollection);
-
   const { role, uid } = userData || {};
 
-  // Filtrar comisiones basado en el rol del usuario
-  const commissions = role === 'superadmin' 
-    ? allCommissions 
-    : allCommissions?.filter(c => c.partnerId === uid);
+  // APUNTAR A LA COLECCIÓN CORRECTA: 'payments'
+  const paymentsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    if (role === 'superadmin') {
+      return collection(firestore, 'payments');
+    }
+    if (role === 'admin' && uid) {
+      // Filtrar por el ID del partner si no es superadmin
+      return query(collection(firestore, 'payments'), where('partnerId', '==', uid));
+    }
+    return null;
+  }, [firestore, role, uid]);
+
+  const { data: allCommissions, isLoading: areCommissionsLoading } = useCollection(paymentsQuery);
     
   const filteredCommissions = React.useMemo(() => {
-    if (!commissions) return [];
-    return commissions.filter(commission =>
+    if (!allCommissions) return [];
+    return allCommissions.filter(commission =>
       commission.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      commission.product.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (commission.status === 'Paid' ? 'pagada' : 'pendiente').includes(searchTerm.toLowerCase())
+      (commission.partnerName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      commission.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [commissions, searchTerm]);
+  }, [allCommissions, searchTerm]);
 
 
-  const totalEarnings = filteredCommissions?.reduce((acc, curr) => acc + curr.earning, 0) || 0;
+  const totalEarnings = filteredCommissions?.reduce((acc, curr) => acc + curr.amount, 0) || 0;
   
   const isLoading = isRoleLoading || areCommissionsLoading;
 
@@ -108,7 +109,7 @@ export default function CommissionsPage() {
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Buscar por ID, producto o estado..."
+                placeholder="Buscar por ID, partner o estado..."
                 className="w-full rounded-lg bg-secondary pl-8"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}

@@ -114,7 +114,7 @@ const ReportsPage = () => {
         csvContent += headers.join(",") + "\r\n";
 
         filteredCommissions.forEach(c => {
-          const rawDate = c.date || c.createdAt || c.paymentDate;
+          const rawDate = c.date || c.createdAt || c.paymentDate || c.fecha;
           const commissionDate = robustParseDate(rawDate);
           const formattedDate = commissionDate ? format(commissionDate, 'yyyy-MM-dd') : 'N/A';
 

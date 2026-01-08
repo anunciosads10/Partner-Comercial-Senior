@@ -58,7 +58,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser, useStorage } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, addDoc, setDoc } from "firebase/firestore";
 import { ref as storageRef, uploadBytes, getDownloadURL } from "firebase/storage";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
@@ -582,85 +582,86 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
             setQrImageFile(file);
             const previewUrl = URL.createObjectURL(file);
             setQrPreview(previewUrl);
-            toast({ title: `Archivo QR seleccionado: ${file.name}` });
         }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!firestore || !partnerId || !storage) {
-            toast({ variant: "destructive", title: "Error de configuración", description: "Los servicios de Firebase no están disponibles." });
+        // Validación de servicios
+        if (!firestore || !storage || !partnerId) {
+            toast({ variant: "destructive", title: "Error", description: "Servicios de Firebase no listos." });
             return;
         }
 
         setIsSaving(true);
-        let finalQrCodeUrl = paymentInfo?.qrCodeUrl || '';
-
         try {
+            let finalQrCodeUrl = paymentInfo?.qrCodeUrl || '';
+
+            // 1. Subida de Imagen
             if (qrImageFile) {
-                toast({ title: "Subiendo imagen...", description: "Por favor espera." });
-                const imageRef = storageRef(storage, `qrcodes/${partnerId}/${qrImageFile.name}`);
+                // Usamos una ruta directa para coincidir con reglas de seguridad estándar
+                const imagePath = `qrcodes/${partnerId}`; 
+                const imageRef = storageRef(storage, imagePath);
+                
                 const snapshot = await uploadBytes(imageRef, qrImageFile);
                 finalQrCodeUrl = await getDownloadURL(snapshot.ref);
-                toast({ title: "Imagen subida", description: "El código QR se ha guardado en la nube." });
             }
 
-            const dataToUpdate = {
-                'paymentInfo.method': method,
-                'paymentInfo.status': 'pending',
-                'paymentInfo.updatedAt': new Date().toISOString(),
-                'paymentInfo.qrCodeUrl': finalQrCodeUrl,
-                'paymentInfo.holderName': formData.holderName,
+            // 2. Preparar objeto de datos
+            const paymentData = {
+                method,
+                holderName: formData.holderName,
+                qrCodeUrl: finalQrCodeUrl,
+                status: 'pending',
+                updatedAt: new Date().toISOString(),
             };
 
-            if (method === 'nequi' || method === 'daviplata' || method === 'bre-b') {
-                dataToUpdate['paymentInfo.phone'] = formData.phone;
+            if (['nequi', 'daviplata', 'bre-b'].includes(method)) {
+                paymentData.phone = formData.phone;
             }
 
             if (method === 'bancolombia') {
-                dataToUpdate['paymentInfo.bank'] = formData.bank;
-                dataToUpdate['paymentInfo.accountNumber'] = formData.accountNumber;
-                dataToUpdate['paymentInfo.accountType'] = formData.accountType;
+                paymentData.bank = formData.bank;
+                paymentData.accountNumber = formData.accountNumber;
+                paymentData.accountType = formData.accountType;
             }
 
+            // 3. GUARDAR EN FIRESTORE 
+            // Usamos setDoc con { merge: true } para que funcione siempre (exista el doc o no)
             const partnerRef = doc(firestore, 'partners', partnerId);
-            await updateDoc(partnerRef, dataToUpdate);
-
-            toast({
-                title: "Datos de Pago Guardados",
-                description: "Tu información ha sido guardada y está pendiente de verificación.",
-            });
             
+            await setDoc(partnerRef, {
+                paymentInfo: paymentData
+            }, { merge: true });
+
+            toast({ title: "¡Éxito!", description: "Datos de pago guardados correctamente." });
             onFinished();
 
         } catch (error) {
-            console.error("Error al guardar datos de pago:", error);
+            console.error("Error completo:", error);
             toast({
                 variant: "destructive",
                 title: "Error al guardar",
-                description: "No se pudieron guardar tus datos de pago. Revisa la consola para más detalles.",
+                description: error.message || "Ocurrió un error inesperado.",
             });
         } finally {
             setIsSaving(false);
         }
     };
 
-
     return (
       <form onSubmit={handleSubmit}>
         <DialogHeader>
           <DialogTitle>Configurar Datos de Pago</DialogTitle>
           <DialogDescription>
-            Esta información se usará para enviarte tus comisiones. Asegúrate de que sea correcta.
+            Esta información se usará para enviarte tus comisiones.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <div className="grid gap-2">
             <Label htmlFor="method">Método de Pago</Label>
-             <Select id="method" value={method} onValueChange={setMethod}>
-                <SelectTrigger>
-                    <SelectValue placeholder="Selecciona un método" />
-                </SelectTrigger>
+             <Select value={method} onValueChange={setMethod}>
+                <SelectTrigger><SelectValue placeholder="Selecciona un método" /></SelectTrigger>
                 <SelectContent>
                     <SelectItem value="nequi">Nequi</SelectItem>
                     <SelectItem value="daviplata">Daviplata</SelectItem>
@@ -675,7 +676,7 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
              <Input id="holderName" name="holderName" value={formData.holderName} onChange={handleChange} required />
           </div>
 
-          {(method === 'nequi' || method === 'daviplata' || method === 'bre-b') && (
+          {['nequi', 'daviplata', 'bre-b'].includes(method) && (
             <div className="grid gap-2">
                 <Label htmlFor="phone">Número de Celular</Label>
                 <Input id="phone" name="phone" value={formData.phone} onChange={handleChange} required />
@@ -705,43 +706,30 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
             </>
           )}
 
-          {(method === 'nequi' || method === 'bancolombia' || method === 'daviplata' || method === 'bre-b') && (
-             <div className="space-y-2">
-                <Label>Código QR (Opcional)</Label>
-                <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted relative">
-                    {qrPreview ? (
-                        <Image src={qrPreview} alt="Vista previa del QR" layout="fill" objectFit="contain" />
-                    ) : (
-                        <div className="text-center text-muted-foreground">
-                            <QrCode className="mx-auto h-12 w-12"/>
-                        </div>
-                    )}
-                     <Button size="sm" type="button" variant="ghost" className="absolute bottom-2" onClick={() => fileInputRef.current?.click()}>
-                        {qrPreview ? 'Cambiar Imagen' : 'Subir Imagen del QR'}
-                    </Button>
-                    <Input 
-                        id="qr-upload" 
-                        type="file" 
-                        ref={fileInputRef} 
-                        className="hidden" 
-                        accept="image/*" 
-                        onChange={handleFileChange} 
-                    />
-                </div>
+          <div className="space-y-2">
+            <Label>Código QR (Opcional)</Label>
+            <div className="flex items-center justify-center p-4 border-2 border-dashed rounded-lg h-40 bg-muted relative overflow-hidden">
+                {qrPreview ? (
+                    /* Usamos una etiqueta img normal para evitar problemas de Next.js con Blobs locales */
+                    <img src={qrPreview} alt="QR Preview" className="h-full w-full object-contain" />
+                ) : (
+                    <QrCode className="h-12 w-12 text-muted-foreground" />
+                )}
+                <Button size="sm" type="button" variant="secondary" className="absolute bottom-2 opacity-90" onClick={() => fileInputRef.current?.click()}>
+                    {qrPreview ? 'Cambiar Imagen' : 'Subir QR'}
+                </Button>
+                <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
             </div>
-          )}
-
-
+          </div>
         </div>
         <DialogFooter>
-          <Button type="button" variant="secondary" onClick={onFinished} disabled={isSaving}>Cancelar</Button>
+          <Button type="button" variant="outline" onClick={onFinished} disabled={isSaving}>Cancelar</Button>
           <Button type="submit" disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            {isSaving ? 'Guardando...' : 'Guardar Datos'}
+            {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Datos'}
           </Button>
         </DialogFooter>
       </form>
-    )
+    );
 };
 
 const RequestAffiliationForm = ({ onFinished, toast, availablePlatforms }) => {

@@ -33,6 +33,8 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@
 import { collection, doc, addDoc, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
+import { addMonths, format, setDate, nextDay, getDay, isAfter } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 const PaymentStatusBadge = ({ status }) => {
   const getVariant = () => {
@@ -50,6 +52,68 @@ const PaymentStatusBadge = ({ status }) => {
 
   return <Badge variant={getVariant()}>{status}</Badge>;
 };
+
+// --- Helper para calcular la próxima fecha de pago ---
+const calculateNextPaymentDate = (settings) => {
+    if (!settings?.frequency || !settings?.paymentDay) {
+        return "No configurado";
+    }
+
+    const { frequency, paymentDay } = settings;
+    const today = new Date();
+    const day = parseInt(paymentDay, 10);
+
+    let nextDate;
+
+    switch (frequency) {
+        case 'monthly':
+            const paymentDateThisMonth = setDate(today, day);
+            if (isAfter(today, paymentDateThisMonth)) {
+                // Si el día de pago ya pasó este mes, será el próximo mes
+                nextDate = addMonths(paymentDateThisMonth, 1);
+            } else {
+                // Si aún no ha pasado, es este mes
+                nextDate = paymentDateThisMonth;
+            }
+            break;
+        
+        case 'weekly':
+             // date-fns: 0=Dom, 1=Lun,..., 6=Sab. El input del usuario es 1-7.
+            const weekDay = day % 7; // Convertimos 7 (Dom) a 0
+            const todayDay = getDay(today);
+
+            if (todayDay === weekDay && today.getHours() < 1) { // Si es hoy pero muy temprano
+                nextDate = today;
+            } else {
+                nextDate = nextDay(today, weekDay);
+            }
+            break;
+
+        case 'biweekly': // Quincenal
+            const firstFortnight = 15;
+            const paymentDateFirst = setDate(today, firstFortnight);
+
+             if (isAfter(today, paymentDateFirst)) {
+                // Si ya pasó el día 15, el próximo pago es el día 30 (o fin de mes)
+                const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                 if (isAfter(today, endOfMonth)) {
+                    nextDate = setDate(addMonths(today, 1), firstFortnight);
+                 } else {
+                    nextDate = endOfMonth;
+                 }
+            } else {
+                nextDate = paymentDateFirst;
+            }
+            break;
+
+        default:
+            return "Frecuencia no válida";
+    }
+
+    // Formatear la fecha en un formato legible
+    return format(nextDate, "d 'de' MMMM 'de' yyyy", { locale: es });
+};
+
 
 export default function PaymentsPage() {
   const { user } = useUser();
@@ -94,6 +158,14 @@ export default function PaymentsPage() {
   // Query for partners to populate the select dropdown
   const partnersCollectionRef = useMemoFirebase(() => firestore && role === 'superadmin' ? collection(firestore, 'partners') : null, [firestore, role]);
   const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollectionRef);
+  
+  // ---- LEER LA CONFIGURACIÓN DE CICLOS DE PAGO ----
+  const settingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'paymentCycles') : null, [firestore]);
+  const { data: paymentSettings, isLoading: areSettingsLoading } = useDoc(settingsRef);
+
+  // ---- CALCULAR LA PRÓXIMA FECHA ----
+  const nextPaymentDate = React.useMemo(() => calculateNextPaymentDate(paymentSettings), [paymentSettings]);
+
 
   const totalPaid = payments?.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0) || 0;
   const totalPending = payments?.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0) || 0;
@@ -201,7 +273,7 @@ export default function PaymentsPage() {
     }
   };
 
-  const isLoading = isRoleLoading || arePaymentsLoading || (role === 'superadmin' && arePartnersLoading);
+  const isLoading = isRoleLoading || arePaymentsLoading || (role === 'superadmin' && arePartnersLoading) || areSettingsLoading;
 
   return (
     <>
@@ -308,7 +380,7 @@ export default function PaymentsPage() {
             />
             <KpiCard
               title="Próximo Ciclo de Pago"
-              value="Según configuración"
+              value={isLoading ? <Loader2 className="animate-spin" /> : nextPaymentDate}
               Icon={CreditCard}
             />
           </div>

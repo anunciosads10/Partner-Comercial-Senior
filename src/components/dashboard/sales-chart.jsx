@@ -2,45 +2,49 @@
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { salesData } from "@/lib/data";
 
-export function SalesChart() {
+export function SalesChart({ data = [] }) {
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>
         <CardTitle>Rendimiento de Ventas</CardTitle>
-        <CardDescription>Ventas totales vs. ventas de sub-partners en el último año.</CardDescription>
+        <CardDescription>Monto total de comisiones y pagos registrados por mes.</CardDescription>
       </CardHeader>
       <CardContent className="pl-2">
         <ResponsiveContainer width="100%" height={350}>
-          <BarChart data={salesData}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis
-              dataKey="month"
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              stroke="hsl(var(--muted-foreground))"
-              fontSize={12}
-              tickLine={false}
-              axisLine={false}
-              tickFormatter={(value) => `$${Number(value) / 1000}K`}
-            />
-            <Tooltip
-              cursor={{ fill: 'hsl(var(--muted))' }}
-              contentStyle={{
-                backgroundColor: "hsl(var(--background))",
-                borderColor: "hsl(var(--border))",
-                borderRadius: 'var(--radius)',
-              }}
-            />
-            <Legend wrapperStyle={{fontSize: "14px", paddingTop: '10px'}}/>
-            <Bar dataKey="totalSales" fill="hsl(var(--primary))" name="Ventas Totales" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="subPartnerSales" fill="hsl(var(--accent))" name="Ventas de Sub-Partners" radius={[4, 4, 0, 0]} />
-          </BarChart>
+          {data.length > 0 ? (
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="month"
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+              />
+              <YAxis
+                stroke="hsl(var(--muted-foreground))"
+                fontSize={12}
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${Number(value) / 1000}K`}
+              />
+              <Tooltip
+                cursor={{ fill: 'hsl(var(--muted))' }}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--background))",
+                  borderColor: "hsl(var(--border))",
+                  borderRadius: 'var(--radius)',
+                }}
+              />
+              <Legend wrapperStyle={{fontSize: "14px", paddingTop: '10px'}}/>
+              <Bar dataKey="total" fill="hsl(var(--primary))" name="Monto Total" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              No hay datos para mostrar en la gráfica.
+            </div>
+          )}
         </ResponsiveContainer>
       </CardContent>
     </Card>

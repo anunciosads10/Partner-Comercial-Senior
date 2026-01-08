@@ -12,7 +12,8 @@ import { DollarSign, CheckCircle, Clock, Download, BarChart3, Loader2 } from "lu
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import { subYears, startOfDay, endOfDay, isWithinInterval } from "date-fns";
+import { subYears, startOfDay, endOfDay, isWithinInterval, format } from "date-fns";
+import { es } from "date-fns/locale";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 
@@ -82,6 +83,27 @@ const ReportsPage = () => {
         });
     }, [commissions, payments, date, selectedPartner, selectedStatus]);
     
+    const chartData = React.useMemo(() => {
+        const monthlyTotals = combinedAndFilteredData.reduce((acc, item) => {
+            const itemDate = robustParseDate(item.paymentDate || item.paidAt || item.date || item.createdAt);
+            if (!itemDate) return acc;
+            
+            const month = format(itemDate, 'MMM', { locale: es });
+            const amount = Number(item.amount || item.earning || 0);
+
+            if (!acc[month]) {
+                acc[month] = { month, total: 0 };
+            }
+            acc[month].total += amount;
+
+            return acc;
+        }, {});
+
+        // Podríamos querer ordenar los meses cronológicamente aquí, pero para simplificar lo dejamos así
+        return Object.values(monthlyTotals);
+
+    }, [combinedAndFilteredData]);
+
     const handleExport = () => {
         if (!combinedAndFilteredData || combinedAndFilteredData.length === 0) {
           toast({
@@ -192,7 +214,7 @@ const ReportsPage = () => {
                         </Card>
 
                         <div className="col-span-1 lg:col-span-2">
-                            <SalesChart />
+                            <SalesChart data={chartData} />
                         </div>
                     </div>
 

@@ -16,28 +16,57 @@ import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+
 
 export default function RegisterPage() {
   const auth = useAuth();
   const firestore = useFirestore();
   const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const { toast } = useToast();
+  
+  // Estados para visibilidad de contraseña
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
+  // Estados para el formulario
+  const [formData, setFormData] = useState({
+    email: '',
+    password: '',
+    confirmPassword: ''
+  });
+  const [isLoading, setIsLoading] = useState(false);
+
 
   const handleSignUp = async (e) => {
     e.preventDefault();
     setError('');
-    if (!auth || !firestore) {
-      setError('El servicio de autenticación o de base de datos no está disponible.');
+
+    if (formData.password !== formData.confirmPassword) {
+      toast({
+        variant: "destructive",
+        title: "Error de validación",
+        description: "Las contraseñas no coinciden."
+      });
       return;
     }
+    
+    setIsLoading(true);
+
+    if (!auth || !firestore) {
+      setError('El servicio de autenticación o de base de datos no está disponible.');
+      setIsLoading(false);
+      return;
+    }
+
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
       
       if (userCredential && userCredential.user) {
         const user = userCredential.user;
-        const role = email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
+        const role = formData.email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
         
         const userRef = doc(firestore, 'users', user.uid);
         await setDoc(userRef, {
@@ -46,6 +75,7 @@ export default function RegisterPage() {
           role: role,
         });
         
+        toast({ title: "Cuenta creada", description: "Bienvenido a PartnerVerse." });
         // AuthProvider se encargará de la redirección
       } else {
         throw new Error("La creación del usuario falló, no se devolvieron credenciales de usuario.");
@@ -58,53 +88,91 @@ export default function RegisterPage() {
         setError('Error al registrarse. Por favor, inténtalo de nuevo.');
         console.error("Error de registro:", err);
       }
+    } finally {
+        setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-full max-w-sm">
+    <div className="flex items-center justify-center min-h-screen bg-slate-50 p-4">
+      <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle className="text-2xl">Crear Cuenta</CardTitle>
           <CardDescription>
             Introduce tu información para crear una cuenta.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSignUp} className="grid gap-4">
-            <div className="grid gap-2">
+        <form onSubmit={handleSignUp}>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="m@ejemplo.com"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
               />
             </div>
-            <div className="grid gap-2">
+            
+            <div className="space-y-2">
               <Label htmlFor="password">Contraseña</Label>
-              <Input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  required
+                  value={formData.password}
+                  onChange={(e) => setFormData({...formData, password: e.target.value})}
+                  className="pr-10" // Espacio para el icono
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirmar Contraseña</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-700"
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+            </div>
+
             {error && <p className="text-sm text-destructive">{error}</p>}
-            <Button type="submit" className="w-full">
+          </CardContent>
+          <CardFooter className="flex flex-col space-y-4">
+            <Button className="w-full" type="submit" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Crear Cuenta
             </Button>
-          </form>
-          <div className="mt-4 text-center text-sm">
-            ¿Ya tienes una cuenta?{' '}
-            <Link href="/login" className="underline">
-              Inicia sesión
-            </Link>
-          </div>
-        </CardContent>
+            <div className="text-sm text-center text-slate-600">
+              ¿Ya tienes una cuenta?{' '}
+              <Link href="/login" className="text-primary hover:underline font-medium">
+                Inicia sesión
+              </Link>
+            </div>
+          </CardFooter>
+        </form>
       </Card>
     </div>
   );

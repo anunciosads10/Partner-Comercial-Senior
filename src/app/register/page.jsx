@@ -7,9 +7,9 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -83,6 +83,15 @@ export default function RegisterPage() {
         });
         
         toast({ title: "Cuenta creada", description: "Bienvenido a PartnerVerse." });
+        
+        // Limpiar el formulario
+        setFormData({
+            name: '',
+            email: '',
+            password: '',
+            confirmPassword: ''
+        });
+
         // AuthProvider se encargará de la redirección
       } else {
         throw new Error("La creación del usuario falló, no se devolvieron credenciales de usuario.");

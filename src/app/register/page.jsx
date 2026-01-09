@@ -14,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth, useFirestore } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { Eye, EyeOff, Loader2 } from "lucide-react";
@@ -34,6 +34,7 @@ export default function RegisterPage() {
   
   // Estados para el formulario
   const [formData, setFormData] = useState({
+    name: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -67,11 +68,16 @@ export default function RegisterPage() {
       
       if (userCredential && userCredential.user) {
         const user = userCredential.user;
+        // Actualizar el perfil de Firebase Auth con el nombre
+        await updateProfile(user, { displayName: formData.name });
+        
         const role = formData.email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
         
         const userRef = doc(firestore, 'users', user.uid);
+        // Guardar datos en Firestore
         await setDoc(userRef, {
           uid: user.uid,
+          name: formData.name, // Guardar el nombre
           email: user.email,
           role: role,
         });
@@ -105,6 +111,17 @@ export default function RegisterPage() {
         </CardHeader>
         <form onSubmit={handleSignUp}>
           <CardContent className="space-y-4">
+            <div className="space-y-2">
+                <Label htmlFor="name">Nombre</Label>
+                <Input
+                  id="name"
+                  type="text"
+                  placeholder="Tu nombre completo"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

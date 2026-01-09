@@ -579,66 +579,67 @@ const PaymentInfoForm = ({ paymentInfo, partnerId, firestore, storage, onFinishe
     const handleFileChange = (e) => {
         const file = e.target.files?.[0];
         if (file) {
-            setQrImageFile(file);
-            const previewUrl = URL.createObjectURL(file);
-            setQrPreview(previewUrl);
+            // Validar tamaño (máximo 500KB para estar seguros en Firestore)
+            if (file.size > 500000) {
+                toast({ variant: "destructive", title: "Imagen muy grande", description: "El QR debe pesar menos de 500KB" });
+                return;
+            }
+    
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const base64String = reader.result; // Aquí está la imagen convertida a texto
+                setQrPreview(base64String);
+                setQrImageFile(base64String); // Guardamos el texto en lugar del archivo
+            };
+            reader.readAsDataURL(file);
         }
     };
-
+    
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!firestore || !storage || !partnerId) {
+        if (!firestore || !partnerId) {
             toast({ variant: "destructive", title: "Error", description: "Servicios de Firebase no listos." });
             return;
         }
-
+    
         setIsSaving(true);
+    
         try {
-            let finalQrCodeUrl = paymentInfo?.qrCodeUrl || '';
-
-            if (qrImageFile) {
-                const imagePath = `qrcodes/${partnerId}/qr_code.png`;
-                const imageRef = storageRef(storage, imagePath);
-                
-                const snapshot = await uploadBytes(imageRef, qrImageFile);
-                finalQrCodeUrl = await getDownloadURL(snapshot.ref);
-            }
-
-            const dataToSave = {
-                'paymentInfo.method': method,
-                'paymentInfo.holderName': formData.holderName,
-                'paymentInfo.status': 'pending',
-                'paymentInfo.updatedAt': new Date().toISOString(),
-                'paymentInfo.qrCodeUrl': finalQrCodeUrl
+            // Si qrImageFile contiene el string Base64, lo usamos directamente
+            const finalQrCodeUrl = qrImageFile || paymentInfo?.qrCodeUrl || '';
+    
+            const paymentData = {
+                method,
+                holderName: formData.holderName,
+                qrCodeUrl: finalQrCodeUrl, // Se guarda el texto de la imagen
+                status: 'pending',
+                updatedAt: new Date().toISOString(),
             };
-
+    
             if (['nequi', 'daviplata', 'bre-b'].includes(method)) {
-                dataToSave['paymentInfo.phone'] = formData.phone;
+                paymentData.phone = formData.phone;
             }
-
+    
             if (method === 'bancolombia') {
-                dataToSave['paymentInfo.bank'] = formData.bank;
-                dataToSave['paymentInfo.accountNumber'] = formData.accountNumber;
-                dataToSave['paymentInfo.accountType'] = formData.accountType;
+                paymentData.bank = formData.bank;
+                paymentData.accountNumber = formData.accountNumber;
+                paymentData.accountType = formData.accountType;
             }
-            
+    
             const partnerRef = doc(firestore, 'partners', partnerId);
-            await updateDoc(partnerRef, dataToSave);
-
-            toast({ title: "¡Éxito!", description: "Datos de pago guardados correctamente." });
+            await setDoc(partnerRef, { paymentInfo: paymentData }, { merge: true });
+    
+            toast({ title: "¡Éxito!", description: "Datos de pago guardados en la base de datos." });
             if (onFinished) onFinished();
-
+    
         } catch (error) {
-            console.error("Error completo:", error);
-            toast({
-                variant: "destructive",
-                title: "Error al guardar",
-                description: error.message || "Ocurrió un error inesperado.",
-            });
+            console.error("Error:", error);
+            toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
             setIsSaving(false);
         }
     };
+
 
     return (
       <form onSubmit={handleSubmit}>

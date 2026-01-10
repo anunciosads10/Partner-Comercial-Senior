@@ -7,7 +7,7 @@ import { Header } from "@/components/header";
 import { AuthProvider } from "@/components/auth-provider";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -15,6 +15,7 @@ export default function DashboardLayout({
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
+  const pathname = usePathname();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -26,11 +27,11 @@ export default function DashboardLayout({
   const isLoading = isAuthLoading || (user && isRoleLoading);
 
   useEffect(() => {
-    // If loading is finished and there's no authenticated user, redirect to login.
-    if (!isLoading && !user) {
+    // If loading is finished and there's no authenticated user on a dashboard route, redirect to login.
+    if (!isLoading && !user && pathname.startsWith('/dashboard')) {
       router.push('/login');
     }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, router, pathname]);
 
   // While loading auth state or user role, show a full-screen loader.
   if (isLoading) {

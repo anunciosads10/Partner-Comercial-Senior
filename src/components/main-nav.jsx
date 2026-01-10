@@ -28,7 +28,7 @@ import {
 import { cn } from '@/lib/utils';
 
 const allMenuItems = [
-  { href: '/', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
   { href: '/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
   { href: '/platforms', label: 'Plataformas SaaS', icon: Puzzle, roles: ['superadmin'] },
   { href: '/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },

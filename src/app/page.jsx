@@ -212,8 +212,8 @@ export default function LandingPage() {
         <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
             <p className="text-sm text-muted-foreground">&copy; 2024 PartnerVerse. Todos los derechos reservados.</p>
             <nav className="flex gap-4 sm:gap-6">
-                <Link href="#" className="text-sm hover:underline underline-offset-4">Términos de Servicio</Link>
-                <Link href="#" className="text-sm hover:underline underline-offset-4">Política de Privacidad</Link>
+                <Link href="/terms" className="text-sm hover:underline underline-offset-4">Términos de Servicio</Link>
+                <Link href="/privacy" className="text-sm hover:underline underline-offset-4">Política de Privacidad</Link>
             </nav>
         </div>
       </footer>

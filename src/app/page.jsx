@@ -21,6 +21,7 @@ import {
   Target,
   FileText
 } from 'lucide-react';
+import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 // Header Component
 function LandingHeader() {
@@ -89,6 +90,9 @@ const FeatureCard = ({ icon, title, description }) => (
 
 // Main Page Component
 export default function LandingPage() {
+  const dashboardImage = PlaceHolderImages.find(p => p.id === 'landing-dashboard');
+  const growthImage = PlaceHolderImages.find(p => p.id === 'landing-growth');
+  
   return (
     <div className="flex flex-col min-h-screen">
       <LandingHeader />
@@ -123,12 +127,12 @@ export default function LandingPage() {
                 <Card className="w-full max-w-4xl overflow-hidden shadow-2xl">
                     <CardContent className="p-2">
                         <Image
-                            src="https://picsum.photos/seed/laptop/1200/600"
+                            src={dashboardImage.imageUrl}
                             width={1200}
                             height={600}
-                            alt="PartnerVerse Dashboard"
+                            alt={dashboardImage.description}
                             className="rounded-md object-cover"
-                            data-ai-hint="dashboard laptop"
+                            data-ai-hint={dashboardImage.imageHint}
                         />
                     </CardContent>
                 </Card>
@@ -170,12 +174,12 @@ export default function LandingPage() {
               </div>
                 <div className="flex flex-col justify-center items-center">
                     <Image
-                        src="https://picsum.photos/seed/growth/600/600"
+                        src={growthImage.imageUrl}
                         width="600"
                         height="600"
-                        alt="Growth"
+                        alt={growthImage.description}
                         className="mx-auto aspect-square overflow-hidden rounded-xl object-cover"
-                        data-ai-hint="growth chart"
+                        data-ai-hint={growthImage.imageHint}
                     />
                 </div>
             </div>

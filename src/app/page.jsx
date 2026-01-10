@@ -125,13 +125,13 @@ export default function LandingPage() {
             </div>
             <div className="mt-12 flex justify-center">
                 <Card className="w-full max-w-4xl overflow-hidden shadow-2xl">
-                    <CardContent className="p-2">
+                    <CardContent className="p-2 bg-muted">
                         <Image
                             src={dashboardImage.imageUrl}
                             width={1200}
                             height={600}
                             alt={dashboardImage.description}
-                            className="rounded-md object-cover"
+                            className="rounded-md object-cover aspect-video"
                             data-ai-hint={dashboardImage.imageHint}
                         />
                     </CardContent>

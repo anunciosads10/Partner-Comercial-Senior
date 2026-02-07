@@ -1,1 +1,4 @@
-// Archivo desactivado. La lógica se movió a /src/app/dashboard/layout.jsx
+/**
+ * FILE NEUTRALIZED
+ * This file is deactivated to resolve conflicts with src/app/dashboard/layout.jsx.
+ */

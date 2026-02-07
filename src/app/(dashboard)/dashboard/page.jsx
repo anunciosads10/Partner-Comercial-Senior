@@ -1,2 +1,5 @@
-// Archivo desactivado para resolver colisión de rutas con /src/app/dashboard/page.jsx
-// No contiene exportación por defecto para ser ignorado por el router de Next.js
+/**
+ * FILE NEUTRALIZED
+ * This file is deactivated to resolve the "Parallel Pages" conflict in Next.js 15.
+ * The /dashboard route is now exclusively managed by src/app/dashboard/page.jsx.
+ */

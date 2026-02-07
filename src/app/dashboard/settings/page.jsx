@@ -10,11 +10,14 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useFirestore, useMemoFirebase, useDoc, useUser } from '@/firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
-import { CalendarDays, Loader2, User, Mail, ShieldCheck } from 'lucide-react';
+import { CalendarDays, Loader2, User, Mail, ShieldCheck, Phone, Globe } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 
+/**
+ * @fileOverview Componente de Configuración de Ciclos de Pago para SuperAdmin.
+ */
 const PaymentSettings = () => {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -43,7 +46,7 @@ const PaymentSettings = () => {
         .catch(async (error) => {
           const permissionError = new FirestorePermissionError({
             path: settingsRef.path,
-            operation: 'write',
+            operation: 'update',
             requestResourceData: data,
           });
           errorEmitter.emit('permission-error', permissionError);
@@ -91,6 +94,9 @@ const PaymentSettings = () => {
     );
 };
 
+/**
+ * @fileOverview Gestión de Perfil de Usuario y Partner comercial.
+ */
 const UserProfileSettings = () => {
     const { user } = useUser();
     const firestore = useFirestore();
@@ -101,23 +107,42 @@ const UserProfileSettings = () => {
         return doc(firestore, 'users', user.uid);
     }, [firestore, user]);
 
-    const { data: userData, isLoading } = useDoc(userDocRef);
+    const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
+
+    const partnerDocRef = useMemoFirebase(() => {
+        if (!firestore || !user || userData?.role !== 'admin') return null;
+        return doc(firestore, 'partners', user.uid);
+    }, [firestore, user, userData?.role]);
+
+    const { data: partnerData, isLoading: isPartnerLoading } = useDoc(partnerDocRef);
     
     const [formData, setFormData] = React.useState({
         name: '',
-        email: ''
+        email: '',
+        pais: '',
+        phone: ''
     });
+
+    const [isSaving, setIsSaving] = React.useState(false);
 
     React.useEffect(() => {
         if (userData) {
-            setFormData({
+            setFormData(prev => ({
+                ...prev,
                 name: userData.name || '',
                 email: userData.email || ''
-            });
+            }));
         }
-    }, [userData]);
+        if (partnerData) {
+            setFormData(prev => ({
+                ...prev,
+                pais: partnerData.pais || '',
+                phone: partnerData.paymentInfo?.phone || ''
+            }));
+        }
+    }, [userData, partnerData]);
 
-    const handleSaveProfile = (e) => {
+    const handleSaveProfile = async (e) => {
         e.preventDefault();
         if (!firestore || !user || !userDocRef) return;
         
@@ -126,67 +151,121 @@ const UserProfileSettings = () => {
             return;
         }
 
-        const updateData = { name: formData.name.trim() };
+        setIsSaving(true);
+        try {
+            // Actualizar documento de usuario global
+            const userUpdate = { name: formData.name.trim() };
+            await updateDoc(userDocRef, userUpdate);
 
-        updateDoc(userDocRef, updateData)
-            .then(() => {
-                toast({ title: 'Perfil Actualizado', description: 'Tus datos personales han sido guardados con éxito.' });
-            })
-            .catch(async (error) => {
-                const permissionError = new FirestorePermissionError({
-                    path: userDocRef.path,
-                    operation: 'update',
-                    requestResourceData: updateData,
-                });
-                errorEmitter.emit('permission-error', permissionError);
+            // Si el usuario tiene un perfil de partner (rol admin), actualizar también allí
+            if (partnerDocRef && partnerData) {
+                const partnerUpdate = { 
+                    name: formData.name.trim(),
+                    pais: formData.pais.trim(),
+                    'paymentInfo.phone': formData.phone.trim()
+                };
+                await updateDoc(partnerDocRef, partnerUpdate);
+            }
+
+            toast({ title: 'Perfil Actualizado', description: 'Tus datos han sido guardados con éxito.' });
+        } catch (error) {
+            console.error("Error updating profile:", error);
+            const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'update',
+                requestResourceData: formData,
             });
+            errorEmitter.emit('permission-error', permissionError);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
-    if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+    if (isUserLoading || (userData?.role === 'admin' && isPartnerLoading)) {
+        return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+    }
 
     return (
         <form onSubmit={handleSaveProfile}>
             <Card className="shadow-md border-primary/10">
                 <CardHeader>
                     <CardTitle className="flex items-center gap-2"><User className="text-primary" /> Gestión de Perfil</CardTitle>
-                    <CardDescription>Administra tu información personal dentro de la plataforma PartnerVerse.</CardDescription>
+                    <CardDescription>Administra tu información personal y de contacto en PartnerVerse.</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name" className="flex items-center gap-2 font-semibold"><User size={14} className="text-muted-foreground" /> Nombre Completo</Label>
-                        <Input 
-                            id="name" 
-                            placeholder="Ej: Alejandro Pérez"
-                            value={formData.name} 
-                            onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                            required 
-                            className="bg-background"
-                        />
+                    <div className="grid md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                            <Label htmlFor="name" className="flex items-center gap-2 font-semibold">
+                                <User size={14} className="text-muted-foreground" /> Nombre Completo
+                            </Label>
+                            <Input 
+                                id="name" 
+                                placeholder="Ej: Alejandro Pérez"
+                                value={formData.name} 
+                                onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                                required 
+                                className="bg-background"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="email" className="flex items-center gap-2 font-semibold">
+                                <Mail size={14} className="text-muted-foreground" /> Correo Electrónico
+                            </Label>
+                            <Input 
+                                id="email" 
+                                type="email" 
+                                value={formData.email} 
+                                disabled 
+                                className="bg-muted font-mono text-xs cursor-not-allowed opacity-80"
+                            />
+                        </div>
+                        
+                        {/* Campos específicos si es un socio comercial */}
+                        {userData?.role === 'admin' && (
+                            <>
+                                <div className="space-y-2">
+                                    <Label htmlFor="pais" className="flex items-center gap-2 font-semibold">
+                                        <Globe size={14} className="text-muted-foreground" /> País / Territorio
+                                    </Label>
+                                    <Input 
+                                        id="pais" 
+                                        placeholder="Ej: Colombia"
+                                        value={formData.pais} 
+                                        onChange={(e) => setFormData({...formData, pais: e.target.value})} 
+                                        className="bg-background"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="phone" className="flex items-center gap-2 font-semibold">
+                                        <Phone size={14} className="text-muted-foreground" /> Teléfono de Contacto
+                                    </Label>
+                                    <Input 
+                                        id="phone" 
+                                        placeholder="Ej: +57 300..."
+                                        value={formData.phone} 
+                                        onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                                        className="bg-background"
+                                    />
+                                </div>
+                            </>
+                        )}
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor="email" className="flex items-center gap-2 font-semibold"><Mail size={14} className="text-muted-foreground" /> Correo Electrónico</Label>
-                        <Input 
-                            id="email" 
-                            type="email" 
-                            value={formData.email} 
-                            disabled 
-                            className="bg-muted font-mono text-xs cursor-not-allowed opacity-80"
-                        />
-                        <p className="text-[10px] text-muted-foreground italic px-1">* El correo electrónico está vinculado a tu cuenta de autenticación y no puede modificarse aquí.</p>
-                    </div>
-                    <div className="grid gap-2">
-                        <Label className="flex items-center gap-2 font-semibold"><ShieldCheck size={14} className="text-muted-foreground" /> Rol Administrativo</Label>
-                        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/20 border border-secondary">
+                    
+                    <div className="grid gap-2 pt-4 border-t border-dashed">
+                        <Label className="flex items-center gap-2 font-semibold">
+                            <ShieldCheck size={14} className="text-muted-foreground" /> Rol del Sistema
+                        </Label>
+                        <div className="flex items-center gap-3 p-3 rounded-lg bg-secondary/20 border border-secondary/50">
                             <Badge variant="default" className="px-4 py-1 uppercase tracking-wider font-bold text-[10px]">
-                                {userData?.role || 'Admin'}
+                                {userData?.role === 'superadmin' ? 'Super Administrador' : 'Partner Senior'}
                             </Badge>
-                            <span className="text-[11px] text-muted-foreground">Este nivel de acceso define tus permisos en el sistema PartnerVerse.</span>
+                            <span className="text-[11px] text-muted-foreground">Tu nivel de acceso define tus permisos administrativos.</span>
                         </div>
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-6 bg-secondary/5 rounded-b-lg">
-                    <Button type="submit" className="w-full sm:w-auto">
-                        Guardar Cambios del Perfil
+                    <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
+                        {isSaving ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...</> : 'Guardar Cambios del Perfil'}
                     </Button>
                 </CardFooter>
             </Card>
@@ -195,25 +274,36 @@ const UserProfileSettings = () => {
 };
 
 export default function SettingsPage() {
-  return (
-    <div className="space-y-6 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-primary">Configuración del Sistema</h1>
-        <p className="text-muted-foreground text-sm">Ajusta los parámetros globales y administra tu identidad en la plataforma.</p>
-      </div>
-      
-      <Tabs defaultValue="profile" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[400px] border">
-          <TabsTrigger value="profile">Perfil de Usuario</TabsTrigger>
-          <TabsTrigger value="payments">Pagos y Ciclos</TabsTrigger>
-        </TabsList>
-        <TabsContent value="profile" className="mt-6">
-            <UserProfileSettings />
-        </TabsContent>
-        <TabsContent value="payments" className="mt-6">
-            <PaymentSettings />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+    const { user } = useUser();
+    const firestore = useFirestore();
+    const userDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [user, firestore]);
+    const { data: userData, isLoading } = useDoc(userDocRef);
+
+    if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
+
+    const isSuperAdmin = userData?.role === 'superadmin';
+
+    return (
+        <div className="space-y-6 animate-in fade-in duration-500">
+            <div className="flex flex-col gap-1">
+                <h1 className="text-3xl font-bold tracking-tight text-primary">Configuración</h1>
+                <p className="text-muted-foreground text-sm">Ajusta los parámetros globales y administra tu identidad en PartnerVerse.</p>
+            </div>
+            
+            <Tabs defaultValue="profile" className="w-full">
+                <TabsList className={`grid w-full ${isSuperAdmin ? 'grid-cols-2 lg:w-[400px]' : 'grid-cols-1 lg:w-[200px]'} border`}>
+                    <TabsTrigger value="profile">Perfil de Usuario</TabsTrigger>
+                    {isSuperAdmin && <TabsTrigger value="payments">Pagos y Ciclos</TabsTrigger>}
+                </TabsList>
+                <TabsContent value="profile" className="mt-6">
+                    <UserProfileSettings />
+                </TabsContent>
+                {isSuperAdmin && (
+                    <TabsContent value="payments" className="mt-6">
+                        <PaymentSettings />
+                    </TabsContent>
+                )}
+            </Tabs>
+        </div>
+    );
 }

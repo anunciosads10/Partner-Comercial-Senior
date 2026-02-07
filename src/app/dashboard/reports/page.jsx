@@ -17,6 +17,10 @@ import { es } from "date-fns/locale";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 
+/**
+ * @fileOverview Página de Reportes Financieros consolidada.
+ * Gestiona el análisis de comisiones y pagos históricos.
+ */
 export default function ReportsPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
@@ -35,6 +39,7 @@ export default function ReportsPage() {
     const [selectedStatus, setSelectedStatus] = React.useState('all');
 
     React.useEffect(() => {
+        // Inicialización segura en el cliente para evitar errores 500 en Next.js 15
         setDate({
             from: subYears(new Date(), 1),
             to: new Date()

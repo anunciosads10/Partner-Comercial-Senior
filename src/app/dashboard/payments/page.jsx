@@ -30,10 +30,10 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from "@/firebase";
-import { collection, doc, addDoc, query, where, updateDoc } from "firebase/firestore";
+import { collection, doc, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
-import { addMonths, format, setDate, nextDay, getDay, isAfter } from 'date-fns';
+import { addMonths, format, setDate, nextDay, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
@@ -55,13 +55,15 @@ const calculateNextPaymentDate = (settings) => {
     const today = new Date();
     const day = parseInt(paymentDay, 10);
     let nextDate;
+    
     switch (frequency) {
         case 'monthly':
             const paymentDateThisMonth = setDate(today, day);
             nextDate = isAfter(today, paymentDateThisMonth) ? addMonths(paymentDateThisMonth, 1) : paymentDateThisMonth;
             break;
         case 'weekly':
-            nextDate = todayDay === (day % 7) && today.getHours() < 1 ? today : nextDay(today, day % 7);
+            // Simplificación: asumiendo día de semana (0-6) si es semanal
+            nextDate = nextDay(today, day % 7);
             break;
         case 'biweekly':
             const paymentDateFirst = setDate(today, 15);
@@ -93,6 +95,7 @@ export default function PaymentsPage() {
     description: ''
   });
 
+  // Garantizar hidratación segura
   React.useEffect(() => {
     setIsMounted(true);
   }, []);
@@ -113,13 +116,14 @@ export default function PaymentsPage() {
   }, [firestore, role, uid]);
   
   const { data: payments, isLoading: arePaymentsLoading } = useCollection(paymentsQuery);
+  
   const partnersCollectionRef = useMemoFirebase(() => firestore && role === 'superadmin' ? collection(firestore, 'partners') : null, [firestore, role]);
   const { data: partners, isLoading: arePartnersLoading } = useCollection(partnersCollectionRef);
   
   const settingsRef = useMemoFirebase(() => firestore ? doc(firestore, 'settings', 'paymentCycles') : null, [firestore]);
   const { data: paymentSettings, isLoading: areSettingsLoading } = useDoc(settingsRef);
 
-  const nextPaymentDate = React.useMemo(() => isMounted ? calculateNextPaymentDate(paymentSettings) : "Cargando...", [paymentSettings, isMounted]);
+  const nextPaymentDate = React.useMemo(() => isMounted ? calculateNextPaymentDate(paymentSettings) : "Calculando...", [paymentSettings, isMounted]);
 
   const totalPaid = payments?.filter(p => p.status === 'Pagado').reduce((acc, p) => acc + p.amount, 0) || 0;
   const totalPending = payments?.filter(p => p.status === 'Pendiente').reduce((acc, p) => acc + p.amount, 0) || 0;
@@ -133,8 +137,9 @@ export default function PaymentsPage() {
     payments.forEach(p => {
       csvContent += `${p.id},${p.partnerName || 'N/A'},${new Date(p.paymentDate).toLocaleDateString()},${p.paidAt ? new Date(p.paidAt).toLocaleDateString() : 'N/A'},${p.amount},${p.status},"${p.description || ''}"\r\n`;
     });
+    const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
+    link.setAttribute("href", encodedUri);
     link.setAttribute("download", "reporte_de_pagos.csv");
     document.body.appendChild(link);
     link.click();
@@ -146,7 +151,9 @@ export default function PaymentsPage() {
     e.preventDefault();
     if (!firestore || !newPaymentData.partnerId || !newPaymentData.amount) return;
     
-    const selectedPartner = partners.find(p => p.id === newPaymentData.partnerId);
+    const selectedPartner = partners?.find(p => p.id === newPaymentData.partnerId);
+    if (!selectedPartner) return;
+
     const paymentData = {
         amount: Number(newPaymentData.amount),
         description: newPaymentData.description || 'Pago de comisión',
@@ -157,7 +164,7 @@ export default function PaymentsPage() {
     };
 
     addDocumentNonBlocking(collection(firestore, 'payments'), paymentData);
-    toast({ title: "Pago Iniciado", description: "El pago se está procesando en segundo plano." });
+    toast({ title: "Pago Iniciado", description: "El registro de pago se está creando." });
     setNewPaymentDialogOpen(false);
     setNewPaymentData({ partnerId: '', amount: '', description: '' });
   };
@@ -176,6 +183,8 @@ export default function PaymentsPage() {
   };
 
   const isLoading = isRoleLoading || arePaymentsLoading || (role === 'superadmin' && arePartnersLoading) || areSettingsLoading;
+
+  if (isRoleLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   return (
     <div className="flex flex-col gap-8">
@@ -199,14 +208,19 @@ export default function PaymentsPage() {
                           <Label>Partner</Label>
                           <Select value={newPaymentData.partnerId} onValueChange={(v) => setNewPaymentData({ ...newPaymentData, partnerId: v })}>
                             <SelectTrigger><SelectValue placeholder="Selecciona..." /></SelectTrigger>
-                            <SelectContent>{partners?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                            <SelectContent>
+                                {partners?.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                            </SelectContent>
                           </Select>
                         </div>
                         <div className="grid gap-2">
                           <Label>Monto</Label>
                           <Input type="number" value={newPaymentData.amount} onChange={(e) => setNewPaymentData({ ...newPaymentData, amount: e.target.value })} required />
                         </div>
-                        <div className="grid gap-2"><Label>Descripción</Label><Textarea value={newPaymentData.description} onChange={(e) => setNewPaymentData({ ...newPaymentData, description: e.target.value })} /></div>
+                        <div className="grid gap-2">
+                            <Label>Descripción</Label>
+                            <Textarea value={newPaymentData.description} onChange={(e) => setNewPaymentData({ ...newPaymentData, description: e.target.value })} />
+                        </div>
                       </div>
                       <DialogFooter><Button type="submit">Crear Pago</Button></DialogFooter>
                     </form>
@@ -238,17 +252,28 @@ export default function PaymentsPage() {
                 <TableBody>
                   {payments?.map((payment) => (
                     <TableRow key={payment.id}>
-                      <TableCell className="font-mono">{payment.id}</TableCell>
-                      {role === 'superadmin' && <TableCell>{payment.partnerName}</TableCell>}
-                      <TableCell className="font-semibold">${payment.amount.toLocaleString()}</TableCell>
+                      <TableCell className="font-mono text-xs">{payment.id}</TableCell>
+                      {role === 'superadmin' && <TableCell className="font-medium">{payment.partnerName}</TableCell>}
+                      <TableCell className="font-semibold text-primary">${payment.amount.toLocaleString()}</TableCell>
                       <TableCell><PaymentStatusBadge status={payment.status} /></TableCell>
                       {role === 'superadmin' && (
                         <TableCell className="text-right">
-                          {payment.status === 'Pendiente' ? <Button size="sm" onClick={() => { setPaymentToPay(payment); setAlertOpen(true); }}>Pagar</Button> : <CheckCircle className="h-4 w-4 ml-auto text-green-600" />}
+                          {payment.status === 'Pendiente' ? (
+                            <Button size="sm" onClick={() => { setPaymentToPay(payment); setAlertOpen(true); }}>Pagar</Button>
+                          ) : (
+                            <CheckCircle className="h-4 w-4 ml-auto text-green-600" />
+                          )}
                         </TableCell>
                       )}
                     </TableRow>
                   ))}
+                  {(!payments || payments.length === 0) && (
+                      <TableRow>
+                          <TableCell colSpan={role === 'superadmin' ? 5 : 3} className="text-center py-8 text-muted-foreground italic">
+                              No se han registrado pagos aún.
+                          </TableCell>
+                      </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -257,8 +282,14 @@ export default function PaymentsPage() {
       </Card>
       <AlertDialog open={isAlertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent>
-          <AlertDialogHeader><AlertDialogTitle>Confirmar Pago</AlertDialogTitle><AlertDialogDescription>¿Marcar como pagado el monto de ${paymentToPay?.amount.toLocaleString()}?</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancelar</AlertDialogCancel><AlertDialogAction onClick={confirmPayment}>Confirmar</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogHeader>
+              <AlertDialogTitle>Confirmar Pago</AlertDialogTitle>
+              <AlertDialogDescription>¿Deseas marcar como pagado el monto de <span className="font-bold text-primary">${paymentToPay?.amount.toLocaleString()}</span> para {paymentToPay?.partnerName}?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={confirmPayment}>Confirmar Pago</AlertDialogAction>
+          </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
     </div>

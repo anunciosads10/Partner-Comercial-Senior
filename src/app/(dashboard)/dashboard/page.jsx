@@ -1,5 +1,2 @@
-/**
- * ARCHIVO NEUTRALIZADO
- * Este archivo ha sido desactivado para evitar la colisión de rutas con src/app/dashboard/page.jsx.
- * Se ha eliminado la exportación por defecto para que Next.js ignore este path.
- */
+// Archivo vaciado para eliminar colisión de rutas paralelas con /src/app/dashboard/page.jsx
+// Next.js 15 ignora archivos sin exportación por defecto.

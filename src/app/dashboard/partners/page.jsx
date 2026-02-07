@@ -47,7 +47,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, PlusCircle, CreditCard, QrCode, Eye, Copy, Loader2, Search, Edit, Trash2, Shield, Calendar, Globe, Award, Link as LinkIcon } from "lucide-react";
+import { MoreHorizontal, PlusCircle, Copy, Loader2, Search, Edit, Trash2, Shield, Calendar, Globe, Award, Link as LinkIcon } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -57,15 +57,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { collection, doc, updateDoc, deleteDoc, addDoc } from "firebase/firestore";
+import { collection, doc, updateDoc, deleteDoc, addDoc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { seedAllData } from "@/lib/seed-data";
 
 const generateAffiliateLink = (platformUrl, partner) => {
-  if (!platformUrl) return "Configura la URL en la Plataforma";
+  if (!platformUrl) return "URL no configurada";
   if (!partner) return "";
-  const identifier = partner.referralCode || partner.id;
+  const identifier = partner.id;
   const cleanBase = platformUrl.endsWith('/') ? platformUrl.slice(0, -1) : platformUrl;
   return `${cleanBase}?ref=${identifier}`;
 };
@@ -345,13 +345,30 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
   );
 };
 
-const AdminPartnersView = ({ partner, allPlatforms }) => {
+const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
   const { toast } = useToast();
 
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
     toast({ title: "Enlace Copiado", description: "El link de afiliado está en tu portapapeles." });
   };
+
+  if (!partner) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle>Perfil de Partner no encontrado</CardTitle>
+          <CardDescription>Aún no has configurado tu perfil de socio comercial.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Para acceder a tus enlaces de afiliado y estadísticas, primero debes crear tu perfil básico.</p>
+        </CardContent>
+        <CardFooter>
+          <Button onClick={onCreateProfile}>Crear Mi Perfil de Partner</Button>
+        </CardFooter>
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -436,7 +453,7 @@ const AdminPartnersView = ({ partner, allPlatforms }) => {
           </div>
           {(!allPlatforms || allPlatforms?.length === 0) && (
              <div className="text-center py-12 border-2 border-dashed rounded-lg bg-secondary/10">
-                <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
+                <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
                 <p className="text-muted-foreground">No hay plataformas de afiliación activas en este momento.</p>
              </div>
           )}
@@ -449,6 +466,7 @@ const AdminPartnersView = ({ partner, allPlatforms }) => {
 export default function PartnersPage() {
   const firestore = useFirestore();
   const { user } = useUser();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = React.useState('');
 
   const userRoleDocRef = useMemoFirebase(() => user ? doc(firestore, 'users', user.uid) : null, [firestore, user]);
@@ -473,6 +491,29 @@ export default function PartnersPage() {
     (p.pais || '').toLowerCase().includes(searchTerm.toLowerCase())
   ), [partners, searchTerm]);
 
+  const handleCreateProfile = async () => {
+    if (!user || !firestore) return;
+    try {
+      const partnerRef = doc(firestore, 'partners', user.uid);
+      await setDoc(partnerRef, {
+        id: user.uid,
+        name: user.email?.split('@')[0] || 'Nuevo Partner',
+        email: user.email,
+        tier: 'Silver',
+        status: 'Active',
+        pais: 'Sin asignar',
+        joinDate: new Date().toISOString(),
+        totalSales: 0,
+        revenue: 0,
+        avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
+      });
+      toast({ title: "Perfil Creado", description: "Ya puedes gestionar tus enlaces de afiliado." });
+    } catch (error) {
+      console.error(error);
+      toast({ variant: "destructive", title: "Error", description: "No se pudo crear el perfil." });
+    }
+  };
+
   if (isRoleLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
 
   if (role === 'superadmin') {
@@ -490,14 +531,14 @@ export default function PartnersPage() {
 
   if (role === 'admin') {
     if (isLoadingPartnerData) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-    return <AdminPartnersView partner={partnerData} allPlatforms={allPlatforms} />;
+    return <AdminPartnersView partner={partnerData} allPlatforms={allPlatforms} onCreateProfile={handleCreateProfile} />;
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle>Acceso Restringido</CardTitle>
-        <CardDescription>No tienes permisos suficientes para ver esta sección.</CardDescription>
+        <CardDescription>No tienes permisos suficientes para ver esta sección o tu perfil aún no ha sido cargado.</CardDescription>
       </CardHeader>
     </Card>
   );

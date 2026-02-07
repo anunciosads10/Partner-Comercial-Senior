@@ -1,1 +1,1 @@
-// Este archivo ha sido desactivado para evitar colisiones con la landing page principal en src/app/page.jsx
+// Archivo desactivado para evitar conflictos con la raíz del proyecto.

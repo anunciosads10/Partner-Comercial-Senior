@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 
 const SuperAdminDashboard = ({ partners, isLoading }) => {
   if (isLoading) {
-    return <div>Cargando Panel de Super Admin...</div>;
+    return <div className="flex items-center justify-center p-12">Cargando Panel de Super Admin...</div>;
   }
 
   const totalRevenue = partners?.reduce((acc, partner) => acc + (partner.revenue || 0), 0) || 0;
@@ -27,7 +27,7 @@ const SuperAdminDashboard = ({ partners, isLoading }) => {
   const activePartners = partners?.filter(p => p.status === 'Active').length || 0;
 
   return (
-    <>
+    <div className="space-y-6">
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <KpiCard
           title="Ingresos Totales"
@@ -61,13 +61,13 @@ const SuperAdminDashboard = ({ partners, isLoading }) => {
       </div>
 
       <AtRiskPartners partners={partners} />
-    </>
+    </div>
   );
 };
 
 const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
   if (isLoading) {
-    return <div>Cargando Panel de Partner...</div>;
+    return <div className="flex items-center justify-center p-12">Cargando Panel de Partner...</div>;
   }
 
   const handleCreateProfile = async () => {
@@ -110,19 +110,16 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
 
   const getTierBadgeVariant = (tier) => {
     switch (tier) {
-      case 'Platinum':
-        return 'default';
-      case 'Gold':
-        return 'secondary';
+      case 'Platinum': return 'default';
+      case 'Gold': return 'secondary';
       case 'Silver':
-      default:
-        return 'outline';
+      default: return 'outline';
     }
   };
 
   return (
-    <>
-      <div className="flex justify-between items-center mb-4">
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Panel de Partner</h1>
           <p className="text-muted-foreground">Bienvenido, {name}</p>
@@ -156,7 +153,7 @@ const AdminDashboard = ({ partnerData, isLoading, user, firestore }) => {
        <div className="grid grid-cols-1 gap-4 mt-8">
         <SalesChart />
       </div>
-    </>
+    </div>
   );
 }
 
@@ -188,7 +185,7 @@ export default function DashboardPage() {
   const isLoading = isAuthLoading || isRoleLoading;
 
   if (isLoading) {
-    return <div>Cargando...</div>;
+    return <div className="flex items-center justify-center min-h-[400px]">Cargando Dashboard...</div>;
   }
 
   return (

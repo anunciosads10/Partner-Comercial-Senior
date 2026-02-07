@@ -6,7 +6,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { LogOut, User, Upload } from "lucide-react";
 import { Input } from "./ui/input";
-import { useAuth } from "@/firebase";
+import { useAuth, useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import {
   DropdownMenu,
@@ -21,10 +21,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useToast } from "@/hooks/use-toast";
 
 
-export function Header({ userData }) { // Recibe userData como prop
+export function Header({ userData }) {
   const auth = useAuth();
+  const { user } = useUser();
   const { toast } = useToast();
-  const { user } = useAuth() || {};
   const [isClient, setIsClient] = useState(false);
   const router = useRouter();
   const fileInputRef = useRef(null);
@@ -43,12 +43,10 @@ export function Header({ userData }) { // Recibe userData como prop
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      console.log("Archivo seleccionado:", file.name);
       toast({
         title: "Imagen Seleccionada",
         description: `${file.name}`,
       });
-      // Aquí iría la lógica para subir y actualizar el avatar
     }
   };
 
@@ -68,7 +66,7 @@ export function Header({ userData }) { // Recibe userData como prop
                 className="overflow-hidden rounded-full"
               >
                 <Avatar className="h-8 w-8">
-                  <AvatarImage src="https://picsum.photos/seed/1/200" alt="Avatar" />
+                  <AvatarImage src={user?.photoURL || "https://picsum.photos/seed/1/200"} alt="Avatar" />
                   <AvatarFallback>
                     {user?.email?.[0].toUpperCase() || <User />}
                   </AvatarFallback>
@@ -79,12 +77,12 @@ export function Header({ userData }) { // Recibe userData como prop
               <DropdownMenuLabel>Mi Cuenta</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem disabled>
-                <div>
-                  <div>{user?.email}</div>
+                <div className="flex flex-col">
+                  <span className="font-medium text-sm">{user?.email}</span>
                   {userData && (
-                    <div className="text-xs text-muted-foreground capitalize">
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
                       Rol: {userData.role}
-                    </div>
+                    </span>
                   )}
                 </div>
               </DropdownMenuItem>
@@ -102,7 +100,7 @@ export function Header({ userData }) { // Recibe userData como prop
                     onChange={handleFileChange}
                 />
               <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={handleLogout}>
+              <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Cerrar Sesión
               </DropdownMenuItem>

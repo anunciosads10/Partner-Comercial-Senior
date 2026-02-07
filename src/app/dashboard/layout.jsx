@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect } from "react";
@@ -11,6 +12,7 @@ import { useRouter } from "next/navigation";
 /**
  * @fileOverview Layout principal del Dashboard. 
  * Gestiona la autenticación, el estado de la barra lateral y los datos del usuario.
+ * Implementado como Client Component para manejar hooks de Firebase.
  */
 export default function DashboardLayout({ children }) {
   const { user, isUserLoading: isAuthLoading } = useUser();

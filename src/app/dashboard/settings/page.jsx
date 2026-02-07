@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +10,11 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, User, Shield, Phone, MapPin, Mail } from 'lucide-react';
+import { Loader2, User, Shield, Phone, MapPin, Mail, CreditCard } from 'lucide-react';
 
 /**
- * @fileOverview Gestión de Perfil y Configuración del SaaS.
- * Implementación estricta para producción.
+ * @fileOverview Gestión de Perfil y Configuración para SuperAdmin y Admins.
+ * Implementación estricta para producción con sincronización multi-colección.
  */
 
 function ProfileSettings({ userData }) {
@@ -28,7 +27,6 @@ function ProfileSettings({ userData }) {
     pais: ''
   });
 
-  // Sincronizar estado local con datos de Firestore
   React.useEffect(() => {
     if (userData) {
       setFormData({
@@ -45,7 +43,7 @@ function ProfileSettings({ userData }) {
 
     const userRef = doc(firestore, 'users', userData.uid);
     
-    // Actualización optimista y no bloqueante
+    // Actualización del perfil de usuario
     updateDocumentNonBlocking(userRef, {
       name: formData.name,
       phone: formData.phone,
@@ -53,22 +51,21 @@ function ProfileSettings({ userData }) {
       updatedAt: new Date().toISOString()
     });
 
-    // Si el usuario es un partner (admin), sincronizar también su documento de partner
-    if (userData.role === 'admin') {
+    // Sincronización con el documento de Partner si aplica
+    if (userData.role === 'admin' || userData.role === 'superadmin') {
       const partnerRef = doc(firestore, 'partners', userData.uid);
       updateDocumentNonBlocking(partnerRef, {
         name: formData.name,
         pais: formData.pais,
-        email: userData.email // Mantener consistencia
+        email: userData.email
       });
     }
 
-    // Feedback visual tras un breve delay para simular procesamiento
     setTimeout(() => {
       setIsSaving(false);
       toast({
         title: "Perfil actualizado",
-        description: "Tus cambios se han guardado correctamente en la nube."
+        description: "Los cambios se han guardado correctamente en Firestore."
       });
     }, 600);
   };
@@ -80,25 +77,24 @@ function ProfileSettings({ userData }) {
           <User className="h-5 w-5 text-primary" /> Información del Perfil
         </CardTitle>
         <CardDescription>
-          Gestiona tu información personal y de contacto en la plataforma PartnerVerse.
+          Gestiona tu información de contacto y visibilidad en PartnerVerse.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold">Correo Electrónico</Label>
+            <Label className="text-sm font-semibold">Email (No editable)</Label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input id="email" value={userData?.email || ''} disabled className="pl-10 bg-muted/50 cursor-not-allowed" />
+              <Input value={userData?.email || ''} disabled className="pl-10 bg-muted/50" />
             </div>
-            <p className="text-[10px] text-muted-foreground">El email no puede ser modificado por seguridad.</p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="role" className="text-sm font-semibold">Rol Asignado</Label>
+            <Label className="text-sm font-semibold">Rol en el Sistema</Label>
             <div className="flex items-center gap-2 p-2.5 bg-secondary/20 rounded-md border border-secondary/30">
               <Shield className="h-4 w-4 text-primary" />
-              <span className="text-sm font-bold uppercase tracking-wider text-primary">
+              <span className="text-sm font-bold uppercase text-primary">
                 {userData?.role || 'Partner'}
               </span>
             </div>
@@ -108,22 +104,18 @@ function ProfileSettings({ userData }) {
             <Label htmlFor="name" className="text-sm font-semibold">Nombre Completo</Label>
             <Input 
               id="name" 
-              placeholder="Ej. Juan Pérez"
               value={formData.name} 
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              className="focus:ring-primary"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone" className="text-sm font-semibold">Teléfono de Contacto</Label>
+            <Label htmlFor="phone" className="text-sm font-semibold">Teléfono</Label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 id="phone" 
-                type="tel"
-                placeholder="+57 300 000 0000"
-                className="pl-10 focus:ring-primary"
+                className="pl-10"
                 value={formData.phone} 
                 onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               />
@@ -131,13 +123,12 @@ function ProfileSettings({ userData }) {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="pais" className="text-sm font-semibold">País de Residencia</Label>
+            <Label htmlFor="pais" className="text-sm font-semibold">País</Label>
             <div className="relative">
               <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input 
                 id="pais" 
-                placeholder="Ej. Colombia"
-                className="pl-10 focus:ring-primary"
+                className="pl-10"
                 value={formData.pais} 
                 onChange={(e) => setFormData(prev => ({ ...prev, pais: e.target.value }))}
               />
@@ -146,15 +137,9 @@ function ProfileSettings({ userData }) {
         </div>
       </CardContent>
       <CardFooter className="bg-muted/30 border-t p-6">
-        <Button onClick={handleSave} disabled={isSaving} className="w-full md:w-auto px-8">
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Guardando...
-            </>
-          ) : (
-            "Actualizar Perfil"
-          )}
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {isSaving ? "Guardando..." : "Actualizar Perfil"}
         </Button>
       </CardFooter>
     </Card>
@@ -173,69 +158,32 @@ export default function SettingsPage() {
   const { data: userData, isLoading } = useDoc(userDocRef);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-3xl font-bold tracking-tight text-foreground">Configuración</h1>
-        <p className="text-muted-foreground text-lg">
-          Personaliza tu experiencia y gestiona tus datos de socio.
-        </p>
+    <div className="space-y-8">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Configuración</h1>
+        <p className="text-muted-foreground">Gestiona tu perfil y preferencias del sistema.</p>
       </div>
 
-      <Tabs defaultValue="profile" className="w-full space-y-6">
-        <TabsList className="bg-background border p-1 h-12">
-          <TabsTrigger value="profile" className="px-6 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-            Mi Perfil
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="px-6">
-            Notificaciones
-          </TabsTrigger>
-          {userData?.role === 'superadmin' && (
-            <TabsTrigger value="system" className="px-6">
-              Ajustes de Sistema
-            </TabsTrigger>
-          )}
+      <Tabs defaultValue="profile" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:w-[400px]">
+          <TabsTrigger value="profile">Perfil</TabsTrigger>
+          <TabsTrigger value="billing">Pagos</TabsTrigger>
         </TabsList>
-        
-        <TabsContent value="profile" className="outline-none">
+        <TabsContent value="profile" className="mt-6">
           {isLoading ? (
-            <div className="flex flex-col items-center justify-center p-20 gap-4">
-              <Loader2 className="h-10 w-10 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground animate-pulse">Cargando datos de perfil...</p>
-            </div>
+            <div className="flex justify-center p-12"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>
           ) : (
             <ProfileSettings userData={userData} />
           )}
         </TabsContent>
-        
-        <TabsContent value="notifications">
-          <Card className="border-dashed border-2">
-            <CardHeader className="text-center">
-              <CardTitle>Canales de Alerta</CardTitle>
-              <CardDescription>Próximamente: Configura alertas vía WhatsApp y Email.</CardDescription>
+        <TabsContent value="billing">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2"><CreditCard className="h-5 w-5" /> Información de Pago</CardTitle>
+              <CardDescription>Próximamente: Configura tus métodos de retiro de comisiones.</CardDescription>
             </CardHeader>
-            <CardContent className="h-40 flex items-center justify-center text-muted-foreground italic">
-              Sección en desarrollo para la fase 2.
-            </CardContent>
           </Card>
         </TabsContent>
-
-        {userData?.role === 'superadmin' && (
-          <TabsContent value="system">
-            <Card className="border-none shadow-md">
-              <CardHeader>
-                <CardTitle>Configuración del SaaS</CardTitle>
-                <CardDescription>Parámetros globales de comisiones y ciclos de pago.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="p-8 text-center bg-muted/20 rounded-lg border">
-                  <p className="text-sm text-muted-foreground">
-                    Como Super Administrador, aquí podrás gestionar los esquemas globales de comisión y las reglas del sistema.
-                  </p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
       </Tabs>
     </div>
   );

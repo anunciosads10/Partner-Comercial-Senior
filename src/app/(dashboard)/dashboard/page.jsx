@@ -1,2 +1,3 @@
-// Archivo neutralizado para eliminar conflicto de rutas paralelas en Next.js 15.
-// No debe contener exportaciones para ser ignorado por el sistema de rutas.
+// Archivo neutralizado estructuralmente para resolver el error de Parallel Pages en Next.js 15.
+// Al no contener exportaciones, Next.js ignorará esta ruta, priorizando /src/app/dashboard/page.jsx
+export default function InactivePage() { return null; }

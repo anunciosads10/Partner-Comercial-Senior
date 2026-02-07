@@ -8,20 +8,19 @@ import { getStorage } from 'firebase/storage';
 
 /**
  * Inicializa Firebase de forma robusta para entornos de cliente y servidor.
- * Evita errores de "app/no-options" durante la generación estática de Next.js.
+ * Sigue la guía para evitar el error (app/no-options) pasando explícitamente la configuración.
  */
 export function initializeFirebase() {
-  // Verificamos si ya hay aplicaciones inicializadas para evitar duplicados en HMR
-  // Durante el build, esto asegura que se use la configuración explícita proporcionada.
   let firebaseApp: FirebaseApp;
   
+  // Lógica para que funcione tanto en Local como en Server
+  // Si ya existe una app iniciada, úsala. Si no, inicialízala con la config explícitamente.
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
-    // Si no hay configuración disponible (caso raro en build estático sin envs), 
-    // lanzamos un error descriptivo, pero aquí usamos el objeto importado directamente.
-    if (!firebaseConfig.apiKey) {
-      console.warn("Firebase Config: API Key no detectada. Verifique src/firebase/config.ts");
+    // Validamos que la configuración sea válida antes de intentar inicializar
+    if (!firebaseConfig || !firebaseConfig.apiKey) {
+      console.error("Firebase Config Error: Credenciales no encontradas en config.ts");
     }
     firebaseApp = initializeApp(firebaseConfig);
   }

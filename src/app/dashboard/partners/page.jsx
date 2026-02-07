@@ -75,7 +75,7 @@ function getTierBadgeVariant(tier) {
     case 'Platinum': return 'default';
     case 'Gold': return 'secondary';
     case 'Silver': return 'outline';
-    default: return 'destructive';
+    default: return 'outline';
   }
 }
 
@@ -208,7 +208,9 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto" /></TableCell></TableRow>
+                <TableRow><TableCell colSpan={5} className="text-center py-8"><Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" /></TableCell></TableRow>
+              ) : partners?.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-12 text-muted-foreground italic">No hay partners registrados.</TableCell></TableRow>
               ) : partners?.map((partner) => (
                 <TableRow key={partner.id}>
                   <TableCell>
@@ -355,16 +357,16 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
 
   if (!partner) {
     return (
-      <Card>
+      <Card className="border-primary/20 bg-primary/5">
         <CardHeader>
-          <CardTitle>Perfil de Partner no encontrado</CardTitle>
-          <CardDescription>Aún no has configurado tu perfil de socio comercial.</CardDescription>
+          <CardTitle>Perfil de Socio no configurado</CardTitle>
+          <CardDescription>Aún no has activado tu perfil de socio comercial para generar enlaces.</CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">Para acceder a tus enlaces de afiliado y estadísticas, primero debes crear tu perfil básico.</p>
+          <p className="text-sm text-muted-foreground">Para acceder a tus enlaces de afiliado y estadísticas personales, primero debes crear tu perfil básico.</p>
         </CardContent>
         <CardFooter>
-          <Button onClick={onCreateProfile}>Crear Mi Perfil de Partner</Button>
+          <Button onClick={onCreateProfile} className="w-full sm:w-auto">Activar Mi Perfil de Socio</Button>
         </CardFooter>
       </Card>
     );
@@ -372,24 +374,24 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
 
   return (
     <div className="space-y-6">
-      <Card className="border-primary/20 shadow-lg">
-        <CardHeader className="bg-primary/5">
+      <Card className="border-primary/20 shadow-lg overflow-hidden">
+        <CardHeader className="bg-primary text-primary-foreground">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
                <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
                   <AvatarImage src={partner?.avatarUrl}/>
-                  <AvatarFallback className="text-xl">{partner?.name?.slice(0,2)}</AvatarFallback>
+                  <AvatarFallback className="text-xl text-primary">{partner?.name?.slice(0,2)}</AvatarFallback>
                 </Avatar>
                 <div>
                   <CardTitle className="text-2xl">{partner?.name}</CardTitle>
-                  <CardDescription>{partner?.email}</CardDescription>
+                  <CardDescription className="text-primary-foreground/80">{partner?.email}</CardDescription>
                 </div>
             </div>
             <div className="flex flex-col items-end gap-2">
-                <Badge variant={getTierBadgeVariant(partner?.tier)} className="text-lg px-6 py-1.5 uppercase tracking-wider">
+                <Badge variant="secondary" className="text-lg px-6 py-1.5 uppercase tracking-wider font-bold">
                   Nivel {partner?.tier}
                 </Badge>
-                <Badge variant={getStatusBadgeVariant(partner?.status)} className="px-3">Cuenta {partner?.status}</Badge>
+                <Badge variant="outline" className="px-3 bg-white/20 border-white text-white">Cuenta {partner?.status}</Badge>
             </div>
           </div>
         </CardHeader>
@@ -404,7 +406,7 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
             </div>
              <div className="space-y-1 p-4 rounded-lg bg-secondary/30">
                 <Label className="text-muted-foreground flex items-center gap-1"><Award className="h-3 w-3"/> ID de Socio</Label>
-                <p className="font-mono text-sm">{partner?.id}</p>
+                <p className="font-mono text-sm truncate">{partner?.id}</p>
             </div>
         </CardContent>
       </Card>
@@ -415,7 +417,7 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
              <div className="p-2 bg-primary/10 rounded-full"><LinkIcon className="h-6 w-6 text-primary" /></div>
              <div>
                 <CardTitle>Generador de Enlaces de Afiliado</CardTitle>
-                <CardDescription>Usa estos enlaces personalizados para referir clientes y ganar comisiones recurrentes.</CardDescription>
+                <CardDescription>Usa estos enlaces para referir clientes y ganar comisiones recurrentes.</CardDescription>
              </div>
           </div>
         </CardHeader>
@@ -436,7 +438,7 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
                       </div>
                       <Button size="sm" variant="outline" className="w-full text-xs font-semibold" onClick={() => copyToClipboard(link)}>
                         <Copy className="mr-2 h-3 w-3" />
-                        Copiar Link Personalizado
+                        Copiar Link
                       </Button>
                     </div>
                   </CardContent>
@@ -454,7 +456,7 @@ const AdminPartnersView = ({ partner, allPlatforms, onCreateProfile }) => {
           {(!allPlatforms || allPlatforms?.length === 0) && (
              <div className="text-center py-12 border-2 border-dashed rounded-lg bg-secondary/10">
                 <Globe className="h-12 w-12 text-muted-foreground mx-auto mb-4 opacity-20" />
-                <p className="text-muted-foreground">No hay plataformas de afiliación activas en este momento.</p>
+                <p className="text-muted-foreground">No hay plataformas de afiliación configuradas en el sistema.</p>
              </div>
           )}
         </CardContent>
@@ -497,7 +499,7 @@ export default function PartnersPage() {
       const partnerRef = doc(firestore, 'partners', user.uid);
       await setDoc(partnerRef, {
         id: user.uid,
-        name: user.email?.split('@')[0] || 'Nuevo Partner',
+        name: user.email?.split('@')[0] || 'Socio Nuevo',
         email: user.email,
         tier: 'Silver',
         status: 'Active',
@@ -507,10 +509,10 @@ export default function PartnersPage() {
         revenue: 0,
         avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
       });
-      toast({ title: "Perfil Creado", description: "Ya puedes gestionar tus enlaces de afiliado." });
+      toast({ title: "Perfil Activado", description: "Tu perfil de socio comercial ha sido creado con éxito." });
     } catch (error) {
       console.error(error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo crear el perfil." });
+      toast({ variant: "destructive", title: "Error", description: "No se pudo activar el perfil de socio." });
     }
   };
 
@@ -537,9 +539,12 @@ export default function PartnersPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Acceso Restringido</CardTitle>
-        <CardDescription>No tienes permisos suficientes para ver esta sección o tu perfil aún no ha sido cargado.</CardDescription>
+        <CardTitle>Cargando información...</CardTitle>
+        <CardDescription>Estamos preparando el acceso a tu panel de socios.</CardDescription>
       </CardHeader>
+      <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
+      </CardContent>
     </Card>
   );
 }

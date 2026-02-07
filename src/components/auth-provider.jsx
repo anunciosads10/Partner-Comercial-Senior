@@ -14,35 +14,36 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     if (isUserLoading) {
-      return; // Do nothing while loading
+      return;
     }
     
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-    const isDashboardRoute = pathname.startsWith(DASHBOARD_PREFIX);
+    // Verificar si estamos intentando entrar a cualquier ruta protegida (las que no son públicas)
+    const isProtectedRoute = !isPublicRoute;
 
-    // If user is logged in and tries to access a public route, redirect to dashboard
-    if (user && isPublicRoute && pathname !== '/') {
+    // Si el usuario está logueado e intenta acceder a login/register, llevarlo al dashboard
+    if (user && (pathname === '/login' || pathname === '/register')) {
       router.push(DASHBOARD_PREFIX);
     }
     
-    // If there is no user and they are on a protected dashboard route, redirect to login
-    if (!user && isDashboardRoute) {
+    // Si no hay usuario y está en una ruta protegida, llevar a login
+    if (!user && isProtectedRoute) {
       router.push('/login');
     }
 
   }, [user, isUserLoading, router, pathname]);
 
-  // If loading on a protected route, show a loader or nothing
   if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
-      // You could return a full-page loader here
-      return null;
+      return (
+        <div className="flex items-center justify-center min-h-screen">
+          <p>Verificando acceso...</p>
+        </div>
+      );
   }
 
-  // Prevent flashing protected content before redirection
   if (!user && !PUBLIC_ROUTES.includes(pathname)) {
       return null;
   }
 
-  // Render children if checks pass
   return children;
 }

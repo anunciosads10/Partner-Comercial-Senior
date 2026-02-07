@@ -71,22 +71,18 @@ export default function LoginPage() {
   const [error, setError] = useState('');
 
   const handleSignIn = async () => {
-    console.log("Intentando iniciar sesión con:", email); // LOG 1
     setError('');
     
     if (!auth) {
-      console.log("Error: auth es null"); // LOG 2
       setError('El servicio de autenticación no está disponible.');
       return;
     }
 
     try {
-      console.log("Llamando a Firebase..."); // LOG 3
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      console.log("¡Éxito! Usuario logueado:", userCredential.user.uid); // LOG 4
-      router.push('/');
+      // Redirigir explícitamente al dashboard después del éxito
+      router.push('/dashboard');
     } catch (err) {
-      console.log("Error detectado:", err.code); // LOG 5
       if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found') {
         setError('Credenciales inválidas. Por favor, revisa tu email y contraseña.');
       } else {

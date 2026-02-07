@@ -34,7 +34,7 @@ const allMenuItems = [
   { href: '/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },
   { href: '/hierarchy', label: 'Jerarquía', icon: GitFork, roles: ['admin', 'superadmin'] },
   { href: '/payments', label: 'Pagos', icon: CreditCard, roles: ['admin', 'superadmin'] },
-  { href: '/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] }, // Nuevo ítem de menú
+  { href: '/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] },
   { href: '/rules', label: 'Reglas', icon: Gavel, roles: ['superadmin'] },
   { href: '/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];
@@ -42,7 +42,7 @@ const allMenuItems = [
 export function MainNav({ userData }) {
   const pathname = usePathname();
   const { state } = useSidebar();
-  const userRole = userData?.role || 'admin'; // Por defecto 'admin' si el rol aún no está cargado
+  const userRole = userData?.role || 'admin';
 
   const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
 

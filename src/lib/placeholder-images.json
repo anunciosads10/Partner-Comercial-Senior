@@ -3,19 +3,19 @@
     {
       "id": "landing-dashboard",
       "description": "PartnerVerse Dashboard",
-      "imageUrl": "/images/placeholder-dashboard.png",
+      "imageUrl": "/images/partner-01.png",
       "imageHint": "dashboard laptop"
     },
     {
       "id": "landing-growth",
       "description": "Growth Chart",
-      "imageUrl": "https://images.unsplash.com/photo-1577563682708-4f022ec774fb?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxncm93dGglMjBjaGFydHxlbnwwfHx8fDE3NjgwNDI0MjB8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/partner-resocial-social-01.png",
       "imageHint": "growth chart"
     },
     {
       "id": "partner-1",
       "description": "Partner 1 Avatar",
-      "imageUrl": "https://images.unsplash.com/photo-1600180758890-6b94519a8ba6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3Njc1MTExMDd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "/images/partner-resocial-social-01.png",
       "imageHint": "person portrait"
     },
     {

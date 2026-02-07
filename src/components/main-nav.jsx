@@ -11,9 +11,8 @@ import {
   Gavel,
   Bell,
   Settings,
-  Wallet,
-  BarChart3,
   Puzzle,
+  BarChart3,
 } from 'lucide-react';
 
 import {
@@ -29,14 +28,14 @@ import { cn } from '@/lib/utils';
 
 const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
-  { href: '/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
-  { href: '/platforms', label: 'Plataformas SaaS', icon: Puzzle, roles: ['superadmin'] },
-  { href: '/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },
-  { href: '/hierarchy', label: 'Jerarquía', icon: GitFork, roles: ['admin', 'superadmin'] },
-  { href: '/payments', label: 'Pagos', icon: CreditCard, roles: ['admin', 'superadmin'] },
-  { href: '/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] },
-  { href: '/rules', label: 'Reglas', icon: Gavel, roles: ['superadmin'] },
-  { href: '/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/platforms', label: 'Plataformas SaaS', icon: Puzzle, roles: ['superadmin'] },
+  { href: '/dashboard/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },
+  { href: '/dashboard/hierarchy', label: 'Jerarquía', icon: GitFork, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/payments', label: 'Pagos', icon: CreditCard, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] },
+  { href: '/dashboard/rules', label: 'Reglas', icon: Gavel, roles: ['superadmin'] },
+  { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];
 
 export function MainNav({ userData }) {
@@ -108,9 +107,9 @@ export function MainNav({ userData }) {
       <SidebarFooter className="p-2 mt-auto">
         <SidebarMenu>
            <SidebarMenuItem>
-            <Link href="/settings">
+            <Link href="/dashboard/settings">
               <SidebarMenuButton
-                isActive={pathname.startsWith('/settings')}
+                isActive={pathname.startsWith('/dashboard/settings')}
                 tooltip="Configuración"
               >
                 <Settings />

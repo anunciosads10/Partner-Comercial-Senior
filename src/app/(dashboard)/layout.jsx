@@ -27,13 +27,12 @@ export default function DashboardLayout({
   const isLoading = isAuthLoading || (user && isRoleLoading);
 
   useEffect(() => {
-    // If loading is finished and there's no authenticated user on a dashboard route, redirect to login.
-    if (!isLoading && !user && pathname.startsWith('/dashboard')) {
+    // Protección adicional: si no hay usuario, redirigir a login
+    if (!isAuthLoading && !user) {
       router.push('/login');
     }
-  }, [isLoading, user, router, pathname]);
+  }, [isAuthLoading, user, router]);
 
-  // While loading auth state or user role, show a full-screen loader.
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -42,8 +41,6 @@ export default function DashboardLayout({
     );
   }
 
-  // If loading is done, but we still have no user, render nothing.
-  // The useEffect above will handle the redirection.
   if (!user) {
     return null;
   }

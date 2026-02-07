@@ -65,7 +65,6 @@ function LandingHeader() {
   );
 }
 
-
 export default function RegisterPage() {
   const auth = useAuth();
   const firestore = useFirestore();
@@ -73,11 +72,9 @@ export default function RegisterPage() {
   const [error, setError] = useState('');
   const { toast } = useToast();
   
-  // Estados para visibilidad de contraseña
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  // Estados para el formulario
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -85,7 +82,6 @@ export default function RegisterPage() {
     confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-
 
   const handleSignUp = async (e) => {
     e.preventDefault();
@@ -113,23 +109,20 @@ export default function RegisterPage() {
       
       if (userCredential && userCredential.user) {
         const user = userCredential.user;
-        // Actualizar el perfil de Firebase Auth con el nombre
         await updateProfile(user, { displayName: formData.name });
         
         const role = formData.email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
         
         const userRef = doc(firestore, 'users', user.uid);
-        // Guardar datos en Firestore
         await setDoc(userRef, {
           uid: user.uid,
-          name: formData.name, // Guardar el nombre
+          name: formData.name,
           email: user.email,
           role: role,
         });
         
         toast({ title: "Cuenta creada", description: "Bienvenido a PartnerVerse." });
         
-        // Limpiar el formulario
         setFormData({
             name: '',
             email: '',
@@ -137,17 +130,13 @@ export default function RegisterPage() {
             confirmPassword: ''
         });
 
-        // AuthProvider se encargará de la redirección
-      } else {
-        throw new Error("La creación del usuario falló, no se devolvieron credenciales de usuario.");
+        router.push('/dashboard');
       }
-
     } catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('Esta dirección de email ya está en uso.');
       } else {
         setError('Error al registrarse. Por favor, inténtalo de nuevo.');
-        console.error("Error de registro:", err);
       }
     } finally {
         setIsLoading(false);
@@ -199,7 +188,7 @@ export default function RegisterPage() {
                     required
                     value={formData.password}
                     onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="pr-10" // Espacio para el icono
+                    className="pr-10"
                   />
                   <button
                     type="button"

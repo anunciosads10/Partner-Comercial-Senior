@@ -18,11 +18,10 @@ export function AuthProvider({ children }) {
     }
     
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-    // Verificar si estamos intentando entrar a cualquier ruta protegida (las que no son públicas)
     const isProtectedRoute = !isPublicRoute;
 
-    // Si el usuario está logueado e intenta acceder a login/register, llevarlo al dashboard
-    if (user && (pathname === '/login' || pathname === '/register')) {
+    // Si el usuario está logueado e intenta acceder a rutas públicas de auth o al inicio, llevarlo al dashboard
+    if (user && (pathname === '/login' || pathname === '/register' || pathname === '/')) {
       router.push(DASHBOARD_PREFIX);
     }
     
@@ -33,6 +32,7 @@ export function AuthProvider({ children }) {
 
   }, [user, isUserLoading, router, pathname]);
 
+  // Mostrar cargador solo si es una ruta protegida y estamos cargando
   if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
       return (
         <div className="flex items-center justify-center min-h-screen">
@@ -41,6 +41,7 @@ export function AuthProvider({ children }) {
       );
   }
 
+  // No renderizar nada si no hay usuario en ruta protegida (el useEffect redirigirá)
   if (!user && !PUBLIC_ROUTES.includes(pathname)) {
       return null;
   }

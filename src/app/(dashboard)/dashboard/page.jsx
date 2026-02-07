@@ -1,6 +1,8 @@
 /**
- * Archivo desactivado para resolver colisión de rutas en Next.js 15.
- * Toda la lógica ha sido movida a src/app/dashboard/page.jsx.
- * No eliminar este archivo físicamente si se desea mantener la estructura de carpetas, 
- * pero se ha eliminado el 'export default' para que Next.js lo ignore como ruta.
+ * ARCHIVO NEUTRALIZADO
+ * Este archivo ha sido desactivado para evitar la colisión de rutas con src/app/dashboard/page.jsx.
+ * En Next.js 15, no puede haber dos páginas que resuelvan al mismo path.
  */
+export default function InactivePage() {
+  return null;
+}

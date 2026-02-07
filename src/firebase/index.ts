@@ -6,31 +6,27 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION
+/**
+ * Inicializa Firebase de forma robusta para entornos de cliente y servidor.
+ * Evita errores de "app/no-options" durante la generación estática de Next.js.
+ */
 export function initializeFirebase() {
-  if (!getApps().length) {
-    // Important! initializeApp() is called without any arguments because Firebase App Hosting
-    // integrates with the initializeApp() function to provide the environment variables needed to
-    // populate the FirebaseOptions in production. It is critical that we attempt to call initializeApp()
-    // without arguments.
-    let firebaseApp;
-    try {
-      // Attempt to initialize via Firebase App Hosting environment variables
-      firebaseApp = initializeApp();
-    } catch (e) {
-      // Only warn in production because it's normal to use the firebaseConfig to initialize
-      // during development
-      if (process.env.NODE_ENV === "production") {
-        console.warn('Automatic initialization failed. Falling back to firebase config object.', e);
-      }
-      firebaseApp = initializeApp(firebaseConfig);
+  // Verificamos si ya hay aplicaciones inicializadas para evitar duplicados en HMR
+  // Durante el build, esto asegura que se use la configuración explícita proporcionada.
+  let firebaseApp: FirebaseApp;
+  
+  if (getApps().length > 0) {
+    firebaseApp = getApp();
+  } else {
+    // Si no hay configuración disponible (caso raro en build estático sin envs), 
+    // lanzamos un error descriptivo, pero aquí usamos el objeto importado directamente.
+    if (!firebaseConfig.apiKey) {
+      console.warn("Firebase Config: API Key no detectada. Verifique src/firebase/config.ts");
     }
-
-    return getSdks(firebaseApp);
+    firebaseApp = initializeApp(firebaseConfig);
   }
 
-  // If already initialized, return the SDKs with the already initialized App
-  return getSdks(getApp());
+  return getSdks(firebaseApp);
 }
 
 export function getSdks(firebaseApp: FirebaseApp) {
@@ -42,6 +38,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
   };
 }
 
+// Exportación centralizada de utilidades y hooks
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';

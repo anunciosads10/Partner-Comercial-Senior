@@ -1,2 +1,2 @@
-// Archivo vaciado para eliminar colisión de rutas paralelas con /src/app/dashboard/page.jsx
-// Next.js 15 ignora archivos sin exportación por defecto.
+// Este archivo ha sido desactivado para evitar colisiones con src/app/dashboard/page.jsx
+// Al no tener exportación por defecto, Next.js lo ignorará como ruta.

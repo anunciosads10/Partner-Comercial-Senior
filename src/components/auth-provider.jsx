@@ -5,7 +5,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 const DASHBOARD_PREFIX = '/dashboard';
-const PUBLIC_ROUTES = ['/login', '/register', '/login/forgot-password', '/'];
+const PUBLIC_ROUTES = ['/login', '/register', '/login/forgot-password', '/', '/terms', '/privacy'];
 
 export function AuthProvider({ children }) {
   const { user, isUserLoading } = useUser() || {};
@@ -13,37 +13,31 @@ export function AuthProvider({ children }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    if (isUserLoading) {
-      return;
-    }
+    if (isUserLoading) return;
     
     const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
-    const isProtectedRoute = !isPublicRoute;
+    const isProtectedRoute = !isPublicRoute && !pathname.startsWith('/(dashboard)');
 
-    // Si el usuario está logueado e intenta acceder a rutas públicas de auth o al inicio, llevarlo al dashboard
+    // Redirección automática si ya está logueado:
+    // Si el usuario ya inició sesión e intenta ir a Login, Registro o Inicio, lo mandamos al Dashboard
     if (user && (pathname === '/login' || pathname === '/register' || pathname === '/')) {
-      router.push(DASHBOARD_PREFIX);
+      router.replace(DASHBOARD_PREFIX);
     }
     
-    // Si no hay usuario y está en una ruta protegida, llevar a login
-    if (!user && isProtectedRoute) {
-      router.push('/login');
+    // Si no hay usuario y trata de entrar a una ruta que no es pública
+    if (!user && !isPublicRoute) {
+      router.replace('/login');
     }
 
   }, [user, isUserLoading, router, pathname]);
 
-  // Mostrar cargador solo si es una ruta protegida y estamos cargando
+  // Evitar parpadeos de contenido protegido mientras carga
   if (isUserLoading && !PUBLIC_ROUTES.includes(pathname)) {
       return (
-        <div className="flex items-center justify-center min-h-screen">
-          <p>Verificando acceso...</p>
+        <div className="flex items-center justify-center min-h-screen bg-background">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         </div>
       );
-  }
-
-  // No renderizar nada si no hay usuario en ruta protegida (el useEffect redirigirá)
-  if (!user && !PUBLIC_ROUTES.includes(pathname)) {
-      return null;
   }
 
   return children;

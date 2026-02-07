@@ -4,10 +4,9 @@ import React, { useEffect } from "react";
 import { Sidebar, SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { MainNav } from "@/components/main-nav";
 import { Header } from "@/components/header";
-import { AuthProvider } from "@/components/auth-provider";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 export default function DashboardLayout({
   children,
@@ -15,7 +14,6 @@ export default function DashboardLayout({
   const { user, isUserLoading: isAuthLoading } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  const pathname = usePathname();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -27,7 +25,6 @@ export default function DashboardLayout({
   const isLoading = isAuthLoading || (user && isRoleLoading);
 
   useEffect(() => {
-    // Protección adicional: si no hay usuario, redirigir a login
     if (!isAuthLoading && !user) {
       router.push('/login');
     }
@@ -36,7 +33,10 @@ export default function DashboardLayout({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p>Cargando portal...</p>
+        <div className="flex flex-col items-center gap-2">
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-muted-foreground">Cargando portal...</p>
+        </div>
       </div>
     );
   }
@@ -46,18 +46,16 @@ export default function DashboardLayout({
   }
   
   return (
-    <AuthProvider>
-      <SidebarProvider>
-        <Sidebar>
-          <MainNav userData={userData} />
-        </Sidebar>
-        <SidebarInset>
-          <Header userData={userData} />
-          <main className="p-4 sm:p-6 lg:p-8">
-            {children}
-          </main>
-        </SidebarInset>
-      </SidebarProvider>
-    </AuthProvider>
+    <SidebarProvider>
+      <Sidebar>
+        <MainNav userData={userData} />
+      </Sidebar>
+      <SidebarInset>
+        <Header userData={userData} />
+        <main className="p-4 sm:p-6 lg:p-8">
+          {children}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

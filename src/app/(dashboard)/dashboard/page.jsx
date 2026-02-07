@@ -1,8 +1,6 @@
 /**
- * @fileOverview Archivo desactivado para resolver el conflicto de rutas paralelo en Next.js 15.
- * La ruta activa es src/app/dashboard/page.jsx.
- * Se elimina la exportación por defecto para que Next.js no lo procese como página.
+ * DEPRECATED: Este archivo ha sido desactivado para resolver el conflicto de rutas paralelo en Next.js 15.
+ * La ruta activa se encuentra en src/app/dashboard/page.jsx.
+ * Se ha eliminado la exportación por defecto para que Next.js no lo registre como una página válida.
  */
-export const metadata = { title: "Neutralized" };
-function Neutralized() { return null; }
-export { Neutralized as default };
+export const metadata = { title: "Archivador" };

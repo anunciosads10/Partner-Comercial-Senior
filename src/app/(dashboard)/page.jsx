@@ -1,6 +1,4 @@
 /**
- * @fileOverview Página raíz del grupo desactivada para evitar conflictos con la landing page real.
+ * DEPRECATED: Este archivo ha sido desactivado para evitar conflictos con la landing page raíz.
  */
-export default function NeutralizedPage() {
-  return null;
-}
+export const metadata = { title: "Archivador" };

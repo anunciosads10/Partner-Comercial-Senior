@@ -12,11 +12,12 @@ import { useFirestore, useMemoFirebase, useDoc, useUser } from '@/firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
 import { CalendarDays, Loader2, User, Mail, ShieldCheck } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const PaymentSettings = () => {
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [isSaving, setIsSaving] = React.useState(false);
     const [frequency, setFrequency] = React.useState('monthly');
     const [paymentDay, setPaymentDay] = React.useState('15');
 
@@ -30,16 +31,23 @@ const PaymentSettings = () => {
         }
     }, [paymentSettings]);
     
-    const handleSavePaymentCycles = async () => {
-      if (!firestore) return;
-      setIsSaving(true);
-      try {
-        await setDoc(settingsRef, { frequency, paymentDay }, { merge: true });
-        toast({ title: 'Configuración de Pagos Guardada' });
-      } catch (error) { 
-        console.error(error);
-        toast({ variant: 'destructive', title: 'Error', description: 'No se pudo guardar la configuración.' });
-      } finally { setIsSaving(false); }
+    const handleSavePaymentCycles = () => {
+      if (!firestore || !settingsRef) return;
+      
+      const data = { frequency, paymentDay };
+      
+      setDoc(settingsRef, data, { merge: true })
+        .then(() => {
+          toast({ title: 'Configuración de Pagos Guardada' });
+        })
+        .catch(async (error) => {
+          const permissionError = new FirestorePermissionError({
+            path: settingsRef.path,
+            operation: 'write',
+            requestResourceData: data,
+          });
+          errorEmitter.emit('permission-error', permissionError);
+        });
     };
 
     if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -75,8 +83,7 @@ const PaymentSettings = () => {
                 </div>
             </CardContent>
             <CardFooter className="border-t pt-6">
-                <Button onClick={handleSavePaymentCycles} disabled={isSaving}>
-                  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button onClick={handleSavePaymentCycles}>
                   Actualizar Ciclos de Pago
                 </Button>
             </CardFooter>
@@ -88,7 +95,6 @@ const UserProfileSettings = () => {
     const { user } = useUser();
     const firestore = useFirestore();
     const { toast } = useToast();
-    const [isSaving, setIsSaving] = React.useState(false);
     
     const userDocRef = useMemoFirebase(() => {
         if (!firestore || !user) return null;
@@ -111,7 +117,7 @@ const UserProfileSettings = () => {
         }
     }, [userData]);
 
-    const handleSaveProfile = async (e) => {
+    const handleSaveProfile = (e) => {
         e.preventDefault();
         if (!firestore || !user || !userDocRef) return;
         
@@ -120,18 +126,20 @@ const UserProfileSettings = () => {
             return;
         }
 
-        setIsSaving(true);
-        try {
-            await updateDoc(userDocRef, {
-                name: formData.name.trim(),
+        const updateData = { name: formData.name.trim() };
+
+        updateDoc(userDocRef, updateData)
+            .then(() => {
+                toast({ title: 'Perfil Actualizado', description: 'Tus datos personales han sido guardados con éxito.' });
+            })
+            .catch(async (error) => {
+                const permissionError = new FirestorePermissionError({
+                    path: userDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                });
+                errorEmitter.emit('permission-error', permissionError);
             });
-            toast({ title: 'Perfil Actualizado', description: 'Tus datos personales han sido guardados con éxito.' });
-        } catch (error) {
-            console.error("Error updating profile:", error);
-            toast({ variant: 'destructive', title: 'Error', description: 'Ocurrió un error al intentar actualizar el perfil.' });
-        } finally {
-            setIsSaving(false);
-        }
     };
 
     if (isLoading) return <div className="p-8 flex justify-center"><Loader2 className="animate-spin h-8 w-8 text-primary" /></div>;
@@ -177,8 +185,7 @@ const UserProfileSettings = () => {
                     </div>
                 </CardContent>
                 <CardFooter className="border-t pt-6 bg-secondary/5 rounded-b-lg">
-                    <Button type="submit" disabled={isSaving} className="w-full sm:w-auto">
-                        {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                    <Button type="submit" className="w-full sm:w-auto">
                         Guardar Cambios del Perfil
                     </Button>
                 </CardFooter>

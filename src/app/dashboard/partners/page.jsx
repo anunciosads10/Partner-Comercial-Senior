@@ -32,8 +32,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
-  DialogClose,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -61,6 +59,8 @@ import { collection, doc, updateDoc, deleteDoc, addDoc, setDoc } from "firebase/
 import { useToast } from "@/hooks/use-toast";
 import React from "react";
 import { seedAllData } from "@/lib/seed-data";
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 const generateAffiliateLink = (platformUrl, partner) => {
   if (!platformUrl) return "URL no configurada";
@@ -103,16 +103,23 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
     toast({ title: "Datos de Prueba Cargados" });
   }
 
-  const handleToggleSuspend = async (partner) => {
+  const handleToggleSuspend = (partner) => {
     if (!firestore || !partner) return;
     const partnerRef = doc(firestore, "partners", partner.id);
     const newStatus = partner.status === 'Active' ? 'Suspended' : 'Active';
-    try {
-      await updateDoc(partnerRef, { status: newStatus });
-      toast({ title: "Estado Actualizado", description: `Partner ${partner.name} ahora está ${newStatus}` });
-    } catch (error) {
-      console.error(error);
-    }
+    
+    updateDoc(partnerRef, { status: newStatus })
+      .then(() => {
+        toast({ title: "Estado Actualizado", description: `Partner ${partner.name} ahora está ${newStatus}` });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: partnerRef.path,
+          operation: 'update',
+          requestResourceData: { status: newStatus },
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
   
   const openEditDialog = (partner) => { 
@@ -127,48 +134,78 @@ const SuperAdminPartnersView = ({ partners, isLoading, firestore, searchTerm, se
     setOpenMenuId(null); 
   };
 
-  const confirmDeletePartner = async () => {
+  const confirmDeletePartner = () => {
     if (!firestore || !partnerToDelete) return;
-    try {
-      await deleteDoc(doc(firestore, "partners", partnerToDelete.id));
-      toast({ title: "Partner Eliminado" });
-    } catch (error) {
-      console.error(error);
-    } finally { setAlertOpen(false); }
+    const partnerRef = doc(firestore, "partners", partnerToDelete.id);
+    
+    deleteDoc(partnerRef)
+      .then(() => {
+        toast({ title: "Partner Eliminado" });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: partnerRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      })
+      .finally(() => { setAlertOpen(false); });
   };
 
-  const handleCreatePartner = async (e) => {
+  const handleCreatePartner = (e) => {
     e.preventDefault();
     if (!firestore) return;
-    try {
-        await addDoc(collection(firestore, 'partners'), { 
-          ...newPartner, 
-          status: 'Active', 
-          joinDate: new Date().toISOString(), 
-          totalSales: 0, 
-          revenue: 0, 
-          avatarUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/200` 
-        });
+    
+    const partnerData = { 
+      ...newPartner, 
+      status: 'Active', 
+      joinDate: new Date().toISOString(), 
+      totalSales: 0, 
+      revenue: 0, 
+      avatarUrl: `https://picsum.photos/seed/${Math.floor(Math.random() * 1000)}/200` 
+    };
+
+    addDoc(collection(firestore, 'partners'), partnerData)
+      .then(() => {
         toast({ title: "Partner Creado" });
         setCreateDialogOpen(false);
         setNewPartner({ name: '', email: '', tier: 'Silver', pais: '' });
-    } catch (error) { console.error(error); }
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: 'partners',
+          operation: 'create',
+          requestResourceData: partnerData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
-  const handleUpdatePartner = async (e) => {
+  const handleUpdatePartner = (e) => {
     e.preventDefault();
     if (!firestore || !partnerToEdit) return;
-    try {
-        const partnerRef = doc(firestore, "partners", partnerToEdit.id);
-        await updateDoc(partnerRef, {
-            name: partnerToEdit.name,
-            email: partnerToEdit.email,
-            tier: partnerToEdit.tier,
-            pais: partnerToEdit.pais
-        });
+    
+    const partnerRef = doc(firestore, "partners", partnerToEdit.id);
+    const updateData = {
+        name: partnerToEdit.name,
+        email: partnerToEdit.email,
+        tier: partnerToEdit.tier,
+        pais: partnerToEdit.pais
+    };
+
+    updateDoc(partnerRef, updateData)
+      .then(() => {
         toast({ title: "Partner Actualizado" });
         setEditDialogOpen(false);
-    } catch (error) { console.error(error); }
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: partnerRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
+      });
   };
 
   return (
@@ -493,27 +530,34 @@ export default function PartnersPage() {
     (p.pais || '').toLowerCase().includes(searchTerm.toLowerCase())
   ), [partners, searchTerm]);
 
-  const handleCreateProfile = async () => {
+  const handleCreateProfile = () => {
     if (!user || !firestore) return;
-    try {
-      const partnerRef = doc(firestore, 'partners', user.uid);
-      await setDoc(partnerRef, {
-        id: user.uid,
-        name: user.email?.split('@')[0] || 'Socio Nuevo',
-        email: user.email,
-        tier: 'Silver',
-        status: 'Active',
-        pais: 'Sin asignar',
-        joinDate: new Date().toISOString(),
-        totalSales: 0,
-        revenue: 0,
-        avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
+    const partnerRef = doc(firestore, 'partners', user.uid);
+    const partnerData = {
+      id: user.uid,
+      name: user.email?.split('@')[0] || 'Socio Nuevo',
+      email: user.email,
+      tier: 'Silver',
+      status: 'Active',
+      pais: 'Sin asignar',
+      joinDate: new Date().toISOString(),
+      totalSales: 0,
+      revenue: 0,
+      avatarUrl: `https://picsum.photos/seed/${user.uid}/200`,
+    };
+
+    setDoc(partnerRef, partnerData)
+      .then(() => {
+        toast({ title: "Perfil Activado", description: "Tu perfil de socio comercial ha sido creado con éxito." });
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: partnerRef.path,
+          operation: 'write',
+          requestResourceData: partnerData,
+        });
+        errorEmitter.emit('permission-error', permissionError);
       });
-      toast({ title: "Perfil Activado", description: "Tu perfil de socio comercial ha sido creado con éxito." });
-    } catch (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Error", description: "No se pudo activar el perfil de socio." });
-    }
   };
 
   if (isRoleLoading) return <div className="flex items-center justify-center h-64"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;

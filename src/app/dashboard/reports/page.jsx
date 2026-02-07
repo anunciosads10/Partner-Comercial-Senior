@@ -17,11 +17,10 @@ import { es } from "date-fns/locale";
 import { DateRangePicker } from '@/components/ui/date-range-picker';
 import { SalesChart } from '@/components/dashboard/sales-chart';
 
-const ReportsPage = () => {
+export default function ReportsPage() {
     const firestore = useFirestore();
     const { toast } = useToast();
     
-    // FETCH DE AMBAS COLECCIONES: Comisiones y Pagos
     const commissionsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'commissions') : null, [firestore]);
     const paymentsCollection = useMemoFirebase(() => firestore ? collection(firestore, 'payments') : null, [firestore]);
     const partnersCollection = useMemoFirebase(() => firestore ? collection(firestore, 'partners') : null, [firestore]);
@@ -30,16 +29,23 @@ const ReportsPage = () => {
     const { data: payments, isLoading: isLoadingPayments } = useCollection(paymentsCollection);
     const { data: partners, isLoading: isLoadingPartners } = useCollection(partnersCollection);
     
-    const [date, setDate] = React.useState({ from: subYears(new Date(), 1), to: new Date() });
+    // Evitar mismatch de hidratación inicializando el rango de fechas en useEffect
+    const [date, setDate] = React.useState({ from: undefined, to: undefined });
     const [selectedPartner, setSelectedPartner] = React.useState('all');
     const [selectedStatus, setSelectedStatus] = React.useState('all');
+
+    React.useEffect(() => {
+        setDate({
+            from: subYears(new Date(), 1),
+            to: new Date()
+        });
+    }, []);
 
     const partnerNames = React.useMemo(() => {
         if (!partners) return {};
         return partners.reduce((acc, p) => ({ ...acc, [p.id]: p.name }), {});
     }, [partners]);
 
-    // Función para procesar fechas de forma flexible (ISO String, Timestamp o Date)
     const robustParseDate = (dateValue) => {
         if (!dateValue) return null;
         if (dateValue.toDate) return dateValue.toDate();
@@ -48,7 +54,6 @@ const ReportsPage = () => {
     };
 
     const combinedAndFilteredData = React.useMemo(() => {
-        // Combinamos ambas colecciones para tener el panorama completo
         const allData = [...(commissions || []), ...(payments || [])];
         if (allData.length === 0) return [];
 
@@ -56,7 +61,6 @@ const ReportsPage = () => {
         const rangeEnd = date?.to ? endOfDay(date.to) : null;
 
         return allData.filter(item => {
-            // 1. Fecha: verificamos campos de ambas colecciones
             const rawDate = item.paymentDate || item.paidAt || item.date || item.createdAt;
             const itemDate = robustParseDate(rawDate);
             if (!itemDate) return false;
@@ -65,7 +69,6 @@ const ReportsPage = () => {
                 ? isWithinInterval(itemDate, { start: rangeStart, end: rangeEnd })
                 : true;
 
-            // 2. Partner: Comparamos contra ID y contra el nombre directo (como "alexjf")
             const partnerId = (item.partnerId || '').toLowerCase();
             const partnerName = (item.partnerName || item.partner || '').toLowerCase();
             const filterValue = selectedPartner.toLowerCase();
@@ -74,7 +77,6 @@ const ReportsPage = () => {
                                  partnerId === filterValue || 
                                  partnerName === filterValue;
             
-            // 3. Estado
             const status = (item.status || '').toLowerCase();
             const statusFilter = selectedStatus.toLowerCase();
             const statusMatch = selectedStatus === 'all' || status === statusFilter;
@@ -99,9 +101,7 @@ const ReportsPage = () => {
             return acc;
         }, {});
 
-        // Podríamos querer ordenar los meses cronológicamente aquí, pero para simplificar lo dejamos así
         return Object.values(monthlyTotals);
-
     }, [combinedAndFilteredData]);
 
     const handleExport = () => {
@@ -128,13 +128,12 @@ const ReportsPage = () => {
           ];
           csvContent += row.join(",") + "\r\n";
         });
-    
+
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
         link.setAttribute("href", encodedUri);
         link.setAttribute("download", "reporte_financiero.csv");
         document.body.appendChild(link);
-        
         link.click();
         document.body.removeChild(link);
         
@@ -144,7 +143,6 @@ const ReportsPage = () => {
         });
     };
 
-    // KPIs usando 'amount' o 'earning' indistintamente
     const total = combinedAndFilteredData.reduce((acc, item) => acc + (Number(item.amount || item.earning || 0)), 0);
     const paid = combinedAndFilteredData
         .filter(item => (item.status || '').toLowerCase().includes('pagado'))
@@ -218,7 +216,6 @@ const ReportsPage = () => {
                         </div>
                     </div>
 
-
                     <Card>
                         <CardHeader><CardTitle>Detalle de Movimientos</CardTitle></CardHeader>
                         <CardContent>
@@ -267,6 +264,4 @@ const ReportsPage = () => {
             </Card>
         </div>
     );
-};
-
-export default ReportsPage;
+}

@@ -10,9 +10,8 @@ import { doc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 
 /**
- * @fileOverview Layout principal del Dashboard. 
- * Gestiona la autenticación, el estado de la barra lateral y los datos del usuario.
- * Implementado como Client Component para manejar hooks de Firebase.
+ * @fileOverview Layout principal del Dashboard.
+ * Gestiona la autenticación y la estructura de navegación.
  */
 export default function DashboardLayout({ children }) {
   const { user, isUserLoading: isAuthLoading } = useUser();

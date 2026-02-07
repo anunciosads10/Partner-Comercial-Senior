@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect } from "react";
@@ -50,7 +49,7 @@ export default function DashboardLayout({ children }) {
   
   return (
     <SidebarProvider>
-      <Sidebar>
+      <Sidebar className="border-r">
         <MainNav userData={userData} />
       </Sidebar>
       <SidebarInset>

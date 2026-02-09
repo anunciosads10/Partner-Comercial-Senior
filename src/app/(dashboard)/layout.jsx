@@ -1,2 +1,2 @@
-// Archivo neutralizado estructuralmente para evitar colisiones con el layout principal.
-export default function InactiveLayout({ children }) { return <>{children}</>; }
+// ARCHIVO NEUTRALIZADO PARA EVITAR COLISIÓN DE RUTAS PARALELAS EN NEXT.JS 15
+// El layout activo se encuentra en la raíz o en los segmentos correspondientes.

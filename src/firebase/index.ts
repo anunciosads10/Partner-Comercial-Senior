@@ -8,13 +8,11 @@ import { getStorage } from 'firebase/storage';
 
 /**
  * Inicializa Firebase de forma robusta para entornos de cliente y servidor.
- * Sigue la guía para evitar el error (app/no-options) pasando explícitamente la configuración.
+ * Asegura que el objeto de configuración se pase explícitamente para evitar el error (app/no-options).
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
   
-  // Lógica para que funcione tanto en Local como en Server
-  // Si ya existe una app iniciada, úsala. Si no, inicialízala con la config explícitamente.
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {

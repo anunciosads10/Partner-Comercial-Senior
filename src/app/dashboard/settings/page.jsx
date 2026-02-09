@@ -16,21 +16,26 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
  * @fileOverview Gestión de Perfil de Grado SaaS.
- * Implementa sincronización multi-colección y validación estricta.
+ * Implementa sincronización multi-colección y validación estricta de tipos.
  */
 
-function ProfileSettings({ userData }) {
+interface ProfileFormData {
+  name: string;
+  pais: string;
+  phone: string;
+}
+
+function ProfileSettings({ userData }: { userData: any }) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState<boolean>(false);
   
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = React.useState<ProfileFormData>({
     name: '',
     pais: '',
     phone: ''
   });
 
-  // Sincronización de estado local con datos de Firestore
   React.useEffect(() => {
     if (userData) {
       setFormData({
@@ -41,7 +46,7 @@ function ProfileSettings({ userData }) {
     }
   }, [userData]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!firestore || !userData?.uid) {
       toast({
         variant: "destructive",
@@ -53,33 +58,39 @@ function ProfileSettings({ userData }) {
 
     setIsSaving(true);
     
-    const userRef = doc(firestore, 'users', userData.uid);
-    
-    // 1. Actualización en la colección global de usuarios
-    updateDocumentNonBlocking(userRef, { 
-      name: formData.name,
-      pais: formData.pais,
-      phone: formData.phone
-    });
-
-    // 2. Si es admin/socio, sincronizar su silo de datos en 'partners'
-    if (userData.role === 'admin') {
-      const partnerRef = doc(firestore, 'partners', userData.uid);
-      updateDocumentNonBlocking(partnerRef, {
+    try {
+      const userRef = doc(firestore, 'users', userData.uid);
+      
+      // 1. Actualización en la colección global de usuarios
+      updateDocumentNonBlocking(userRef, { 
         name: formData.name,
         pais: formData.pais,
-        'paymentInfo.phone': formData.phone
+        phone: formData.phone
       });
-    }
 
-    // Feedback visual inmediato (optimista)
-    setTimeout(() => {
-      setIsSaving(false);
+      // 2. Sincronización en el silo de Partners si el rol es admin
+      if (userData.role === 'admin') {
+        const partnerRef = doc(firestore, 'partners', userData.uid);
+        updateDocumentNonBlocking(partnerRef, {
+          name: formData.name,
+          pais: formData.pais,
+          'paymentInfo.phone': formData.phone
+        });
+      }
+
       toast({
         title: "Perfil Actualizado",
-        description: "Tus datos se han sincronizado correctamente en el sistema."
+        description: "Tus datos se han sincronizado correctamente."
       });
-    }, 800);
+    } catch (error) {
+       toast({
+        variant: "destructive",
+        title: "Error al guardar",
+        description: "Hubo un problema al actualizar tu perfil."
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -108,7 +119,6 @@ function ProfileSettings({ userData }) {
               value={formData.name} 
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Ej: Juan Pérez"
-              className="focus-visible:ring-primary"
             />
           </div>
           <div className="space-y-2">
@@ -117,7 +127,7 @@ function ProfileSettings({ userData }) {
               id="email" 
               value={userData?.email || ''} 
               disabled 
-              className="bg-muted/30 cursor-not-allowed italic"
+              className="bg-muted/30 italic"
             />
           </div>
           <div className="space-y-2">
@@ -190,14 +200,14 @@ export default function SettingsPage() {
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-muted/50 border mb-6">
             <TabsTrigger value="profile">Perfil de Usuario</TabsTrigger>
-            <TabsTrigger value="billing">Seguridad y Pagos</TabsTrigger>
+            <TabsTrigger value="security">Seguridad y Pagos</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile">
             <ProfileSettings userData={userData} />
           </TabsContent>
           
-          <TabsContent value="billing">
+          <TabsContent value="security">
             <Card className="border-dashed bg-muted/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">

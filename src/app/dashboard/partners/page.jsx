@@ -11,11 +11,11 @@ import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 
 /**
- * @fileOverview Vista de Partners optimizada para Producción.
+ * @fileOverview Vista de Partners para Producción.
  * Resuelve errores de referencia e implementa lógica por rol.
  */
 
-function AdminPartnersView({ userData }) {
+function AdminPartnersView({ userData }: { userData: any }) {
   const firestore = useFirestore();
   const platformsRef = useMemoFirebase(() => {
     if (!firestore) return null;

@@ -1,21 +1,21 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '../../../firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Bell, Loader2, CheckCheck, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { Card, CardContent } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { ScrollArea } from '../../../components/ui/scroll-area';
 
 export default function NotificationsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
   const notificationsRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return query(
       collection(firestore, 'partners', user.uid, 'notifications'),
       orderBy('timestamp', 'desc')

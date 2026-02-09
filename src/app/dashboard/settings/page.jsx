@@ -1,23 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../../../components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import { Label } from '../../../components/ui/label';
+import { Input } from '../../../components/ui/input';
+import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '../../../firebase';
 import { doc } from 'firebase/firestore';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '../../../hooks/use-toast';
 import { Loader2, User, MapPin, Phone, ShieldCheck, CreditCard } from 'lucide-react';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-
-/**
- * @fileOverview Gestión de Perfil de Grado SaaS.
- * Implementa sincronización multi-colección y validación estricta de datos.
- */
+import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 
 function ProfileSettings({ userData }) {
   const { toast } = useToast();
@@ -55,14 +50,12 @@ function ProfileSettings({ userData }) {
     try {
       const userRef = doc(firestore, 'users', userData.uid);
       
-      // Actualización en la colección de usuarios (perfil central)
       updateDocumentNonBlocking(userRef, { 
         name: formData.name,
         pais: formData.pais,
         phone: formData.phone
       });
 
-      // Sincronización en la colección de partners si el usuario tiene rol administrativo
       if (userData.role === 'admin' || userData.role === 'superadmin') {
         const partnerRef = doc(firestore, 'partners', userData.uid);
         updateDocumentNonBlocking(partnerRef, {

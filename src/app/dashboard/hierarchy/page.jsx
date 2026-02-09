@@ -1,19 +1,20 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '../../../firebase';
 import { collection } from 'firebase/firestore';
 import { GitFork, Users, Loader2, AlertCircle } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 
 /**
- * @fileOverview Vista de Jerarquía Comercial para Producción.
- * Implementado en JavaScript puro para evitar errores de compilación en archivos .jsx.
+ * Componente funcional para renderizar un nodo de partner en la jerarquía.
+ * @param {Object} props - Propiedades del componente.
+ * @param {Object} props.partner - Datos del partner.
+ * @param {number} [props.depth=0] - Profundidad en el árbol.
  */
-
 function PartnerNode({ partner, depth = 0 }) {
   if (!partner) return null;
 

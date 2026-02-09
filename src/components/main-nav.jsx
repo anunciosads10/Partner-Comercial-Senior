@@ -24,18 +24,9 @@ import {
   SidebarMenuButton,
   SidebarFooter,
   useSidebar,
-} from '@/components/ui/sidebar';
-import { cn } from '@/lib/utils';
+} from './ui/sidebar';
+import { cn } from '../lib/utils';
 
-/**
- * @typedef {Object} MenuItem
- * @property {string} href
- * @property {string} label
- * @property {import('lucide-react').LucideIcon} icon
- * @property {string[]} roles
- */
-
-/** @type {MenuItem[]} */
 const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
@@ -48,10 +39,6 @@ const allMenuItems = [
   { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];
 
-/**
- * Componente de Navegación Principal del Sidebar.
- * Implementa cierre automático en móviles y filtrado por roles.
- */
 export function MainNav({ userData }) {
   const pathname = usePathname();
   const { state, setOpenMobile, isMobile } = useSidebar();
@@ -62,9 +49,6 @@ export function MainNav({ userData }) {
     [userRole]
   );
 
-  /**
-   * Cierra el sidebar en dispositivos móviles tras una navegación.
-   */
   const handleNavigationClick = () => {
     if (isMobile) {
       setOpenMobile(false);

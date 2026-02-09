@@ -1,33 +1,32 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../../firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { CreditCard, Loader2, Download, Filter } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Button } from '../../../components/ui/button';
 
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
   const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: userData } = useDoc(userDocRef);
 
   const paymentsRef = useMemoFirebase(() => {
-    if (!firestore || !userData || !user) return null;
+    if (!firestore || !userData || !user?.uid) return null;
     if (userData.role === 'superadmin') {
       return collection(firestore, 'payments');
     }
     return query(collection(firestore, 'payments'), where('partnerId', '==', user.uid));
-  }, [firestore, userData, user]);
+  }, [firestore, userData, user?.uid]);
 
   const { data: payments, isLoading } = useCollection(paymentsRef);
 

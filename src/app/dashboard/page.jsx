@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 
 /**
- * @fileOverview Panel Principal del Dashboard con rutas relativas para producción.
+ * @fileOverview Panel Principal del Dashboard.
+ * Centraliza la visualización de métricas críticas y analítica de IA.
  */
 
 export default function DashboardPage() {

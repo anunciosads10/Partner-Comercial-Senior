@@ -1,9 +1,30 @@
 "use client";
 
+import * as React from 'react';
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Legend, CartesianGrid } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
 export function SalesChart({ data = [] }) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return (
+      <Card className="col-span-1 lg:col-span-2 h-[450px]">
+        <CardHeader>
+          <CardTitle>Rendimiento de Ventas</CardTitle>
+          <CardDescription>Cargando gráfica de comisiones...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex items-center justify-center">
+          <div className="h-32 w-32 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="col-span-1 lg:col-span-2">
       <CardHeader>

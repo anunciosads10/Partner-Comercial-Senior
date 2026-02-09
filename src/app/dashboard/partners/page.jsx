@@ -18,6 +18,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 function AdminPartnersView({ userData }) {
   const { user } = useUser();
   const firestore = useFirestore();
+  
   const platformsRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'saasPlatforms');
@@ -107,6 +108,7 @@ function AdminPartnersView({ userData }) {
 function SuperAdminPartnersView() {
   const { user } = useUser();
   const firestore = useFirestore();
+  
   const partnersRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');

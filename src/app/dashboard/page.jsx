@@ -24,8 +24,12 @@ import {
 export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [isMounted, setIsMounted] = React.useState(false);
 
-  // Asegurar que la consulta de usuario sea nula si no hay sesión para evitar errores de permisos
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
@@ -33,7 +37,6 @@ export default function DashboardPage() {
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // Asegurar que la consulta de partners sea nula si no hay sesión
   const partnersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');
@@ -54,7 +57,7 @@ export default function DashboardPage() {
     ]);
   }, []);
 
-  if (isUserLoading || isPartnersLoading) {
+  if (!isMounted || isUserLoading || isPartnersLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">
@@ -105,7 +108,7 @@ export default function DashboardPage() {
 
         <div className="grid gap-6 lg:grid-cols-4">
           <SalesChart data={chartData} />
-          {isSuperAdmin && <AtRiskPartners partners={partners || []} />}
+          {isSuperAdmin && partners && <AtRiskPartners partners={partners} />}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-1">

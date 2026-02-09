@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
+ * Implementado en JavaScript puro para evitar errores de compilación.
  */
 
 function PartnerNode({ partner, depth = 0 }) {
@@ -51,6 +52,11 @@ function PartnerNode({ partner, depth = 0 }) {
 export default function HierarchyPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const partnersRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -79,7 +85,7 @@ export default function HierarchyPage() {
     return roots;
   }, [partners]);
 
-  if (isLoading) {
+  if (!isMounted || isLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">
@@ -108,7 +114,7 @@ export default function HierarchyPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error de Acceso</AlertTitle>
             <AlertDescription>
-              No tienes permisos para ver la red global o hubo un problema de conexión. Asegúrate de haber iniciado sesión.
+              No tienes permisos para ver la red global o hubo un problema de conexión.
             </AlertDescription>
           </Alert>
         )}
@@ -134,7 +140,7 @@ export default function HierarchyPage() {
                 </div>
                 <h3 className="font-bold text-lg">Sin Red Detectada</h3>
                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  No se han encontrado relaciones jerárquicas configuradas en el sistema o no tienes asignado un equipo.
+                  No se han encontrado relaciones jerárquicas configuradas en el sistema.
                 </p>
               </div>
             )}

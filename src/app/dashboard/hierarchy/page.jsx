@@ -53,7 +53,7 @@ export default function HierarchyPage() {
   const firestore = useFirestore();
 
   const partnersRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');
   }, [firestore, user?.uid]);
 
@@ -108,7 +108,7 @@ export default function HierarchyPage() {
             <AlertCircle className="h-4 w-4" />
             <AlertTitle>Error de Acceso</AlertTitle>
             <AlertDescription>
-              No tienes permisos para ver la red global o hubo un problema de conexión.
+              No tienes permisos para ver la red global o hubo un problema de conexión. Asegúrate de haber iniciado sesión.
             </AlertDescription>
           </Alert>
         )}

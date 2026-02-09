@@ -16,7 +16,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
  * @fileOverview Gestión de Perfil de Grado SaaS.
- * Implementa sincronización multi-colección y validación estricta de tipos.
+ * Implementa sincronización multi-colección y validación de datos de usuario.
  */
 
 function ProfileSettings({ userData }) {

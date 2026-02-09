@@ -19,7 +19,7 @@ function AdminPartnersView({ userData }) {
   const { user } = useUser();
   const firestore = useFirestore();
   const platformsRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'saasPlatforms');
   }, [firestore, user?.uid]);
 
@@ -108,7 +108,7 @@ function SuperAdminPartnersView() {
   const { user } = useUser();
   const firestore = useFirestore();
   const partnersRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');
   }, [firestore, user?.uid]);
 
@@ -170,7 +170,7 @@ export default function PartnersPage() {
   const firestore = useFirestore();
 
   const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user?.uid]);
 

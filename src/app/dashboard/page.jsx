@@ -16,21 +16,28 @@ import {
   Loader2
 } from 'lucide-react';
 
+/**
+ * @fileOverview Panel Principal del Dashboard.
+ * Centraliza métricas y análisis de IA para administradores.
+ */
+
 export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
+  // Asegurar que la consulta de usuario sea nula si no hay sesión para evitar errores de permisos
   const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
+  // Asegurar que la consulta de partners sea nula si no hay sesión
   const partnersQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 

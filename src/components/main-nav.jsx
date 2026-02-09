@@ -1,5 +1,6 @@
 'use client';
 
+import * as React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -26,6 +27,15 @@ import {
 } from '@/components/ui/sidebar';
 import { cn } from '@/lib/utils';
 
+/**
+ * @typedef {Object} MenuItem
+ * @property {string} href
+ * @property {string} label
+ * @property {import('lucide-react').LucideIcon} icon
+ * @property {string[]} roles
+ */
+
+/** @type {MenuItem[]} */
 const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
@@ -38,12 +48,28 @@ const allMenuItems = [
   { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];
 
+/**
+ * Componente de Navegación Principal del Sidebar.
+ * Implementa cierre automático en móviles y filtrado por roles.
+ */
 export function MainNav({ userData }) {
   const pathname = usePathname();
-  const { state } = useSidebar();
+  const { state, setOpenMobile, isMobile } = useSidebar();
   const userRole = userData?.role || 'admin';
 
-  const menuItems = allMenuItems.filter(item => item.roles.includes(userRole));
+  const menuItems = React.useMemo(() => 
+    allMenuItems.filter(item => item.roles.includes(userRole)),
+    [userRole]
+  );
+
+  /**
+   * Cierra el sidebar en dispositivos móviles tras una navegación.
+   */
+  const handleNavigationClick = () => {
+    if (isMobile) {
+      setOpenMobile(false);
+    }
+  };
 
   return (
     <>
@@ -91,7 +117,7 @@ export function MainNav({ userData }) {
         <SidebarMenu>
           {menuItems.map((item) => (
             <SidebarMenuItem key={item.href}>
-              <Link href={item.href}>
+              <Link href={item.href} onClick={handleNavigationClick}>
                 <SidebarMenuButton
                   isActive={pathname === item.href}
                   tooltip={item.label}
@@ -107,7 +133,7 @@ export function MainNav({ userData }) {
       <SidebarFooter className="p-2 mt-auto">
         <SidebarMenu>
            <SidebarMenuItem>
-            <Link href="/dashboard/settings">
+            <Link href="/dashboard/settings" onClick={handleNavigationClick}>
               <SidebarMenuButton
                 isActive={pathname.startsWith('/dashboard/settings')}
                 tooltip="Configuración"

@@ -1,5 +1,5 @@
 /**
- * Archivo neutralizado para resolver el conflicto de Parallel Pages en Next.js 15.
- * La lógica principal de esta ruta reside ahora exclusivamente en src/app/dashboard/page.jsx.
- * No se exporta ningún componente para que el enrutador ignore este segmento.
+ * ARCHIVO DESACTIVADO ESTRUCTURALMENTE
+ * Para resolver el error de Next.js 15 "Parallel Pages", este archivo NO debe exportar nada.
+ * La página activa del dashboard se encuentra en: /src/app/dashboard/page.jsx
  */

@@ -37,15 +37,12 @@ import {
 
 /**
  * @fileOverview Centro de Inteligencia y Reportes Globales.
- * Proporciona visibilidad total sobre la salud financiera y operativa del ecosistema de partners.
  */
-
 export default function ReportsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
   const [period, setPeriod] = React.useState('current_month');
 
-  // Verificación estricta de rol SuperAdmin
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
@@ -53,7 +50,6 @@ export default function ReportsPage() {
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // Consulta de pagos globales para analítica
   const paymentsQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return query(collection(firestore, 'payments'), orderBy('paymentDate', 'desc'), limit(100));
@@ -61,7 +57,6 @@ export default function ReportsPage() {
 
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
 
-  // Consulta de partners para métricas de red
   const partnersQuery = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'partners');
@@ -69,11 +64,10 @@ export default function ReportsPage() {
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 
-  // Cálculos de métricas (Simulando agregaciones que normalmente vendrían de un Cloud Function o Backend de analítica)
   const stats = React.useMemo(() => {
     if (!payments || !partners) return { totalRevenue: 0, totalPaid: 0, activePartners: 0 };
     
-    const totalRevenue = payments.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) * 5.4; // Simulación de Gross Revenue
+    const totalRevenue = payments.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0) * 5.4;
     const totalPaid = payments.reduce((acc, curr) => acc + (Number(curr.amount) || 0), 0);
     const activePartners = partners.filter(p => p.status === 'Active').length;
 
@@ -238,47 +232,6 @@ export default function ReportsPage() {
             </Card>
           </div>
         </div>
-
-        <Card className="border-primary/10 shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-lg">Auditoría de Pagos Recientes</CardTitle>
-            <CardDescription>Registro histórico de transacciones financieras procesadas.</CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/50">
-                  <TableHead>Fecha</TableHead>
-                  <TableHead>Referencia Pago</TableHead>
-                  <TableHead>Partner ID</TableHead>
-                  <TableHead className="text-right">Monto Liquidado</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments && payments.length > 0 ? (
-                  payments.map((p) => (
-                    <TableRow key={p.id} className="hover:bg-muted/20">
-                      <TableCell className="text-xs">
-                        {p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                      <TableCell className="font-mono text-[10px] text-muted-foreground">{p.id}</TableCell>
-                      <TableCell className="text-xs font-semibold">{p.partnerId}</TableCell>
-                      <TableCell className="text-right">
-                        <span className="font-bold text-primary">${p.amount?.toLocaleString()}</span>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-10 text-muted-foreground italic">
-                      No se han encontrado registros financieros en el periodo seleccionado.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
       </div>
     </AuthenticatedLayout>
   );

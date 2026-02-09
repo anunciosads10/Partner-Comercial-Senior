@@ -12,8 +12,6 @@ import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/aler
 /**
  * Componente funcional para renderizar un nodo de partner en la jerarquía.
  * @param {Object} props - Propiedades del componente.
- * @param {Object} props.partner - Datos del partner.
- * @param {number} [props.depth=0] - Profundidad en el árbol.
  */
 function PartnerNode({ partner, depth = 0 }) {
   if (!partner) return null;
@@ -51,6 +49,9 @@ function PartnerNode({ partner, depth = 0 }) {
   );
 }
 
+/**
+ * @fileOverview Visualización de la red jerárquica de Partners.
+ */
 export default function HierarchyPage() {
   const { user } = useUser();
   const firestore = useFirestore();

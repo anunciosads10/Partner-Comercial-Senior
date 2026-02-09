@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 /**
  * @fileOverview Vista de Partners para Producción.
- * Resuelve errores de referencia e implementa lógica por rol.
+ * Implementa lógica por rol y gestión de plataformas de afiliación.
  */
 
 function AdminPartnersView({ userData }) {
@@ -40,7 +40,7 @@ function AdminPartnersView({ userData }) {
         <Card className="md:col-span-1 border-primary/10 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Mi Estatus</CardTitle>
-            <CardDescription>Resumen de socio comercial.</CardDescription>
+            <CardDescription>Resumen de socio comercial activo.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -52,7 +52,7 @@ function AdminPartnersView({ userData }) {
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Territorio:</span>
               <span className="text-sm flex items-center gap-1">
-                <Globe className="h-3 w-3 text-accent" /> {userData?.pais || 'Sin asignar'}
+                <Globe className="h-3 w-3 text-accent" /> {userData?.pais || 'No Definido'}
               </span>
             </div>
           </CardContent>
@@ -60,16 +60,16 @@ function AdminPartnersView({ userData }) {
 
         <Card className="md:col-span-2 border-primary/10 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg text-primary">Plataformas de Afiliación</CardTitle>
-            <CardDescription>Enlaces directos para referir nuevos clientes.</CardDescription>
+            <CardTitle className="text-lg text-primary">Plataformas Disponibles</CardTitle>
+            <CardDescription>Software SaaS para referir y generar comisiones.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Producto SaaS</TableHead>
-                  <TableHead>Comisión</TableHead>
-                  <TableHead className="text-right">Enlace</TableHead>
+                  <TableHead>SaaS</TableHead>
+                  <TableHead>Comisión Base</TableHead>
+                  <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -84,7 +84,7 @@ function AdminPartnersView({ userData }) {
                       </TableCell>
                       <TableCell className="text-right">
                         <Button variant="ghost" size="sm" className="gap-2 text-primary">
-                          Copiar <ExternalLink className="h-3 w-3" />
+                          Enlace <ExternalLink className="h-3 w-3" />
                         </Button>
                       </TableCell>
                     </TableRow>
@@ -92,7 +92,7 @@ function AdminPartnersView({ userData }) {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">
-                      No hay plataformas asignadas todavía.
+                      No hay plataformas asignadas a tu territorio.
                     </TableCell>
                   </TableRow>
                 )}
@@ -130,8 +130,8 @@ function SuperAdminPartnersView() {
         <div className="flex items-center gap-3">
             <UsersIcon className="h-6 w-6 text-primary" />
             <div>
-                <CardTitle className="text-xl font-bold">Gestión de Red Comercial</CardTitle>
-                <CardDescription>Control total de socios comerciales en todos los territorios.</CardDescription>
+                <CardTitle className="text-xl font-bold">Gestión Global de Partners</CardTitle>
+                <CardDescription>Control administrativo de la red comercial PartnerVerse.</CardDescription>
             </div>
         </div>
       </CardHeader>
@@ -139,9 +139,9 @@ function SuperAdminPartnersView() {
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
-              <TableHead>Nombre</TableHead>
+              <TableHead>Socio</TableHead>
               <TableHead>Ubicación</TableHead>
-              <TableHead>Nivel</TableHead>
+              <TableHead>Tier</TableHead>
               <TableHead>Estado</TableHead>
             </TableRow>
           </TableHeader>
@@ -194,11 +194,11 @@ export default function PartnersPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Socios</h1>
+          <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Partners</h1>
           <p className="text-muted-foreground">
             {isSuperAdmin 
-              ? 'Administración global de la red PartnerVerse.' 
-              : 'Gestión de perfil y herramientas de afiliado.'}
+              ? 'Administración central de la red de socios comerciales.' 
+              : 'Gestión de tu perfil de socio y herramientas de afiliación.'}
           </p>
         </div>
 

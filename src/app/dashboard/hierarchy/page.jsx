@@ -10,8 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 /**
- * @fileOverview Vista de Jerarquía Comercial.
- * Visualiza la estructura multinivel de partners usando el campo parentId.
+ * @fileOverview Vista de Jerarquía Comercial para Producción.
  * Implementado en JavaScript puro para evitar errores de compilación en archivos .jsx.
  */
 
@@ -34,7 +33,9 @@ function PartnerNode({ partner, depth = 0 }) {
               {partner.tier || 'Silver'}
             </Badge>
           </div>
-          <p className="text-[10px] text-muted-foreground truncate">{partner.email} • {partner.pais || 'Territorio Global'}</p>
+          <p className="text-[10px] text-muted-foreground truncate">
+            {partner.email} • {partner.pais || 'Territorio Global'}
+          </p>
         </div>
         {partner.children && partner.children.length > 0 && (
           <Badge variant="secondary" className="text-[10px] bg-accent/10 text-accent border-none hidden sm:inline-flex">

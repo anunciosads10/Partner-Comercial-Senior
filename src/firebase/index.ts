@@ -7,8 +7,8 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 /**
- * Inicializa Firebase de forma robusta para entornos de producción.
- * Asegura que se pasen las opciones explícitas durante el proceso de build.
+ * Inicializa Firebase de forma robusta para entornos SaaS de producción.
+ * Asegura que se utilicen las opciones de configuración explícitas durante el proceso de build.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
@@ -16,6 +16,7 @@ export function initializeFirebase() {
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
+    // Es crítico pasar las opciones de configuración explícitamente para evitar el error de 'no-options'
     firebaseApp = initializeApp(firebaseConfig);
   }
 

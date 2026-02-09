@@ -1,5 +1,6 @@
 /**
- * Este archivo ha sido neutralizado para eliminar el conflicto de Parallel Pages con /src/app/dashboard/page.jsx.
- * Al no exportar un componente por defecto, Next.js 15 ignora este archivo como ruta.
+ * ARCHIVO NEUTRALIZADO ESTRUCTURALMENTE.
+ * Se ha eliminado todo el contenido y las exportaciones para resolver el conflicto de "Parallel Pages" en Next.js 15.
+ * La ruta principal de la aplicación es /src/app/dashboard/page.jsx.
+ * No añadir exportaciones por defecto en este archivo.
  */
-export const dynamic = 'force-dynamic';

@@ -16,7 +16,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
  * @fileOverview Gestión de Perfil de Grado SaaS.
- * Implementa sincronización multi-colección y validación de datos.
+ * Implementa sincronización multi-colección y validación estricta de datos.
  */
 
 function ProfileSettings({ userData }) {
@@ -41,22 +41,29 @@ function ProfileSettings({ userData }) {
   }, [userData]);
 
   const handleSave = async () => {
-    if (!firestore || !userData?.uid) return;
+    if (!firestore || !userData?.uid) {
+      toast({
+        variant: "destructive",
+        title: "Error de sesión",
+        description: "No se pudo identificar al usuario activo."
+      });
+      return;
+    }
 
     setIsSaving(true);
     
     try {
       const userRef = doc(firestore, 'users', userData.uid);
       
-      // Actualización en la colección de usuarios
+      // Actualización en la colección de usuarios (perfil central)
       updateDocumentNonBlocking(userRef, { 
         name: formData.name,
         pais: formData.pais,
         phone: formData.phone
       });
 
-      // Sincronización en la colección de partners si aplica
-      if (userData.role === 'admin') {
+      // Sincronización en la colección de partners si el usuario tiene rol administrativo
+      if (userData.role === 'admin' || userData.role === 'superadmin') {
         const partnerRef = doc(firestore, 'partners', userData.uid);
         updateDocumentNonBlocking(partnerRef, {
           name: formData.name,
@@ -66,13 +73,13 @@ function ProfileSettings({ userData }) {
 
       toast({
         title: "Perfil Actualizado",
-        description: "Tus datos se han guardado correctamente."
+        description: "Tus datos se han sincronizado correctamente en el sistema."
       });
     } catch (error) {
        toast({
         variant: "destructive",
         title: "Error al guardar",
-        description: "Hubo un problema al actualizar tu perfil."
+        description: "Hubo un problema técnico al actualizar tu perfil."
       });
     } finally {
       setIsSaving(false);
@@ -92,7 +99,7 @@ function ProfileSettings({ userData }) {
             </CardDescription>
           </div>
           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 capitalize">
-            {userData?.role || 'Admin'}
+            {userData?.role || 'Socio'}
           </Badge>
         </div>
       </CardHeader>
@@ -104,11 +111,12 @@ function ProfileSettings({ userData }) {
               id="name" 
               value={formData.name} 
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="Ej. Alexander Jiménez"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email Corporativo</Label>
-            <Input id="email" value={userData?.email || ''} disabled className="bg-muted/30" />
+            <Input id="email" value={userData?.email || ''} disabled className="bg-muted/30 cursor-not-allowed" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="pais" className="flex items-center gap-2">
@@ -118,6 +126,7 @@ function ProfileSettings({ userData }) {
               id="pais" 
               value={formData.pais} 
               onChange={(e) => setFormData(prev => ({ ...prev, pais: e.target.value }))}
+              placeholder="Ej. Colombia"
             />
           </div>
           <div className="space-y-2">
@@ -128,6 +137,7 @@ function ProfileSettings({ userData }) {
               id="phone" 
               value={formData.phone} 
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+              placeholder="Ej. +57 300 000 0000"
             />
           </div>
         </div>
@@ -147,9 +157,9 @@ export default function SettingsPage() {
   const firestore = useFirestore();
   
   const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
+    if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: userData, isLoading } = useDoc(userDocRef);
 
@@ -168,13 +178,13 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Configuración</h1>
-          <p className="text-muted-foreground">Administra los parámetros de tu cuenta y preferencias.</p>
+          <p className="text-muted-foreground">Administra los parámetros de tu cuenta y preferencias de socio.</p>
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-muted/50 border mb-6">
             <TabsTrigger value="profile">Perfil</TabsTrigger>
-            <TabsTrigger value="security">Seguridad</TabsTrigger>
+            <TabsTrigger value="security">Seguridad & Cobros</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile">
@@ -187,12 +197,12 @@ export default function SettingsPage() {
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <CreditCard className="h-5 w-5 text-primary" /> Información de Cobros
                 </CardTitle>
-                <CardDescription>Las opciones de liquidación se activan según tu volumen.</CardDescription>
+                <CardDescription>Las opciones de liquidación se activan según tu volumen de comisiones.</CardDescription>
               </CardHeader>
               <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                  <ShieldCheck className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Esta sección está reservada para la configuración de pagos verificados.
+                  Esta sección está reservada para la configuración de métodos de pago verificados una vez alcances el Tier Gold.
                 </p>
               </CardContent>
             </Card>

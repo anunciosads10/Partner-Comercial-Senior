@@ -1,12 +1,12 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { KpiCard } from '@/components/dashboard/kpi-card';
-import { SalesChart } from '@/components/dashboard/sales-chart';
-import { PartnerRankings } from '@/components/dashboard/partner-rankings';
-import { AtRiskPartners } from '@/components/dashboard/at-risk-partners';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { AuthenticatedLayout } from '../../components/authenticated-layout';
+import { KpiCard } from '../../components/dashboard/kpi-card';
+import { SalesChart } from '../../components/dashboard/sales-chart';
+import { PartnerRankings } from '../../components/dashboard/partner-rankings';
+import { AtRiskPartners } from '../../components/dashboard/at-risk-partners';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../firebase';
 import { collection, doc } from 'firebase/firestore';
 import { 
   Users, 
@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 
 /**
- * @fileOverview Panel Principal del Dashboard.
- * Centraliza métricas y análisis de IA para administradores.
+ * @fileOverview Panel Principal del Dashboard con rutas relativas para producción.
  */
 
 export default function DashboardPage() {
@@ -73,7 +72,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Panel Principal</h1>
           <p className="text-muted-foreground">
-            Bienvenido de nuevo, {userData?.name || 'Usuario'}. Aquí tienes el resumen de hoy.
+            Bienvenido de nuevo, {userData?.name || 'Usuario'}.
           </p>
         </div>
 

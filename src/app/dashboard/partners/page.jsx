@@ -1,18 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../../firebase';
 import { doc, collection } from 'firebase/firestore';
 import { Loader2, ExternalLink, Award, Globe, Users as UsersIcon } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
+import { Button } from '../../../components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 
 /**
- * @fileOverview Vista de Partners para Producción.
- * Implementa lógica por rol y gestión de plataformas de afiliación.
+ * @fileOverview Vista de Partners con rutas relativas para producción.
  */
 
 function AdminPartnersView({ userData }) {
@@ -37,65 +36,45 @@ function AdminPartnersView({ userData }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1 border-primary/10 shadow-sm">
+        <Card className="md:col-span-1">
           <CardHeader>
             <CardTitle className="text-lg">Mi Estatus</CardTitle>
-            <CardDescription>Resumen de socio comercial activo.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Nivel:</span>
-              <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
-                <Award className="mr-1 h-3 w-3" /> {userData?.tier || 'Silver'}
-              </Badge>
+              <Badge variant="secondary">{userData?.tier || 'Silver'}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Territorio:</span>
-              <span className="text-sm flex items-center gap-1">
-                <Globe className="h-3 w-3 text-accent" /> {userData?.pais || 'No Definido'}
-              </span>
+              <span className="text-sm">{userData?.pais || 'Global'}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2 border-primary/10 shadow-sm">
+        <Card className="md:col-span-2">
           <CardHeader>
-            <CardTitle className="text-lg text-primary">Plataformas Disponibles</CardTitle>
-            <CardDescription>Software SaaS para referir y generar comisiones.</CardDescription>
+            <CardTitle className="text-lg">Plataformas Disponibles</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow className="bg-muted/50">
+                <TableRow>
                   <TableHead>SaaS</TableHead>
-                  <TableHead>Comisión Base</TableHead>
+                  <TableHead>Comisión</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {platforms && platforms.length > 0 ? (
-                  platforms.map((platform) => (
-                    <TableRow key={platform.id} className="hover:bg-muted/30">
-                      <TableCell className="font-semibold">{platform.name}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-accent border-accent">
-                          {platform.baseCommission || 0}%
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="gap-2 text-primary">
-                          Enlace <ExternalLink className="h-3 w-3" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">
-                      No hay plataformas asignadas a tu territorio.
+                {platforms?.map((platform) => (
+                  <TableRow key={platform.id}>
+                    <TableCell className="font-semibold">{platform.name}</TableCell>
+                    <TableCell>{platform.baseCommission}%</TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm">Enlace</Button>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -125,20 +104,14 @@ function SuperAdminPartnersView() {
   }
 
   return (
-    <Card className="shadow-md border-primary/10">
+    <Card>
       <CardHeader>
-        <div className="flex items-center gap-3">
-            <UsersIcon className="h-6 w-6 text-primary" />
-            <div>
-                <CardTitle className="text-xl font-bold">Gestión Global de Partners</CardTitle>
-                <CardDescription>Control administrativo de la red comercial PartnerVerse.</CardDescription>
-            </div>
-        </div>
+        <CardTitle>Gestión Global de Partners</CardTitle>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
-            <TableRow className="bg-muted/50">
+            <TableRow>
               <TableHead>Socio</TableHead>
               <TableHead>Ubicación</TableHead>
               <TableHead>Tier</TableHead>
@@ -147,12 +120,10 @@ function SuperAdminPartnersView() {
           </TableHeader>
           <TableBody>
             {partners?.map((partner) => (
-              <TableRow key={partner.id} className="hover:bg-muted/30">
+              <TableRow key={partner.id}>
                 <TableCell className="font-medium">{partner.name}</TableCell>
                 <TableCell>{partner.pais}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="capitalize border-primary/20 text-primary">{partner.tier}</Badge>
-                </TableCell>
+                <TableCell><Badge variant="outline">{partner.tier}</Badge></TableCell>
                 <TableCell>
                   <Badge variant={partner.status === 'Active' ? 'default' : 'destructive'}>
                     {partner.status}
@@ -195,13 +166,7 @@ export default function PartnersPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Partners</h1>
-          <p className="text-muted-foreground">
-            {isSuperAdmin 
-              ? 'Administración central de la red de socios comerciales.' 
-              : 'Gestión de tu perfil de socio y herramientas de afiliación.'}
-          </p>
         </div>
-
         {isSuperAdmin ? <SuperAdminPartnersView /> : <AdminPartnersView userData={userData} />}
       </div>
     </AuthenticatedLayout>

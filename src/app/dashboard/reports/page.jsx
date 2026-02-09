@@ -1,14 +1,14 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '../../components/authenticated-layout';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
 import { 
   useFirestore, 
   useCollection, 
   useMemoFirebase, 
   useUser, 
   useDoc 
-} from '../../firebase';
+} from '../../../firebase';
 import { collection, doc, query, orderBy, limit } from 'firebase/firestore';
 import { 
   BarChart3, 
@@ -22,18 +22,18 @@ import {
   Calendar,
   PieChart
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../components/ui/card';
-import { Button } from '../../components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
-import { Badge } from '../../components/ui/badge';
-import { SalesChart } from '../../components/dashboard/sales-chart';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Badge } from '../../../components/ui/badge';
+import { SalesChart } from '../../../components/dashboard/sales-chart';
 import { 
   Select, 
   SelectContent, 
   SelectItem, 
   SelectTrigger, 
   SelectValue 
-} from '../../components/ui/select';
+} from '../../../components/ui/select';
 
 /**
  * @fileOverview Centro de Inteligencia y Reportes Globales.

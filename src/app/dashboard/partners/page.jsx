@@ -12,15 +12,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 /**
  * @fileOverview Vista de Partners para Producción.
- * Resuelve errores de referencia e implementa lógica por rol.
+ * Resuelve errores de referencia e implementa lógica por rol con validación de sesión.
  */
 
 function AdminPartnersView({ userData }) {
+  const { user } = useUser();
   const firestore = useFirestore();
   const platformsRef = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'saasPlatforms');
-  }, [firestore]);
+  }, [firestore, user?.uid]);
 
   const { data: platforms, isLoading } = useCollection(platformsRef);
 
@@ -104,11 +105,12 @@ function AdminPartnersView({ userData }) {
 }
 
 function SuperAdminPartnersView() {
+  const { user } = useUser();
   const firestore = useFirestore();
   const partnersRef = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'partners');
-  }, [firestore]);
+  }, [firestore, user?.uid]);
 
   const { data: partners, isLoading } = useCollection(partnersRef);
 
@@ -170,7 +172,7 @@ export default function PartnersPage() {
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
+  }, [firestore, user?.uid]);
 
   const { data: userData, isLoading } = useDoc(userDocRef);
 

@@ -1,9 +1,7 @@
 /**
- * FILE DEACTIVATED TO RESOLVE NEXT.JS 15 ROUTING CONFLICT.
- * The active dashboard route is handled exclusively by /src/app/dashboard/page.jsx.
- * 
- * In Next.js 15, route groups (dashboard) cannot have a 'page.jsx' that 
- * resolves to the same path as a physical directory 'dashboard/page.jsx'.
- * 
- * DO NOT ADD AN 'export default' COMPONENT TO THIS FILE.
+ * @fileOverview Archivo neutralizado para evitar conflicto de rutas paralelas en Next.js 15.
+ * La ruta autoritativa del dashboard se encuentra en src/app/dashboard/page.jsx.
  */
+export default function NeutralizedPage() {
+  return null;
+}

@@ -22,12 +22,12 @@ export default function PaymentsPage() {
   const { data: userData } = useDoc(userDocRef);
 
   const paymentsRef = useMemoFirebase(() => {
-    if (!firestore || !userData) return null;
+    if (!firestore || !userData || !user) return null;
     if (userData.role === 'superadmin') {
       return collection(firestore, 'payments');
     }
     return query(collection(firestore, 'payments'), where('partnerId', '==', user.uid));
-  }, [firestore, userData, user?.uid]);
+  }, [firestore, userData, user]);
 
   const { data: payments, isLoading } = useCollection(paymentsRef);
 

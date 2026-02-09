@@ -2,8 +2,8 @@
 
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection } from 'firebase/firestore';
 import { GitFork, Users, Loader2, AlertCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,6 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
- * Se ha corregido eliminando interfaces de TypeScript para compatibilidad con archivos .jsx.
  */
 
 function PartnerNode({ partner, depth = 0 }) {
@@ -34,7 +33,7 @@ function PartnerNode({ partner, depth = 0 }) {
               {partner.tier || 'Silver'}
             </Badge>
           </div>
-          <p className="text-[10px] text-muted-foreground truncate">{partner.email} • {partner.pais}</p>
+          <p className="text-[10px] text-muted-foreground truncate">{partner.email} • {partner.pais || 'Territorio Global'}</p>
         </div>
         {partner.children && partner.children.length > 0 && (
           <Badge variant="secondary" className="text-[10px] bg-accent/10 text-accent border-none hidden sm:inline-flex">
@@ -53,17 +52,10 @@ export default function HierarchyPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData } = useDoc(userDocRef);
-
   const partnersRef = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'partners');
-  }, [firestore]);
+  }, [firestore, user?.uid]);
 
   const { data: partners, isLoading, error } = useCollection(partnersRef);
 
@@ -114,9 +106,9 @@ export default function HierarchyPage() {
         {error && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Error al cargar jerarquía</AlertTitle>
+            <AlertTitle>Error de Acceso</AlertTitle>
             <AlertDescription>
-              No se pudo sincronizar la red de partners. Por favor, intente de nuevo más tarde.
+              No tienes permisos para ver la red global o hubo un problema de conexión.
             </AlertDescription>
           </Alert>
         )}
@@ -142,7 +134,7 @@ export default function HierarchyPage() {
                 </div>
                 <h3 className="font-bold text-lg">Sin Red Detectada</h3>
                 <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                  No se han encontrado relaciones jerárquicas configuradas en el sistema.
+                  No se han encontrado relaciones jerárquicas configuradas en el sistema o no tienes asignado un equipo.
                 </p>
               </div>
             )}

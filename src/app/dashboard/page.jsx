@@ -7,7 +7,7 @@ import { SalesChart } from '@/components/dashboard/sales-chart';
 import { PartnerRankings } from '@/components/dashboard/partner-rankings';
 import { AtRiskPartners } from '@/components/dashboard/at-risk-partners';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import { 
   Users, 
   DollarSign, 
@@ -20,7 +20,6 @@ export default function DashboardPage() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Obtener datos del usuario actual para conocer su rol
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -28,19 +27,16 @@ export default function DashboardPage() {
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // Cargar partners para el análisis (Solo SuperAdmin ve todos)
   const partnersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return collection(firestore, 'partners');
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 
-  // Simulación de datos para la gráfica (en un SaaS real vendrían de Firestore)
   const [chartData, setChartData] = React.useState([]);
 
   React.useEffect(() => {
-    // Evitar mismatch de hidratación calculando datos en el cliente
     setChartData([
       { month: 'Ene', total: 4500 },
       { month: 'Feb', total: 5200 },
@@ -73,7 +69,6 @@ export default function DashboardPage() {
           </p>
         </div>
 
-        {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <KpiCard 
             title="Partners Activos" 
@@ -101,13 +96,11 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Charts & AI Analysis */}
         <div className="grid gap-6 lg:grid-cols-4">
           <SalesChart data={chartData} />
           {isSuperAdmin && <AtRiskPartners partners={partners || []} />}
         </div>
 
-        {/* Rankings */}
         <div className="grid gap-6 lg:grid-cols-1">
           <PartnerRankings partners={partners || []} />
         </div>

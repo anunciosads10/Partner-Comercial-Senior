@@ -1,5 +1,9 @@
 /**
- * @fileOverview Archivo neutralizado para eliminar el conflicto de rutas paralelas en Next.js 15.
- * La funcionalidad principal se ha centralizado en src/app/dashboard/page.jsx.
- * Se elimina toda exportación para que el motor de rutas ignore este archivo.
+ * @fileOverview Archivo neutralizado estructuralmente.
+ * Se ha eliminado la exportación por defecto para que Next.js no lo reconozca como una página.
+ * Esto resuelve el error "You cannot have two parallel pages that resolve to the same path"
+ * permitiendo que la ruta /dashboard se resuelva únicamente en src/app/dashboard/page.jsx.
  */
+
+// Sin export default para evitar colisión de rutas.
+const Neutralized = () => null;

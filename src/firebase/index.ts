@@ -8,18 +8,17 @@ import { getStorage } from 'firebase/storage';
 
 /**
  * Inicializa Firebase de forma robusta para entornos de cliente y servidor.
- * Asegura que el objeto de configuración se pase explícitamente para evitar el error (app/no-options).
+ * Asegura que el objeto de configuración se pase explícitamente para evitar el error (app/no-options)
+ * durante la generación de páginas estáticas o el proceso de build.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
   
+  // Lógica robusta para evitar re-inicialización y asegurar conectividad en build
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
-    // Validamos que la configuración sea válida antes de intentar inicializar
-    if (!firebaseConfig || !firebaseConfig.apiKey) {
-      console.error("Firebase Config Error: Credenciales no encontradas en config.ts");
-    }
+    // Siempre pasamos la configuración explícitamente cumpliendo con la guía técnica
     firebaseApp = initializeApp(firebaseConfig);
   }
 

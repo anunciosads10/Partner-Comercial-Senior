@@ -19,18 +19,12 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
  * Implementa sincronización multi-colección y validación estricta de tipos.
  */
 
-interface ProfileFormData {
-  name: string;
-  pais: string;
-  phone: string;
-}
-
-function ProfileSettings({ userData }: { userData: any }) {
+function ProfileSettings({ userData }) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const [isSaving, setIsSaving] = React.useState<boolean>(false);
+  const [isSaving, setIsSaving] = React.useState(false);
   
-  const [formData, setFormData] = React.useState<ProfileFormData>({
+  const [formData, setFormData] = React.useState({
     name: '',
     pais: '',
     phone: ''
@@ -74,7 +68,10 @@ function ProfileSettings({ userData }: { userData: any }) {
         updateDocumentNonBlocking(partnerRef, {
           name: formData.name,
           pais: formData.pais,
-          'paymentInfo.phone': formData.phone
+          paymentInfo: {
+            ...userData.paymentInfo,
+            phone: formData.phone
+          }
         });
       }
 

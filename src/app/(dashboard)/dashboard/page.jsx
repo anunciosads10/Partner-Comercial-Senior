@@ -1,9 +1,7 @@
 /**
- * ARCHIVO NEUTRALIZADO PARA PRODUCCIÓN
- * Se ha eliminado todo el código y exportaciones para resolver el error de Next.js 15:
- * "You cannot have two parallel pages that resolve to the same path".
- * La ruta /dashboard es gestionada exclusivamente por src/app/dashboard/page.jsx.
+ * @fileOverview Archivo neutralizado para evitar conflicto de rutas paralelas con /src/app/dashboard/page.jsx.
+ * Next.js 15 no permite páginas paralelas que resuelvan a la misma ruta física.
  */
-export default function NeutralizedPage() {
+export default function NeutralizedDashboardPage() {
   return null;
 }

@@ -12,14 +12,10 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
+ * Se ha corregido la sintaxis eliminando interfaces de TypeScript en archivo .jsx.
  */
 
-interface PartnerNodeProps {
-  partner: any;
-  depth?: number;
-}
-
-function PartnerNode({ partner, depth = 0 }: PartnerNodeProps) {
+function PartnerNode({ partner, depth = 0 }) {
   if (!partner) return null;
 
   return (
@@ -46,7 +42,7 @@ function PartnerNode({ partner, depth = 0 }: PartnerNodeProps) {
           </Badge>
         )}
       </div>
-      {partner.children && partner.children.map((child: any) => (
+      {partner.children && partner.children.map((child) => (
         <PartnerNode key={child.id} partner={child} depth={depth + 1} />
       ))}
     </div>
@@ -75,12 +71,12 @@ export default function HierarchyPage() {
   const hierarchy = React.useMemo(() => {
     if (!partners || partners.length === 0) return [];
     
-    const partnerMap: Record<string, any> = {};
+    const partnerMap = {};
     partners.forEach(p => {
       partnerMap[p.id] = { ...p, children: [] };
     });
 
-    const roots: any[] = [];
+    const roots = [];
     partners.forEach(p => {
       if (p.parentId && partnerMap[p.parentId]) {
         partnerMap[p.parentId].children.push(partnerMap[p.id]);

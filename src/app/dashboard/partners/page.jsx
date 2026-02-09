@@ -12,10 +12,10 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 /**
  * @fileOverview Vista de Partners para Producción.
- * Resuelve errores de referencia e implementa lógica por rol.
+ * Resuelve errores de referencia (Button) e implementa lógica por rol.
  */
 
-function AdminPartnersView({ userData }: { userData: any }) {
+function AdminPartnersView({ userData }) {
   const firestore = useFirestore();
   const platformsRef = useMemoFirebase(() => {
     if (!firestore) return null;

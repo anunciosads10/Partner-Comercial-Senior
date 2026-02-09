@@ -62,7 +62,7 @@ function ProfileSettings({ userData }) {
         phone: formData.phone
       });
 
-      // 2. Sincronización en el silo de Partners si el rol es admin
+      // 2. Sincronización en el silo de Partners si el rol es admin (socio comercial)
       if (userData.role === 'admin') {
         const partnerRef = doc(firestore, 'partners', userData.uid);
         updateDocumentNonBlocking(partnerRef, {

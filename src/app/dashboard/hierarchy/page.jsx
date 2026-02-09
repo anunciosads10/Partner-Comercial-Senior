@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
- * Se ha corregido la sintaxis eliminando interfaces de TypeScript en archivo .jsx.
+ * Se ha corregido eliminando interfaces de TypeScript para compatibilidad con archivos .jsx.
  */
 
 function PartnerNode({ partner, depth = 0 }) {
@@ -67,7 +67,6 @@ export default function HierarchyPage() {
 
   const { data: partners, isLoading, error } = useCollection(partnersRef);
 
-  // Construcción del árbol jerárquico optimizada
   const hierarchy = React.useMemo(() => {
     if (!partners || partners.length === 0) return [];
     

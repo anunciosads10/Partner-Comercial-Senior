@@ -1,31 +1,38 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '@/components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
+import { AuthenticatedLayout } from '../../../components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../../firebase';
 import { collection, doc } from 'firebase/firestore';
 import { 
   Percent, 
   Plus, 
   Edit3, 
   Loader2, 
-  CheckCircle2, 
   XCircle,
   TrendingUp,
   DollarSign,
   Info
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useToast } from '@/hooks/use-toast';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
+import { Button } from '../../../components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Badge } from '../../../components/ui/badge';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription, 
+  DialogTrigger, 
+  DialogFooter 
+} from '../../../components/ui/dialog';
+import { Label } from '../../../components/ui/label';
+import { Input } from '../../../components/ui/input';
+import { Textarea } from '../../../components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { useToast } from '../../../hooks/use-toast';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 
 /**
  * @fileOverview Gestión de Esquemas de Comisiones para SuperAdmin.
@@ -91,7 +98,7 @@ export default function CommissionsPage() {
         updateDocumentNonBlocking(docRef, formData);
         toast({ title: "Esquema Actualizado", description: `El esquema ${formData.name} ha sido modificado.` });
       } else {
-        await addDocumentNonBlocking(schemesCol, formData);
+        addDocumentNonBlocking(schemesCol, formData);
         toast({ title: "Esquema Creado", description: "Nuevo modelo de comisiones activado." });
       }
       

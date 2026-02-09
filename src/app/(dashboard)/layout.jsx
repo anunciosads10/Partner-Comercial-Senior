@@ -1,2 +1,4 @@
-// ARCHIVO NEUTRALIZADO PARA EVITAR COLISIÓN DE RUTAS PARALELAS EN NEXT.JS 15
-// El layout activo se encuentra en la raíz o en los segmentos correspondientes.
+// ARCHIVO NEUTRALIZADO: El layout activo reside en la raíz o en los segmentos específicos de src/app/dashboard/.
+export default function InactiveDashboardLayout({ children }) {
+  return <>{children}</>;
+}

@@ -1,2 +1,4 @@
-// ARCHIVO NEUTRALIZADO PARA EVITAR COLISIÓN DE RUTAS PARALELAS EN NEXT.JS 15
-// La ruta activa se encuentra en /src/app/dashboard/page.jsx
+// ARCHIVO NEUTRALIZADO: La ruta activa reside en src/app/dashboard/page.jsx para evitar conflictos de Parallel Pages en Next.js 15.
+export default function InactiveDashboardPage() {
+  return null;
+}

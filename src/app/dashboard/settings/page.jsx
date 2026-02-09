@@ -15,8 +15,8 @@ import { Loader2, User, MapPin, Phone, ShieldCheck, CreditCard } from 'lucide-re
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * @fileOverview Gestión de Perfil de Usuario con estándares de producción.
- * Implementa sincronización de datos entre 'users' y 'partners' bajo validación estricta.
+ * @fileOverview Gestión de Perfil sincronizada para Producción.
+ * Implementa el patrón de actualización no bloqueante y sincronización multi-colección.
  */
 
 function ProfileSettings({ userData }) {
@@ -72,7 +72,7 @@ function ProfileSettings({ userData }) {
       });
     }
 
-    // Feedback visual para confirmar consistencia
+    // Feedback visual profesional
     setTimeout(() => {
       setIsSaving(false);
       toast({
@@ -148,7 +148,7 @@ function ProfileSettings({ userData }) {
           <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
           <div className="space-y-1">
             <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Estado de la cuenta</p>
-            <p className="text-sm">Tu cuenta está verificada. Tu rol de <strong>{userData?.role}</strong> te permite acceder a todas las funcionalidades del panel de socios.</p>
+            <p className="text-sm">Tu cuenta está verificada como <strong>{userData?.role}</strong>.</p>
           </div>
         </div>
       </CardContent>
@@ -222,7 +222,7 @@ export default function SettingsPage() {
               <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                  <ShieldCheck className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Las opciones avanzadas de configuración bancaria se habilitarán próximamente según tu volumen de ventas.
+                  Las opciones avanzadas de configuración bancaria se habilitarán según tu volumen de ventas.
                 </p>
               </CardContent>
             </Card>

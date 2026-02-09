@@ -16,7 +16,7 @@ import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
  * @fileOverview Gestión de Perfil de Grado SaaS.
- * Implementa sincronización multi-colección y validación de datos de usuario.
+ * Implementa sincronización multi-colección y validación de datos.
  */
 
 function ProfileSettings({ userData }) {
@@ -41,43 +41,32 @@ function ProfileSettings({ userData }) {
   }, [userData]);
 
   const handleSave = async () => {
-    if (!firestore || !userData?.uid) {
-      toast({
-        variant: "destructive",
-        title: "Error de sesión",
-        description: "No se pudo identificar al usuario activo."
-      });
-      return;
-    }
+    if (!firestore || !userData?.uid) return;
 
     setIsSaving(true);
     
     try {
       const userRef = doc(firestore, 'users', userData.uid);
       
-      // 1. Actualización en la colección global de usuarios
+      // Actualización en la colección de usuarios
       updateDocumentNonBlocking(userRef, { 
         name: formData.name,
         pais: formData.pais,
         phone: formData.phone
       });
 
-      // 2. Sincronización en el silo de Partners si el rol es admin (socio comercial)
+      // Sincronización en la colección de partners si aplica
       if (userData.role === 'admin') {
         const partnerRef = doc(firestore, 'partners', userData.uid);
         updateDocumentNonBlocking(partnerRef, {
           name: formData.name,
-          pais: formData.pais,
-          paymentInfo: {
-            ...userData.paymentInfo,
-            phone: formData.phone
-          }
+          pais: formData.pais
         });
       }
 
       toast({
         title: "Perfil Actualizado",
-        description: "Tus datos se han sincronizado correctamente."
+        description: "Tus datos se han guardado correctamente."
       });
     } catch (error) {
        toast({
@@ -115,17 +104,11 @@ function ProfileSettings({ userData }) {
               id="name" 
               value={formData.name} 
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Ej: Juan Pérez"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="email">Email Corporativo</Label>
-            <Input 
-              id="email" 
-              value={userData?.email || ''} 
-              disabled 
-              className="bg-muted/30 italic"
-            />
+            <Input id="email" value={userData?.email || ''} disabled className="bg-muted/30" />
           </div>
           <div className="space-y-2">
             <Label htmlFor="pais" className="flex items-center gap-2">
@@ -135,28 +118,22 @@ function ProfileSettings({ userData }) {
               id="pais" 
               value={formData.pais} 
               onChange={(e) => setFormData(prev => ({ ...prev, pais: e.target.value }))}
-              placeholder="Ej: Colombia"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="phone" className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-primary" /> WhatsApp / Teléfono
+              <Phone className="h-4 w-4 text-primary" /> Teléfono
             </Label>
             <Input 
               id="phone" 
               value={formData.phone} 
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
-              placeholder="+57 300..."
             />
           </div>
         </div>
       </CardContent>
       <CardFooter className="bg-muted/10 border-t p-4 flex justify-end">
-        <Button 
-          onClick={handleSave} 
-          disabled={isSaving} 
-          className="min-w-[140px]"
-        >
+        <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           Guardar Cambios
         </Button>
@@ -191,13 +168,13 @@ export default function SettingsPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Configuración</h1>
-          <p className="text-muted-foreground">Administra los parámetros de tu cuenta y preferencias del sistema.</p>
+          <p className="text-muted-foreground">Administra los parámetros de tu cuenta y preferencias.</p>
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-muted/50 border mb-6">
-            <TabsTrigger value="profile">Perfil de Usuario</TabsTrigger>
-            <TabsTrigger value="security">Seguridad y Pagos</TabsTrigger>
+            <TabsTrigger value="profile">Perfil</TabsTrigger>
+            <TabsTrigger value="security">Seguridad</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile">
@@ -208,16 +185,14 @@ export default function SettingsPage() {
             <Card className="border-dashed bg-muted/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <CreditCard className="h-5 w-5 text-primary" /> Información Bancaria
+                  <CreditCard className="h-5 w-5 text-primary" /> Información de Cobros
                 </CardTitle>
-                <CardDescription>
-                  Las opciones de liquidación se activan según tu volumen de ventas.
-                </CardDescription>
+                <CardDescription>Las opciones de liquidación se activan según tu volumen.</CardDescription>
               </CardHeader>
               <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                  <ShieldCheck className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Esta sección está reservada para la configuración de cobros y verificaciones de identidad.
+                  Esta sección está reservada para la configuración de pagos verificados.
                 </p>
               </CardContent>
             </Card>

@@ -7,14 +7,12 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 /**
- * Inicializa Firebase de forma robusta para entornos de producción (SaaS).
- * Sigue estrictamente la guía para evitar el error (app/no-options) durante el build.
+ * Inicializa Firebase de forma robusta para entornos de producción.
+ * Asegura que se pasen las opciones explícitas durante el proceso de build.
  */
 export function initializeFirebase() {
   let firebaseApp: FirebaseApp;
   
-  // Verificamos si ya existe una instancia para evitar re-inicializaciones en caliente (HMR)
-  // Siempre pasamos el objeto de configuración explícitamente para el proceso de build.
   if (getApps().length > 0) {
     firebaseApp = getApp();
   } else {
@@ -33,7 +31,6 @@ export function getSdks(firebaseApp: FirebaseApp) {
   };
 }
 
-// Exportación centralizada de utilidades y hooks para evitar ciclos de importación
 export * from './provider';
 export * from './client-provider';
 export * from './firestore/use-collection';

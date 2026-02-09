@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
- * Implementado en JavaScript puro para evitar errores de compilación en entornos .jsx.
+ * Implementado en JavaScript puro para evitar errores de compilación en archivos .jsx.
  */
 
 function PartnerNode({ partner, depth = 0 }) {
@@ -52,11 +52,6 @@ function PartnerNode({ partner, depth = 0 }) {
 export default function HierarchyPage() {
   const { user } = useUser();
   const firestore = useFirestore();
-  const [isMounted, setIsMounted] = React.useState(false);
-
-  React.useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const partnersRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -84,8 +79,6 @@ export default function HierarchyPage() {
 
     return roots;
   }, [partners]);
-
-  if (!isMounted) return null;
 
   if (isLoading) {
     return (

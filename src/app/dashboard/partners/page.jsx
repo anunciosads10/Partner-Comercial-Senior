@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 /**
  * @fileOverview Vista de Partners para Producción.
- * Resuelve errores de referencia e implementa lógica por rol con validación de sesión.
+ * Resuelve errores de referencia e implementa lógica por rol.
  */
 
 function AdminPartnersView({ userData }) {

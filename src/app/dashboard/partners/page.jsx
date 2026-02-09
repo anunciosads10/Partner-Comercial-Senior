@@ -4,7 +4,7 @@ import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
-import { Loader2, ExternalLink, Award, Globe } from 'lucide-react';
+import { Loader2, ExternalLink, Award, Globe, Users as UsersIcon } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 
 /**
  * @fileOverview Vista de Partners optimizada para Producción.
- * Resuelve el error de referencia de componentes y maneja roles de usuario.
+ * Resuelve errores de referencia e implementa lógica por rol.
  */
 
 function AdminPartnersView({ userData }) {
@@ -35,10 +35,10 @@ function AdminPartnersView({ userData }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1 shadow-sm border-primary/10">
+        <Card className="md:col-span-1 border-primary/10 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg">Mi Perfil de Socio</CardTitle>
-            <CardDescription>Nivel y territorio asignado.</CardDescription>
+            <CardTitle className="text-lg">Mi Estatus</CardTitle>
+            <CardDescription>Resumen de socio comercial.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
@@ -48,29 +48,26 @@ function AdminPartnersView({ userData }) {
               </Badge>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">País:</span>
+              <span className="text-sm font-medium">Territorio:</span>
               <span className="text-sm flex items-center gap-1">
-                <Globe className="h-3 w-3" /> {userData?.pais || 'No especificado'}
+                <Globe className="h-3 w-3 text-accent" /> {userData?.pais || 'Sin asignar'}
               </span>
-            </div>
-            <div className="pt-4 border-t text-xs text-muted-foreground italic">
-              Unido el: {userData?.joinDate ? new Date(userData.joinDate).toLocaleDateString() : 'Pendiente'}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2 shadow-sm border-primary/10">
+        <Card className="md:col-span-2 border-primary/10 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg text-primary">Mis Enlaces de Afiliado</CardTitle>
-            <CardDescription>Usa estos enlaces para referir clientes y ganar comisiones.</CardDescription>
+            <CardTitle className="text-lg text-primary">Plataformas de Afiliación</CardTitle>
+            <CardDescription>Enlaces directos para referir nuevos clientes.</CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
-                  <TableHead>Plataforma</TableHead>
+                  <TableHead>Producto SaaS</TableHead>
                   <TableHead>Comisión</TableHead>
-                  <TableHead className="text-right">Acción</TableHead>
+                  <TableHead className="text-right">Enlace</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -84,7 +81,7 @@ function AdminPartnersView({ userData }) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="sm" className="gap-2 text-primary hover:text-primary hover:bg-primary/5">
+                        <Button variant="ghost" size="sm" className="gap-2 text-primary">
                           Copiar <ExternalLink className="h-3 w-3" />
                         </Button>
                       </TableCell>
@@ -92,8 +89,8 @@ function AdminPartnersView({ userData }) {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
-                      No hay plataformas disponibles en este momento.
+                    <TableCell colSpan={3} className="text-center py-6 text-muted-foreground italic">
+                      No hay plataformas asignadas todavía.
                     </TableCell>
                   </TableRow>
                 )}
@@ -126,15 +123,20 @@ function SuperAdminPartnersView() {
   return (
     <Card className="shadow-md border-primary/10">
       <CardHeader>
-        <CardTitle className="text-xl font-bold">Gestión Global de Partners</CardTitle>
-        <CardDescription>Control centralizado de la red de socios comerciales.</CardDescription>
+        <div className="flex items-center gap-3">
+            <UsersIcon className="h-6 w-6 text-primary" />
+            <div>
+                <CardTitle className="text-xl font-bold">Gestión de Red Comercial</CardTitle>
+                <CardDescription>Control total de socios comerciales en todos los territorios.</CardDescription>
+            </div>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Nombre</TableHead>
-              <TableHead>País</TableHead>
+              <TableHead>Ubicación</TableHead>
               <TableHead>Nivel</TableHead>
               <TableHead>Estado</TableHead>
             </TableRow>
@@ -145,7 +147,7 @@ function SuperAdminPartnersView() {
                 <TableCell className="font-medium">{partner.name}</TableCell>
                 <TableCell>{partner.pais}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="capitalize">{partner.tier}</Badge>
+                  <Badge variant="outline" className="capitalize border-primary/20 text-primary">{partner.tier}</Badge>
                 </TableCell>
                 <TableCell>
                   <Badge variant={partner.status === 'Active' ? 'default' : 'destructive'}>
@@ -188,11 +190,11 @@ export default function PartnersPage() {
     <AuthenticatedLayout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-primary">Partners</h1>
+          <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Socios</h1>
           <p className="text-muted-foreground">
             {isSuperAdmin 
-              ? 'Administración centralizada de socios comerciales.' 
-              : 'Panel de gestión para Socios Comerciales Senior.'}
+              ? 'Administración global de la red PartnerVerse.' 
+              : 'Gestión de perfil y herramientas de afiliado.'}
           </p>
         </div>
 

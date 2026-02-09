@@ -15,8 +15,8 @@ import { Loader2, User, MapPin, Phone, ShieldCheck, CreditCard } from 'lucide-re
 import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 /**
- * @fileOverview Gestión de Perfil sincronizada para Producción.
- * Implementa el patrón de actualización no bloqueante y sincronización multi-colección.
+ * @fileOverview Gestión de Perfil de Grado SaaS.
+ * Implementa sincronización multi-colección y validación estricta.
  */
 
 function ProfileSettings({ userData }) {
@@ -30,7 +30,7 @@ function ProfileSettings({ userData }) {
     phone: ''
   });
 
-  // Efecto para sincronizar estado local con datos de Firestore (Hydration safe)
+  // Sincronización de estado local con datos de Firestore
   React.useEffect(() => {
     if (userData) {
       setFormData({
@@ -62,24 +62,24 @@ function ProfileSettings({ userData }) {
       phone: formData.phone
     });
 
-    // 2. Si el usuario es un socio (admin), sincronizar su silo de datos en 'partners'
+    // 2. Si es admin/socio, sincronizar su silo de datos en 'partners'
     if (userData.role === 'admin') {
       const partnerRef = doc(firestore, 'partners', userData.uid);
       updateDocumentNonBlocking(partnerRef, {
         name: formData.name,
         pais: formData.pais,
-        'paymentInfo.phone': formData.phone // Sincronización de campo anidado
+        'paymentInfo.phone': formData.phone
       });
     }
 
-    // Feedback visual profesional
+    // Feedback visual inmediato (optimista)
     setTimeout(() => {
       setIsSaving(false);
       toast({
         title: "Perfil Actualizado",
-        description: "Los cambios se han guardado y sincronizado correctamente."
+        description: "Tus datos se han sincronizado correctamente en el sistema."
       });
-    }, 600);
+    }, 800);
   };
 
   return (
@@ -88,31 +88,31 @@ function ProfileSettings({ userData }) {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="text-xl font-bold text-primary flex items-center gap-2">
-              <User className="h-5 w-5" /> Información de Perfil
+              <User className="h-5 w-5" /> Mi Perfil
             </CardTitle>
             <CardDescription>
-              Tus datos de contacto para la red de socios comerciales.
+              Gestiona tu información de contacto y ubicación territorial.
             </CardDescription>
           </div>
           <Badge variant="outline" className="bg-primary/5 text-primary border-primary/20 capitalize">
-            {userData?.role || 'Socio'}
+            {userData?.role || 'Admin'}
           </Badge>
         </div>
       </CardHeader>
       <CardContent className="space-y-6 pt-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-sm font-semibold">Nombre Completo</Label>
+            <Label htmlFor="name">Nombre Completo</Label>
             <Input 
               id="name" 
               value={formData.name} 
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Nombre para el sistema"
+              placeholder="Ej: Juan Pérez"
               className="focus-visible:ring-primary"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email" className="text-sm font-semibold">Email (No editable)</Label>
+            <Label htmlFor="email">Email Corporativo</Label>
             <Input 
               id="email" 
               value={userData?.email || ''} 
@@ -121,19 +121,19 @@ function ProfileSettings({ userData }) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="pais" className="flex items-center gap-2 text-sm font-semibold">
+            <Label htmlFor="pais" className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-primary" /> País / Territorio
             </Label>
             <Input 
               id="pais" 
               value={formData.pais} 
               onChange={(e) => setFormData(prev => ({ ...prev, pais: e.target.value }))}
-              placeholder="Ej: Colombia, México..."
+              placeholder="Ej: Colombia"
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-semibold">
-              <Phone className="h-4 w-4 text-primary" /> Teléfono de Contacto
+            <Label htmlFor="phone" className="flex items-center gap-2">
+              <Phone className="h-4 w-4 text-primary" /> WhatsApp / Teléfono
             </Label>
             <Input 
               id="phone" 
@@ -141,14 +141,6 @@ function ProfileSettings({ userData }) {
               onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
               placeholder="+57 300..."
             />
-          </div>
-        </div>
-        
-        <div className="flex items-start gap-3 p-4 bg-muted/50 rounded-lg border">
-          <ShieldCheck className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Estado de la cuenta</p>
-            <p className="text-sm">Tu cuenta está verificada como <strong>{userData?.role}</strong>.</p>
           </div>
         </div>
       </CardContent>
@@ -187,42 +179,38 @@ export default function SettingsPage() {
     );
   }
 
-  const isSuperAdmin = userData?.role === 'superadmin';
-
   return (
     <AuthenticatedLayout>
       <div className="max-w-4xl mx-auto space-y-8">
         <div>
-          <h1 className="text-3xl font-black tracking-tight">Configuración</h1>
-          <p className="text-muted-foreground">Gestiona tus preferencias de cuenta y parámetros del sistema.</p>
+          <h1 className="text-3xl font-black tracking-tight text-primary uppercase">Configuración</h1>
+          <p className="text-muted-foreground">Administra los parámetros de tu cuenta y preferencias del sistema.</p>
         </div>
 
         <Tabs defaultValue="profile" className="w-full">
           <TabsList className="bg-muted/50 border mb-6">
-            <TabsTrigger value="profile">Perfil</TabsTrigger>
-            <TabsTrigger value="system">Seguridad y Pagos</TabsTrigger>
+            <TabsTrigger value="profile">Perfil de Usuario</TabsTrigger>
+            <TabsTrigger value="billing">Seguridad y Pagos</TabsTrigger>
           </TabsList>
           
           <TabsContent value="profile">
             <ProfileSettings userData={userData} />
           </TabsContent>
           
-          <TabsContent value="system">
+          <TabsContent value="billing">
             <Card className="border-dashed bg-muted/20">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
-                  <CreditCard className="h-5 w-5 text-primary" /> Parámetros de Liquidación
+                  <CreditCard className="h-5 w-5 text-primary" /> Información Bancaria
                 </CardTitle>
                 <CardDescription>
-                  {isSuperAdmin 
-                    ? "Control centralizado de ciclos de pago y comisiones." 
-                    : "Acceso restringido. Solo el Super Administrador puede gestionar estas políticas."}
+                  Las opciones de liquidación se activan según tu volumen de ventas.
                 </CardDescription>
               </CardHeader>
               <CardContent className="py-12 flex flex-col items-center justify-center text-center">
                  <ShieldCheck className="h-12 w-12 text-muted-foreground/30 mb-4" />
                 <p className="text-sm text-muted-foreground max-w-sm">
-                  Las opciones avanzadas de configuración bancaria se habilitarán según tu volumen de ventas.
+                  Esta sección está reservada para la configuración de cobros y verificaciones de identidad.
                 </p>
               </CardContent>
             </Card>

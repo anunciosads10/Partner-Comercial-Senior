@@ -12,7 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 /**
  * @fileOverview Vista de Jerarquía Comercial.
  * Visualiza la estructura multinivel de partners usando el campo parentId.
- * Implementado en JavaScript puro para evitar errores de compilación.
+ * Implementado en JavaScript puro para evitar errores de compilación en entornos .jsx.
  */
 
 function PartnerNode({ partner, depth = 0 }) {
@@ -85,7 +85,9 @@ export default function HierarchyPage() {
     return roots;
   }, [partners]);
 
-  if (!isMounted || isLoading) {
+  if (!isMounted) return null;
+
+  if (isLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">

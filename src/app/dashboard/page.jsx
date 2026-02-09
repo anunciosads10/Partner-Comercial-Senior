@@ -44,20 +44,18 @@ export default function DashboardPage() {
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 
-  const [chartData, setChartData] = React.useState([]);
+  const chartData = React.useMemo(() => [
+    { month: 'Ene', total: 4500 },
+    { month: 'Feb', total: 5200 },
+    { month: 'Mar', total: 4800 },
+    { month: 'Abr', total: 6100 },
+    { month: 'May', total: 5900 },
+    { month: 'Jun', total: 7200 },
+  ], []);
 
-  React.useEffect(() => {
-    setChartData([
-      { month: 'Ene', total: 4500 },
-      { month: 'Feb', total: 5200 },
-      { month: 'Mar', total: 4800 },
-      { month: 'Abr', total: 6100 },
-      { month: 'May', total: 5900 },
-      { month: 'Jun', total: 7200 },
-    ]);
-  }, []);
+  if (!isMounted) return null;
 
-  if (!isMounted || isUserLoading || isPartnersLoading) {
+  if (isUserLoading || isPartnersLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">

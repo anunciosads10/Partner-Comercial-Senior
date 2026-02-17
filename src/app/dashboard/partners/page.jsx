@@ -69,7 +69,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
             </div>
             <div>
               <h2 className="text-xl font-black text-primary uppercase tracking-tight">Detalles del Socio</h2>
-              <p className="text-sm text-muted-foreground">Ficha técnica administrativa.</p>
+              <p className="text-sm text-gray-500">Ficha técnica administrativa del partner.</p>
             </div>
           </div>
           <button
@@ -105,7 +105,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
             <div className="text-right space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Fecha de Ingreso</span>
               <p className="text-sm font-semibold text-foreground">
-                {partner.joinDate ? new Date(partner.joinDate).toLocaleDateString() : 'N/A'}
+                {partner.joinDate || 'N/A'}
               </p>
             </div>
           </div>
@@ -116,7 +116,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Estado del Sistema</span>
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${partner.status === 'Active' ? 'bg-accent' : 'bg-destructive'}`}></div>
+                <div className={`w-2.5 h-2.5 rounded-full ${partner.status === 'Active' ? 'bg-green-500' : 'bg-destructive'}`}></div>
                 <span className="text-sm font-black uppercase text-foreground">{partner.status}</span>
               </div>
             </div>

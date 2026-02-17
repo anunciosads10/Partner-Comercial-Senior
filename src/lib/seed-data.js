@@ -20,7 +20,6 @@ export async function seedAllData(firestore) {
   // Seed Commissions
   const commissionsBatch = writeBatch(firestore);
   mockCommissions.forEach((commission) => {
-    // Usamos el ID de la comisión como ID del documento para evitar duplicados.
     const docRef = doc(firestore, "commissions", commission.id);
     commissionsBatch.set(docRef, commission);
   });
@@ -30,10 +29,26 @@ export async function seedAllData(firestore) {
   // Seed Payments
   const paymentsBatch = writeBatch(firestore);
   mockPayments.forEach((payment) => {
-    // Usamos el ID del pago como ID del documento.
     const docRef = doc(firestore, "payments", payment.id);
     paymentsBatch.set(docRef, payment);
   });
   await paymentsBatch.commit();
   console.log("Payments data seeded successfully!");
+
+  // Seed Example Rule
+  const rulesBatch = writeBatch(firestore);
+  const exampleRule = {
+    id: 'rule-example-001',
+    name: 'Política de Transparencia y Prevención de Fraude v1.2',
+    type: 'anti_fraud',
+    description: 'Marco normativo para la protección de la integridad financiera del ecosistema SaaS.',
+    content: `1. El partner se compromete a no utilizar técnicas de "cookie stuffing" o redirecciones automáticas.
+2. Las ventas deben ser validadas por el cliente final mediante el pago efectivo de la primera suscripción.
+3. El uso de marcas registradas del SaaS en dominios externos está estrictamente prohibido sin autorización previa por escrito.
+4. La violación de estas normas conlleva la revocación inmediata de las comisiones del periodo vigente.`
+  };
+  const ruleRef = doc(firestore, "rules", exampleRule.id);
+  rulesBatch.set(ruleRef, exampleRule);
+  await rulesBatch.commit();
+  console.log("Example rule seeded successfully!");
 }

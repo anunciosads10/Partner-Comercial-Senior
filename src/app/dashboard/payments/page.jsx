@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '../../../components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../../firebase';
+import { AuthenticatedLayout } from '@/components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import { 
   CreditCard, 
@@ -11,30 +11,16 @@ import {
   Filter, 
   FileText, 
   Printer, 
-  Calendar,
-  CheckCircle2,
-  FileDown
+  FileDown,
+  X
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter 
-} from '../../../components/ui/dialog';
-import { Separator } from '../../../components/ui/separator';
-import { useToast } from '../../../hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 
-/**
- * @fileOverview Gestión de Pagos y Liquidaciones.
- * Implementa exportación profesional a PDF y visualización de transacciones.
- */
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -58,62 +44,53 @@ export default function PaymentsPage() {
 
   const { data: payments, isLoading } = useCollection(paymentsRef);
 
-  /**
-   * Genera y descarga un recibo PDF profesional.
-   */
   const handleDownloadPDF = () => {
     if (!selectedPayment) return;
 
     try {
-      const doc = new jsPDF();
+      const docPDF = new jsPDF();
       
-      // Estilo Corporativo PartnerVerse
-      doc.setFontSize(22);
-      doc.setTextColor(63, 81, 181); 
-      doc.setFont("helvetica", "bold");
-      doc.text("PARTNERVERSE", 105, 20, { align: "center" });
+      docPDF.setFontSize(22);
+      docPDF.setTextColor(63, 81, 181); 
+      docPDF.setFont("helvetica", "bold");
+      docPDF.text("PARTNERVERSE", 105, 20, { align: "center" });
       
-      doc.setFontSize(10);
-      doc.setTextColor(100);
-      doc.setFont("helvetica", "normal");
-      doc.text("COMPROBANTE OFICIAL DE LIQUIDACIÓN", 105, 28, { align: "center" });
+      docPDF.setFontSize(10);
+      docPDF.setTextColor(100);
+      docPDF.setFont("helvetica", "normal");
+      docPDF.text("COMPROBANTE OFICIAL DE LIQUIDACIÓN", 105, 28, { align: "center" });
       
-      doc.setDrawColor(200);
-      doc.line(20, 35, 190, 35);
+      docPDF.setDrawColor(200);
+      docPDF.line(20, 35, 190, 35);
       
-      doc.setFontSize(14);
-      doc.setTextColor(40);
-      doc.setFont("helvetica", "bold");
-      doc.text("DETALLES DEL PAGO", 20, 50);
+      docPDF.setFontSize(14);
+      docPDF.setTextColor(40);
+      docPDF.setFont("helvetica", "bold");
+      docPDF.text("DETALLES DEL PAGO", 20, 50);
       
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text(`ID Referencia: ${selectedPayment.id}`, 20, 60);
-      doc.text(`Fecha Emisión: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}`, 20, 67);
-      doc.text(`Beneficiario: ${userData?.name || 'Socio PartnerVerse'}`, 20, 74);
+      docPDF.setFontSize(10);
+      docPDF.setFont("helvetica", "normal");
+      docPDF.text(`ID Referencia: ${selectedPayment.id}`, 20, 60);
+      docPDF.text(`Fecha Emisión: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}`, 20, 67);
+      docPDF.text(`Beneficiario: ${userData?.name || 'Socio PartnerVerse'}`, 20, 74);
       
-      doc.line(20, 85, 190, 85);
+      docPDF.line(20, 85, 190, 85);
       
-      doc.setFont("helvetica", "bold");
-      doc.text("CONCEPTO DE LIQUIDACIÓN", 20, 95);
-      doc.setFont("helvetica", "normal");
-      doc.text(selectedPayment.description || "Comisiones devengadas por ventas SaaS", 20, 105);
+      docPDF.setFont("helvetica", "bold");
+      docPDF.text("CONCEPTO DE LIQUIDACIÓN", 20, 95);
+      docPDF.setFont("helvetica", "normal");
+      docPDF.text(selectedPayment.description || "Comisiones devengadas por ventas SaaS", 20, 105);
       
-      doc.setFillColor(245, 247, 249);
-      doc.rect(20, 120, 170, 25, 'F');
+      docPDF.setFillColor(245, 247, 249);
+      docPDF.rect(20, 120, 170, 25, 'F');
       
-      doc.setFontSize(16);
-      doc.setTextColor(0, 150, 136); 
-      doc.setFont("helvetica", "bold");
-      doc.text("TOTAL NETO PAGADO:", 30, 137);
-      doc.text(`$${selectedPayment.amount?.toLocaleString() || '0'}`, 180, 137, { align: "right" });
+      docPDF.setFontSize(16);
+      docPDF.setTextColor(0, 150, 136); 
+      docPDF.setFont("helvetica", "bold");
+      docPDF.text("TOTAL NETO PAGADO:", 30, 137);
+      docPDF.text(`$${selectedPayment.amount?.toLocaleString() || '0'}`, 180, 137, { align: "right" });
       
-      doc.setFontSize(8);
-      doc.setTextColor(150);
-      doc.text("Documento generado automáticamente por el sistema PartnerVerse.", 105, 160, { align: "center" });
-      doc.text("Este recibo tiene validez como soporte contable digital.", 105, 165, { align: "center" });
-
-      doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
+      docPDF.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
       
       toast({
         title: "Exportación Exitosa",
@@ -182,23 +159,38 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Dialog 
-          open={!!selectedPayment} 
-          onOpenChange={(open) => {
-            if (!open) setSelectedPayment(null);
-          }}
-        >
-          <DialogContent className="sm:max-w-[450px]">
-            <DialogHeader className="space-y-3 pb-4 border-b">
-              <div className="flex items-center gap-2 text-primary">
-                <FileText className="h-5 w-5" />
-                <DialogTitle className="text-xl font-black uppercase">Recibo de Pago</DialogTitle>
+        {selectedPayment && (
+          <div 
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                e.preventDefault();
+                e.stopPropagation();
+                setSelectedPayment(null);
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div 
+              className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b bg-muted/10">
+                <div className="flex items-center gap-2 text-primary">
+                  <FileText className="h-5 w-5" />
+                  <h2 className="text-xl font-black uppercase">Recibo de Pago</h2>
+                </div>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setSelectedPayment(null); }}
+                  type="button"
+                  className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-              <DialogDescription>Detalles oficiales de la transacción.</DialogDescription>
-            </DialogHeader>
 
-            {selectedPayment && (
-              <div className="py-6 space-y-6">
+              <div className="p-6 space-y-6">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">ID Transacción</p>
@@ -214,15 +206,15 @@ export default function PaymentsPage() {
                   <p className="text-2xl font-black text-primary">${selectedPayment.amount?.toLocaleString()}</p>
                 </div>
               </div>
-            )}
 
-            <DialogFooter className="gap-2">
-              <Button variant="outline" className="gap-2" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
-              <Button variant="outline" className="gap-2 text-primary border-primary/20" onClick={handleDownloadPDF}><FileDown className="h-4 w-4" /> PDF</Button>
-              <Button onClick={() => setSelectedPayment(null)}>Cerrar Ventana</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+              <div className="flex justify-end gap-2 p-6 border-t bg-muted/10">
+                <Button variant="outline" className="gap-2" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
+                <Button variant="outline" className="gap-2 text-primary border-primary/20" onClick={handleDownloadPDF}><FileDown className="h-4 w-4" /> PDF</Button>
+                <Button onClick={() => setSelectedPayment(null)}>Cerrar</Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AuthenticatedLayout>
   );

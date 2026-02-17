@@ -1,180 +1,176 @@
 'use client';
 
 import * as React from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { useParams } from 'next/navigation';
 import { 
-  Loader2, 
-  ArrowLeft, 
-  Globe, 
-  Mail, 
+  Users, 
+  MapPin, 
   Calendar, 
   ShieldCheck, 
+  Globe, 
   Award,
-  ExternalLink
+  ArrowLeft
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import Link from 'next/link';
 
 /**
- * @fileOverview Vista Pública del Perfil del Partner.
- * Proporciona una página de aterrizaje profesional para la validación de socios.
+ * @fileOverview Página de Perfil Público de Partner.
+ * Accesible sin autenticación administrativa para validación de socios.
  */
-export default function PublicPartnerProfile() {
-  const params = useParams();
-  const router = useRouter();
+export default function PartnerPublicProfile() {
+  const { partnerId } = useParams();
   const firestore = useFirestore();
-  const partnerId = params.partnerId;
 
   const partnerRef = useMemoFirebase(() => {
     if (!firestore || !partnerId) return null;
     return doc(firestore, 'partners', partnerId);
   }, [firestore, partnerId]);
 
-  const { data: partner, isLoading, error } = useDoc(partnerRef);
+  const { data: partner, isLoading } = useDoc(partnerRef);
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <div className="flex flex-col items-center gap-4">
-          <Loader2 className="h-10 w-10 animate-spin text-primary" />
-          <p className="text-sm font-medium text-muted-foreground">Cargando perfil oficial...</p>
+          <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
+          <p className="text-sm font-bold text-primary animate-pulse uppercase tracking-widest">Validando Credenciales...</p>
         </div>
       </div>
     );
   }
 
-  if (error || !partner) {
+  if (!partner) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 p-6 text-center">
-        <div className="bg-destructive/10 p-4 rounded-full mb-6">
-          <ShieldCheck className="h-12 w-12 text-destructive" />
-        </div>
-        <h1 className="text-2xl font-black uppercase tracking-tight mb-2">Socio No Encontrado</h1>
-        <p className="text-muted-foreground max-w-md mb-8">El perfil solicitado no existe o ha sido revocado del programa PartnerVerse.</p>
-        <Button onClick={() => router.back()} variant="outline" className="gap-2">
-          <ArrowLeft className="h-4 w-4" /> Volver atrás
-        </Button>
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4 bg-slate-50 p-4 text-center">
+        <h1 className="text-6xl font-black text-primary/20">404</h1>
+        <h2 className="text-2xl font-bold uppercase tracking-tight">Socio no Encontrado</h2>
+        <p className="text-muted-foreground max-w-md">La identificación proporcionada no corresponde a un partner activo en el sistema PartnerVerse.</p>
+        <Link href="/">
+          <Button variant="outline" className="gap-2">
+            <ArrowLeft className="h-4 w-4" /> Volver al Inicio
+          </Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-3xl mx-auto space-y-8">
-        <Button 
-          variant="ghost" 
-          onClick={() => router.back()} 
-          className="hover:bg-primary/5 text-muted-foreground hover:text-primary transition-colors gap-2"
-        >
-          <ArrowLeft className="h-4 w-4" /> Volver al portal
-        </Button>
+    <div className="min-h-screen bg-slate-50 py-12 px-4">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <Link href="/" className="inline-flex items-center text-xs font-bold text-primary hover:underline gap-2 uppercase tracking-tighter">
+            <ArrowLeft size={14} /> Regresar a PartnerVerse
+          </Link>
+          <Badge variant="outline" className="text-[10px] font-black uppercase tracking-widest border-primary/20 text-primary">
+            Perfil Verificado
+          </Badge>
+        </div>
 
-        <Card className="border-primary/10 shadow-2xl overflow-hidden border-t-4 border-t-primary bg-white">
-          <CardHeader className="pb-8 pt-10 px-8 bg-muted/5">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-              <div className="space-y-2">
-                <div className="flex items-center gap-3">
-                  <Badge className="bg-primary text-primary-foreground font-black uppercase text-[10px] tracking-widest px-3">Socio Certificado</Badge>
-                  {partner.status === 'Active' && (
-                    <div className="flex items-center gap-1.5 text-accent text-[10px] font-black uppercase tracking-tighter">
-                      <div className="h-2 w-2 rounded-full bg-accent animate-pulse" />
-                      Activo
-                    </div>
-                  )}
+        <Card className="border-none shadow-2xl overflow-hidden rounded-3xl">
+          <div className="h-40 bg-gradient-to-r from-primary to-indigo-900"></div>
+          <CardHeader className="relative pb-0 px-8">
+            <div className="absolute -top-20 left-8">
+              <div className="h-40 w-40 rounded-3xl bg-white p-3 shadow-2xl border border-slate-100">
+                <div className="h-full w-full rounded-2xl bg-primary/5 flex items-center justify-center text-primary">
+                  <Users size={64} className="opacity-80" />
                 </div>
-                <h1 className="text-4xl font-black text-primary uppercase tracking-tighter">{partner.name}</h1>
-                <CardDescription className="text-lg font-medium">Socio Comercial Senior PartnerVerse</CardDescription>
               </div>
-              <div className="shrink-0">
-                <div className="h-24 w-24 rounded-2xl bg-primary/10 border-2 border-primary/20 flex items-center justify-center shadow-inner">
-                  <Award className="h-12 w-12 text-primary" />
+            </div>
+            <div className="pt-24 flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-8">
+              <div className="space-y-1">
+                <h1 className="text-4xl font-black uppercase tracking-tight text-primary leading-none">{partner.name}</h1>
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <MapPin size={16} className="text-accent" />
+                  <span className="text-sm font-bold uppercase tracking-tight">{partner.pais || 'Territorio Global'}</span>
                 </div>
+              </div>
+              <div className="flex flex-col items-end gap-2">
+                <Badge className="text-xl py-2 px-6 font-black uppercase tracking-widest bg-primary text-white shadow-lg">
+                  {partner.tier || 'SILVER'}
+                </Badge>
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Nivel de Afiliación</span>
               </div>
             </div>
           </CardHeader>
-
-          <CardContent className="p-8 space-y-10">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Globe className="h-5 w-5 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Territorio Oficial</span>
-                    <span className="text-foreground font-black uppercase">{partner.pais || 'Territorio Global'}</span>
-                  </div>
+          <CardContent className="p-8 space-y-12">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center gap-3 transition-transform hover:scale-105">
+                <div className="p-3 bg-white rounded-xl shadow-sm">
+                  <Globe className="text-accent h-6 w-6" />
                 </div>
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Mail className="h-5 w-5 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Contacto de Negocios</span>
-                    <span className="text-foreground font-bold">{partner.email}</span>
-                  </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Estatus Digital</span>
+                  <p className="text-sm font-black text-primary">{partner.status === 'Active' ? 'OPERATIVO' : 'EN REVISIÓN'}</p>
                 </div>
               </div>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Award className="h-5 w-5 text-accent" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Nivel de Alianza</span>
-                    <Badge variant="outline" className="w-fit border-accent/20 text-accent font-black uppercase tracking-widest">
-                      {partner.tier || 'Silver'}
-                    </Badge>
-                  </div>
+              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center gap-3 transition-transform hover:scale-105">
+                <div className="p-3 bg-white rounded-xl shadow-sm">
+                  <Calendar className="text-accent h-6 w-6" />
                 </div>
-                <div className="flex items-center gap-3 text-muted-foreground">
-                  <Calendar className="h-5 w-5 text-primary" />
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-bold uppercase tracking-widest opacity-60">Socio desde</span>
-                    <span className="text-foreground font-bold">{partner.joinDate ? new Date(partner.joinDate).toLocaleDateString('es-ES', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A'}</span>
-                  </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Antigüedad</span>
+                  <p className="text-sm font-black text-primary">{partner.joinDate ? new Date(partner.joinDate).getFullYear() : 'N/A'}</p>
+                </div>
+              </div>
+              <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100 flex flex-col items-center text-center gap-3 transition-transform hover:scale-105">
+                <div className="p-3 bg-white rounded-xl shadow-sm">
+                  <ShieldCheck className="text-accent h-6 w-6" />
+                </div>
+                <div className="space-y-1">
+                  <span className="text-[10px] font-bold uppercase text-muted-foreground tracking-widest">Certificación</span>
+                  <p className="text-sm font-black text-primary">SOCIOS SENIOR</p>
                 </div>
               </div>
             </div>
 
-            <Separator />
+            <Separator className="bg-slate-100" />
 
-            <div className="space-y-4">
-              <h3 className="text-sm font-black uppercase tracking-widest text-primary/60">Verificación de Integridad</h3>
-              <div className="bg-accent/5 border border-accent/10 rounded-xl p-6 flex items-start gap-4">
-                <ShieldCheck className="h-6 w-6 text-accent shrink-0 mt-1" />
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-accent uppercase tracking-tight">Identidad Validada</p>
-                  <p className="text-xs text-muted-foreground leading-relaxed">
-                    Este socio ha completado satisfactoriamente los protocolos de cumplimiento (Compliance) y está autorizado para comercializar soluciones SaaS de la red PartnerVerse en su territorio asignado.
+            <div className="grid md:grid-cols-5 gap-8">
+              <div className="md:col-span-3 space-y-6">
+                <div className="space-y-3">
+                  <h2 className="text-2xl font-black uppercase tracking-tight flex items-center gap-3 text-primary">
+                    <Award className="text-accent h-7 w-7" /> Perfil de Consultoría
+                  </h2>
+                  <p className="text-muted-foreground leading-relaxed font-medium">
+                    Este socio actúa como representante oficial y certificado de la red **PartnerVerse**. 
+                    Está plenamente facultado para la distribución, asesoramiento técnico e implementación 
+                    de soluciones SaaS en el ecosistema empresarial. Su gestión está auditada por nuestra 
+                    central de operaciones en {partner.pais || 'el Territorio Global'}.
                   </p>
                 </div>
               </div>
-            </div>
-
-            <div className="pt-6 flex flex-col sm:flex-row gap-4">
-              <Button className="flex-1 gap-2 font-black uppercase tracking-tight py-6">
-                Contactar Socio <ExternalLink className="h-4 w-4" />
-              </Button>
-              <Button variant="outline" className="flex-1 gap-2 font-black uppercase tracking-tight py-6">
-                Validar Licencia
-              </Button>
+              <div className="md:col-span-2">
+                <Card className="bg-primary text-white border-none rounded-2xl shadow-xl p-6">
+                  <h3 className="font-black uppercase text-xs tracking-widest mb-4 opacity-70">Garantía de Servicio</h3>
+                  <ul className="space-y-4">
+                    <li className="flex items-start gap-3">
+                      <ShieldCheck className="h-5 w-5 shrink-0 text-accent" />
+                      <span className="text-xs font-bold leading-tight">Distribución autorizada de licencias SaaS.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <ShieldCheck className="h-5 w-5 shrink-0 text-accent" />
+                      <span className="text-xs font-bold leading-tight">Soporte técnico de primer nivel certificado.</span>
+                    </li>
+                    <li className="flex items-start gap-3">
+                      <ShieldCheck className="h-5 w-5 shrink-0 text-accent" />
+                      <span className="text-xs font-bold leading-tight">Cumplimiento de normativas de transparencia.</span>
+                    </li>
+                  </ul>
+                </Card>
+              </div>
             </div>
           </CardContent>
-          
-          <div className="bg-primary p-4 text-center">
-            <p className="text-[10px] text-primary-foreground font-bold uppercase tracking-[0.2em] opacity-80">
-              Certificación Oficial PartnerVerse ID: {partner.id}
-            </p>
-          </div>
         </Card>
 
-        <footer className="text-center space-y-2 pb-12">
-          <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Powered by PartnerVerse Intelligence Platform</p>
-          <div className="flex justify-center gap-4">
-            <span className="h-1 w-8 bg-primary/20 rounded-full" />
-            <span className="h-1 w-8 bg-accent/20 rounded-full" />
-            <span className="h-1 w-8 bg-primary/20 rounded-full" />
-          </div>
+        <footer className="text-center space-y-2 py-8">
+          <p className="text-[10px] font-black text-muted-foreground uppercase tracking-[0.2em]">© 2024 PartnerVerse - Central de Socios Certificados</p>
+          <p className="text-[9px] text-muted-foreground opacity-50">Documento de validación digital generado automáticamente por el sistema de gobernanza PartnerVerse.</p>
         </footer>
       </div>
     </div>

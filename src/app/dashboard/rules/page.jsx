@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '../../../components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../../firebase';
+import { AuthenticatedLayout } from '@/components/authenticated-layout';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
 import { collection, doc } from 'firebase/firestore';
 import { 
   Gavel, 
@@ -12,36 +12,23 @@ import {
   Loader2, 
   ShieldAlert, 
   FileText,
-  AlertCircle
+  AlertCircle,
+  X
 } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
-import { Badge } from '../../../components/ui/badge';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
-  DialogTrigger, 
-  DialogFooter 
-} from '../../../components/ui/dialog';
-import { Label } from '../../../components/ui/label';
-import { Input } from '../../../components/ui/input';
-import { Textarea } from '../../../components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
-import { useToast } from '../../../hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 import { 
   addDocumentNonBlocking, 
   updateDocumentNonBlocking, 
   deleteDocumentNonBlocking 
-} from '../../../firebase/non-blocking-updates';
-
-/**
- * @fileOverview Gestión de Reglas y Políticas del Programa de Partners.
- * Solo accesible para el Super Administrador.
- */
+} from '@/firebase/non-blocking-updates';
 
 export default function RulesPage() {
   const { user } = useUser();
@@ -52,7 +39,6 @@ export default function RulesPage() {
   const [editingRule, setEditingRule] = React.useState(null);
   const [isSaving, setIsSaving] = React.useState(false);
 
-  // Verificación de rol SuperAdmin
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return doc(firestore, 'users', user.uid);
@@ -60,7 +46,6 @@ export default function RulesPage() {
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // Consulta de reglas globales
   const rulesRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'rules');
@@ -68,7 +53,6 @@ export default function RulesPage() {
 
   const { data: rules, isLoading: isRulesLoading } = useCollection(rulesRef);
 
-  // Estado del formulario con validación estricta
   const [formData, setFormData] = React.useState({
     name: '',
     type: 'terms_of_service',
@@ -87,12 +71,17 @@ export default function RulesPage() {
     setIsDialogOpen(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
     if (!firestore || !formData.name || !formData.type || !formData.content) {
       toast({ 
         variant: "destructive", 
         title: "Validación Fallida", 
-        description: "Todos los campos marcados son obligatorios para la integridad del SaaS." 
+        description: "Todos los campos son obligatorios para la integridad del SaaS." 
       });
       return;
     }
@@ -110,14 +99,23 @@ export default function RulesPage() {
         toast({ title: "Regla Creada", description: "Nueva política integrada en el sistema de gobernanza." });
       }
       
-      setIsDialogOpen(false);
-      setEditingRule(null);
+      closeDialog();
     } catch (error) {
       toast({ variant: "destructive", title: "Error Crítico", description: "No se pudo sincronizar con el motor de reglas." });
     } finally {
       setIsSaving(false);
     }
   };
+
+  const closeDialog = React.useCallback(() => {
+    setIsDialogOpen(false);
+    setEditingRule(null);
+    if (typeof document !== 'undefined') {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      document.body.removeAttribute('data-scroll-locked');
+    }
+  }, []);
 
   const handleDelete = (ruleId) => {
     if (!firestore) return;
@@ -144,7 +142,7 @@ export default function RulesPage() {
         <div className="flex flex-col items-center justify-center h-96 text-center space-y-4">
           <ShieldAlert className="h-16 w-16 text-destructive opacity-20" />
           <h2 className="text-2xl font-bold">Acceso Denegado</h2>
-          <p className="text-muted-foreground max-w-md">Esta sección gestiona las políticas legales y de cumplimiento del SaaS, accesible solo por la Alta Dirección.</p>
+          <p className="text-muted-foreground max-w-md">Esta sección gestiona las políticas legales y de cumplimiento, accesible solo por la Alta Dirección.</p>
         </div>
       </AuthenticatedLayout>
     );
@@ -158,24 +156,52 @@ export default function RulesPage() {
             <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
               <Gavel className="h-8 w-8" /> Reglas y Políticas
             </h1>
-            <p className="text-muted-foreground text-sm">Gobernanza global, cumplimiento y términos legales del ecosistema.</p>
+            <p className="text-muted-foreground text-sm">Gobernanza global, cumplimiento y términos legales.</p>
           </div>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2" onClick={() => {
-                setEditingRule(null);
-                setFormData({ name: '', type: 'terms_of_service', description: '', content: '' });
-              }}>
-                <Plus className="h-4 w-4" /> Crear Regla
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>{editingRule ? 'Modificar Política' : 'Nueva Regla del Programa'}</DialogTitle>
-                <DialogDescription>Define normativas vinculantes para los partners senior.</DialogDescription>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
+          <Button className="gap-2" onClick={() => {
+            setEditingRule(null);
+            setFormData({ name: '', type: 'terms_of_service', description: '', content: '' });
+            setIsDialogOpen(true);
+          }}>
+            <Plus className="h-4 w-4" /> Crear Regla
+          </Button>
+        </div>
+
+        {isDialogOpen && (
+          <div 
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
+            onClick={(e) => {
+              if(e.target === e.currentTarget) {
+                e.preventDefault();
+                e.stopPropagation();
+                closeDialog();
+              }
+            }}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div 
+              className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between p-6 border-b bg-muted/10">
+                <div>
+                  <h2 className="text-xl font-black text-primary uppercase tracking-tight">
+                    {editingRule ? 'Modificar Política' : 'Nueva Regla del Programa'}
+                  </h2>
+                  <p className="text-sm text-gray-500">Define normativas vinculantes para los partners senior.</p>
+                </div>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeDialog(); }}
+                  type="button"
+                  className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>Nombre de la Regla</Label>
@@ -212,20 +238,23 @@ export default function RulesPage() {
                     value={formData.content} 
                     onChange={(e) => setFormData({...formData, content: e.target.value})} 
                     placeholder="Redacta el contenido íntegro de la regla aquí..." 
-                    className="min-h-[250px] font-mono text-xs"
+                    className="min-h-[200px] font-mono text-xs"
                   />
                 </div>
               </div>
-              <DialogFooter>
-                <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+
+              <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">
+                <Button variant="outline" type="button" onClick={(e) => { e.preventDefault(); e.stopPropagation(); closeDialog(); }}>
+                  Cancelar
+                </Button>
                 <Button onClick={handleSave} disabled={isSaving}>
                   {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Publicar Regla
                 </Button>
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
-        </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="grid gap-6">
           <Card className="border-primary/10 shadow-sm overflow-hidden">
@@ -257,29 +286,15 @@ export default function RulesPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline" className="text-[10px] uppercase font-normal capitalize">
-                            {rule.type.replace('_', ' ')}
+                            {rule.type?.replace('_', ' ') || 'General'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-primary" 
-                              onClick={() => handleEdit(rule)}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleEdit(rule)}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10" 
-                              onClick={() => {
-                                if(confirm('¿Confirmas la eliminación de esta política? Esta acción es irreversible.')) {
-                                  handleDelete(rule.id);
-                                }
-                              }}
-                            >
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(rule.id)}>
                               <Trash2 className="h-4 w-4" />
                             </Button>
                           </div>
@@ -288,11 +303,8 @@ export default function RulesPage() {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={3} className="text-center py-20">
-                        <div className="flex flex-col items-center gap-2 text-muted-foreground italic">
-                          <AlertCircle className="h-8 w-8 opacity-20" />
-                          No se han definido reglas de gobernanza aún.
-                        </div>
+                      <TableCell colSpan={3} className="text-center py-20 text-muted-foreground italic">
+                        No se han definido reglas de gobernanza aún.
                       </TableCell>
                     </TableRow>
                   )}

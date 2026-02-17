@@ -28,6 +28,7 @@ import {
 } from '../../../components/ui/dialog';
 import { Separator } from '../../../components/ui/separator';
 import { useToast } from '../../../hooks/use-toast';
+import { jsPDF } from 'jspdf';
 
 /**
  * @fileOverview Página de historial de pagos y liquidaciones.
@@ -65,51 +66,95 @@ export default function PaymentsPage() {
     if (!selectedPayment) return;
 
     toast({
-      title: "Generando documento",
-      description: "El recibo se está procesando para su descarga digital.",
+      title: "Generando PDF",
+      description: "Construyendo documento oficial de liquidación...",
     });
 
-    const content = `
-==========================================
-PARTNERVERSE - RECIBO OFICIAL DE PAGO
-==========================================
-
-ID TRANSACCIÓN: ${selectedPayment.id}
-ESTADO: PROCESADO
-
-FECHA: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
-BENEFICIARIO: ${userData?.name || 'Socio Verificado'}
-EMAIL: ${user?.email || 'N/A'}
-
-------------------------------------------
-CONCEPTO:
-${selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.'}
-
-------------------------------------------
-TOTAL LIQUIDADO: $${selectedPayment.amount?.toLocaleString('es-CO') || '0'}
-
-==========================================
-Este documento es una representación digital 
-de una transacción electrónica oficial.
-PartnerVerse SaaS Platform.
-==========================================
-    `;
-
     try {
-      const blob = new Blob([content.trim()], { type: 'text/plain;charset=utf-8' });
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `recibo-partnerverse-${selectedPayment.id}.txt`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const doc = new jsPDF();
+      
+      // Header branding
+      doc.setFontSize(22);
+      doc.setTextColor(59, 130, 246);
+      doc.setFont("helvetica", "bold");
+      doc.text("PARTNERVERSE", 105, 20, { align: "center" });
+      
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.setFont("helvetica", "normal");
+      doc.text("SISTEMA DE GESTIÓN DE SOCIOS SAAS", 105, 27, { align: "center" });
+      
+      doc.setDrawColor(200);
+      doc.line(20, 35, 190, 35);
+      
+      // Receipt Title
+      doc.setFontSize(14);
+      doc.setTextColor(40);
+      doc.setFont("helvetica", "bold");
+      doc.text("RECIBO OFICIAL DE LIQUIDACIÓN", 20, 48);
+      
+      // Transaction Info
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(80);
+      doc.text(`ID TRANSACCIÓN: ${selectedPayment.id}`, 20, 58);
+      doc.text(`ESTADO: PROCESADO / VERIFICADO`, 190, 58, { align: "right" });
+      
+      doc.line(20, 65, 190, 65);
+      
+      // Body Content
+      doc.setTextColor(40);
+      doc.setFont("helvetica", "bold");
+      doc.text("INFORMACIÓN DEL BENEFICIARIO", 20, 78);
+      
+      doc.setFont("helvetica", "normal");
+      doc.text(`Socio:`, 20, 88);
+      doc.text(`${userData?.name || 'Socio Verificado'}`, 60, 88);
+      
+      doc.text(`Email:`, 20, 96);
+      doc.text(`${user?.email || 'N/A'}`, 60, 96);
+      
+      doc.text(`Fecha Valor:`, 20, 104);
+      doc.text(`${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}`, 60, 104);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("CONCEPTO DE LIQUIDACIÓN", 20, 118);
+      
+      doc.setFont("helvetica", "normal");
+      const description = selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.';
+      const splitDescription = doc.splitTextToSize(description, 160);
+      doc.text(splitDescription, 20, 128);
+      
+      doc.line(20, 145, 190, 145);
+      
+      // Financial Summary
+      doc.setFontSize(18);
+      doc.setTextColor(59, 130, 246);
+      doc.setFont("helvetica", "bold");
+      doc.text(`TOTAL LIQUIDADO:`, 20, 160);
+      doc.text(`$${selectedPayment.amount?.toLocaleString('es-CO') || '0'}`, 190, 160, { align: "right" });
+      
+      doc.line(20, 170, 190, 170);
+      
+      // Legal Footer
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "italic");
+      doc.setTextColor(150);
+      const footerText = "Este documento constituye un comprobante digital oficial de PartnerVerse. La emisión de este recibo confirma que los fondos han sido procesados según los términos de servicio vigentes.";
+      const splitFooter = doc.splitTextToSize(footerText, 170);
+      doc.text(splitFooter, 105, 185, { align: "center" });
+      
+      doc.setFont("helvetica", "normal");
+      doc.text("© 2024 PartnerVerse Platform. Todos los derechos reservados.", 105, 205, { align: "center" });
+
+      doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
+      
     } catch (error) {
+      console.error("Error generating PDF:", error);
       toast({
         variant: "destructive",
         title: "Error de descarga",
-        description: "No se pudo procesar la descarga del archivo.",
+        description: "No se pudo procesar la generación del archivo PDF.",
       });
     }
   };

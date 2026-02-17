@@ -289,7 +289,7 @@ function SuperAdminPartnersView() {
                       <span className="text-[10px] text-muted-foreground font-medium">{partner.email}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm font-medium">{partner.pais || 'Territorio Global'}</TableCell>
+                  <TableCell className="text-sm font-medium">{partner.pais || 'Sin asignar'}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px] uppercase font-black border-primary/20 text-primary">
                       {partner.tier}

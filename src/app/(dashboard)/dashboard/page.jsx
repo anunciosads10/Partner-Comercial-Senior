@@ -1,2 +1,6 @@
-// Archivo neutralizado para resolver el conflicto de Parallel Pages en Next.js 15.
-// La ruta /dashboard es manejada exclusivamente por src/app/dashboard/page.jsx.
+'use client';
+/**
+ * ARCHIVO NEUTRALIZADO PARA RESOLVER CONFLICTO DE PARALLEL PAGES.
+ * La ruta /dashboard se resuelve ahora únicamente desde src/app/dashboard/page.jsx.
+ * Se ha eliminado la exportación por defecto para que Next.js ignore este archivo como ruta.
+ */

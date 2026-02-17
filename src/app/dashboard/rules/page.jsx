@@ -12,7 +12,8 @@ import {
   Loader2, 
   ShieldAlert, 
   FileText,
-  AlertCircle,
+  Search,
+  Filter,
   X
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -30,6 +31,11 @@ import {
   deleteDocumentNonBlocking 
 } from '@/firebase/non-blocking-updates';
 
+/**
+ * @fileOverview Gestión de Reglas y Políticas para SuperAdmin.
+ * Implementa un motor de búsqueda y filtrado para el control de cumplimiento.
+ */
+
 export default function RulesPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -38,6 +44,10 @@ export default function RulesPage() {
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingRule, setEditingRule] = React.useState(null);
   const [isSaving, setIsSaving] = React.useState(false);
+
+  // Estados de búsqueda y filtrado
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [typeFilter, setTypeFilter] = React.useState('all');
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -52,6 +62,20 @@ export default function RulesPage() {
   }, [firestore, user?.uid]);
 
   const { data: rules, isLoading: isRulesLoading } = useCollection(rulesRef);
+
+  // Lógica de filtrado reactivo
+  const filteredRules = React.useMemo(() => {
+    if (!rules) return [];
+    return rules.filter(rule => {
+      const matchesSearch = !searchQuery || 
+        rule.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        rule.description?.toLowerCase().includes(searchQuery.toLowerCase());
+      
+      const matchesType = typeFilter === 'all' || rule.type === typeFilter;
+      
+      return matchesSearch && matchesType;
+    });
+  }, [rules, searchQuery, typeFilter]);
 
   const [formData, setFormData] = React.useState({
     name: '',
@@ -156,16 +180,44 @@ export default function RulesPage() {
             <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
               <Gavel className="h-8 w-8" /> Reglas y Políticas
             </h1>
-            <p className="text-muted-foreground text-sm">Gobernanza global, cumplimiento y términos legales.</p>
+            <p className="text-muted-foreground text-sm font-medium">Gobernanza global, cumplimiento y términos legales.</p>
           </div>
           
-          <Button className="gap-2" onClick={() => {
+          <Button className="gap-2 font-bold shadow-lg" onClick={() => {
             setEditingRule(null);
             setFormData({ name: '', type: 'terms_of_service', description: '', content: '' });
             setIsDialogOpen(true);
           }}>
             <Plus className="h-4 w-4" /> Crear Regla
           </Button>
+        </div>
+
+        {/* Barra de Búsqueda y Filtros */}
+        <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl border border-primary/10 shadow-sm">
+          <div className="relative flex-1 w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              placeholder="Buscar por nombre o descripción..." 
+              className="pl-10 shadow-sm border-primary/10"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2 w-full md:w-auto">
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="w-full md:w-[200px] shadow-sm">
+                <Filter className="w-3 h-3 mr-2 opacity-50" />
+                <SelectValue placeholder="Tipo de Política" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas las Políticas</SelectItem>
+                <SelectItem value="terms_of_service">Términos de Servicio</SelectItem>
+                <SelectItem value="anti_fraud">Anti-Fraude</SelectItem>
+                <SelectItem value="compliance">Cumplimiento (Compliance)</SelectItem>
+                <SelectItem value="operational">Operativa Interna</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {isDialogOpen && (
@@ -260,7 +312,7 @@ export default function RulesPage() {
           <Card className="border-primary/10 shadow-sm overflow-hidden">
             <CardHeader className="bg-muted/30 border-b">
               <CardTitle className="text-lg flex items-center gap-2">
-                <FileText className="h-5 w-5 text-primary" /> Cuerpo Normativo
+                <FileText className="h-5 w-5 text-primary" /> Cuerpo Normativo ({filteredRules.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -273,25 +325,25 @@ export default function RulesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {rules && rules.length > 0 ? (
-                    rules.map((rule) => (
-                      <TableRow key={rule.id} className="hover:bg-muted/20">
+                  {filteredRules.length > 0 ? (
+                    filteredRules.map((rule) => (
+                      <TableRow key={rule.id} className="hover:bg-muted/20 transition-colors">
                         <TableCell>
                           <div className="flex flex-col">
-                            <span className="font-bold text-sm">{rule.name}</span>
+                            <span className="font-bold text-sm uppercase tracking-tight">{rule.name}</span>
                             <span className="text-[10px] text-muted-foreground truncate max-w-[400px]">
                               {rule.description || 'Sin descripción detallada.'}
                             </span>
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="text-[10px] uppercase font-normal capitalize">
-                            {rule.type?.replace('_', ' ') || 'General'}
+                          <Badge variant="outline" className="text-[10px] uppercase font-black border-primary/20 text-primary">
+                            {rule.type?.replace(/_/g, ' ') || 'General'}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end gap-2">
-                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary" onClick={() => handleEdit(rule)}>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/10" onClick={() => handleEdit(rule)}>
                               <Edit3 className="h-4 w-4" />
                             </Button>
                             <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive hover:bg-destructive/10" onClick={() => handleDelete(rule.id)}>
@@ -304,7 +356,9 @@ export default function RulesPage() {
                   ) : (
                     <TableRow>
                       <TableCell colSpan={3} className="text-center py-20 text-muted-foreground italic">
-                        No se han definido reglas de gobernanza aún.
+                        {searchQuery || typeFilter !== 'all' 
+                          ? 'No se encontraron reglas que coincidan con la búsqueda.' 
+                          : 'No se han definido reglas de gobernanza aún.'}
                       </TableCell>
                     </TableRow>
                   )}

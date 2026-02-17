@@ -31,13 +31,12 @@ import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-update
 import { useToast } from '../../../hooks/use-toast';
 
 /**
- * @fileOverview Gestión de Partners con Modal de alta fidelidad y control de propagación estricto para evitar UI Freeze.
+ * @fileOverview Gestión de Partners con Modal de alta fidelidad y control de propagación estricto.
  */
 
 function PartnerDetailsModal({ partner, open, onClose }) {
   if (!open || !partner) return null;
 
-  // Handler para el fondo (Backdrop)
   const handleBackdropClick = (e) => {
     if (e.target === e.currentTarget) {
       e.preventDefault();
@@ -46,16 +45,10 @@ function PartnerDetailsModal({ partner, open, onClose }) {
     }
   };
 
-  // Handler para botones de cierre
   const handleCloseClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
     onClose();
-  };
-
-  // Prevenir propagación desde el contenido del modal
-  const handleContentClick = (e) => {
-    e.stopPropagation();
   };
 
   return (
@@ -67,17 +60,16 @@ function PartnerDetailsModal({ partner, open, onClose }) {
     >
       <div 
         className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200"
-        onClick={handleContentClick}
+        onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex items-center justify-between p-6 border-b bg-muted/10">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-primary/10 rounded-xl">
                <Info className="w-6 h-6 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-black text-primary uppercase tracking-tight">DETALLES DEL SOCIO</h2>
-              <p className="text-sm text-muted-foreground">Información técnica y administrativa del partner.</p>
+              <h2 className="text-xl font-black text-primary uppercase tracking-tight">Detalles del Socio</h2>
+              <p className="text-sm text-muted-foreground">Ficha técnica y administrativa.</p>
             </div>
           </div>
           <button
@@ -89,12 +81,10 @@ function PartnerDetailsModal({ partner, open, onClose }) {
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6 space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
                 Correo Electrónico
               </span>
               <p className="text-sm font-semibold text-foreground">{partner.email}</p>
@@ -111,17 +101,11 @@ function PartnerDetailsModal({ partner, open, onClose }) {
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                Territorio
-              </span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Territorio</span>
               <p className="text-sm font-semibold text-foreground">{partner.pais || 'Sin asignar'}</p>
             </div>
             <div className="text-right space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2 justify-end">
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                Fecha de Ingreso
-              </span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Fecha de Ingreso</span>
               <p className="text-sm font-semibold text-foreground">
                 {partner.joinDate ? new Date(partner.joinDate).toLocaleDateString() : 'N/A'}
               </p>
@@ -145,21 +129,9 @@ function PartnerDetailsModal({ partner, open, onClose }) {
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">
-          <Button
-            variant="outline"
-            onClick={handleCloseClick}
-            type="button"
-          >
-            Cerrar Ventana
-          </Button>
-          <Button
-            onClick={handleCloseClick}
-            type="button"
-          >
-            Aceptar
-          </Button>
+          <Button variant="outline" onClick={handleCloseClick}>Cerrar Ventana</Button>
+          <Button onClick={handleCloseClick}>Aceptar</Button>
         </div>
       </div>
     </div>
@@ -223,7 +195,7 @@ function AdminPartnersView({ userData }) {
                     <TableCell className="font-semibold">{platform.name}</TableCell>
                     <TableCell>{platform.baseCommission}%</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">Enlace</Button>
+                      <Button variant="ghost" size="sm">Ver Enlace</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -256,7 +228,7 @@ function SuperAdminPartnersView() {
     updateDocumentNonBlocking(docRef, { status: newStatus });
     toast({
       title: "Estado Actualizado",
-      description: `El socio ha sido ${newStatus === 'Active' ? 'activado' : 'desactivado'} exitosamente.`,
+      description: `El socio ha sido ${newStatus === 'Active' ? 'activado' : 'desactivado'}.`,
     });
   };
 
@@ -267,14 +239,10 @@ function SuperAdminPartnersView() {
     toast({
       variant: "destructive",
       title: "Cuenta Suspendida",
-      description: "El socio ha sido suspendido por políticas de cumplimiento.",
+      description: "El socio ha sido suspendido exitosamente.",
     });
   };
 
-  /**
-   * Cierra el modal y restaura la interacción del body de forma atómica.
-   * Evita el bloqueo de la UI (Freeze) restaurando pointer-events y overflow.
-   */
   const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
     if (typeof document !== 'undefined') {
@@ -297,7 +265,7 @@ function SuperAdminPartnersView() {
       <Card className="border-primary/10 shadow-sm">
         <CardHeader>
           <CardTitle>Gestión Global de Partners</CardTitle>
-          <CardDescription>Panel de control para la activación y supervisión de la red de socios.</CardDescription>
+          <CardDescription>Panel de control para la activación y supervisión.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -357,8 +325,7 @@ function SuperAdminPartnersView() {
                             onSelect={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              // Desacoplamiento para evitar UI Freeze por foco agresivo
-                              setTimeout(() => setSelectedPartner(partner), 10);
+                              setTimeout(() => setSelectedPartner(partner), 50);
                             }}
                           >
                             <Info className="h-4 w-4 text-primary" /> Ver Detalles
@@ -368,7 +335,12 @@ function SuperAdminPartnersView() {
                             onSelect={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
-                              toast({ title: "Enlace Generado", description: "Accediendo al perfil público..." });
+                              const publicUrl = `/partners/${partner.id}/public`;
+                              window.open(publicUrl, '_blank');
+                              toast({ 
+                                title: "Perfil Público", 
+                                description: `Accediendo al perfil de ${partner.name}...` 
+                              });
                             }}
                           >
                             <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
@@ -434,7 +406,7 @@ export default function PartnersPage() {
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
             <UsersIcon className="h-8 w-8" /> Partners
           </h1>
-          <p className="text-muted-foreground text-sm">Administración de la red de socios y plataformas afiliadas.</p>
+          <p className="text-muted-foreground text-sm">Administración de la red de socios.</p>
         </div>
         {isSuperAdmin ? <SuperAdminPartnersView /> : <AdminPartnersView userData={userData} />}
       </div>

@@ -1,5 +1,7 @@
 /**
- * ARCHIVO NEUTRALIZADO
- * Este archivo ha sido vaciado para resolver el conflicto de rutas paralelas en Next.js 15.
- * La página del dashboard principal se encuentra en: src/app/dashboard/page.jsx
+ * Archivo neutralizado para resolver el conflicto de rutas paralelas en Next.js 15.
+ * La ruta /dashboard ahora se resuelve exclusivamente desde src/app/dashboard/page.jsx.
  */
+export default function NeutralizedPage() {
+  return null;
+}

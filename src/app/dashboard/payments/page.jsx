@@ -64,7 +64,7 @@ export default function PaymentsPage() {
       
       // Estilo Corporativo PartnerVerse
       doc.setFontSize(22);
-      doc.setTextColor(63, 81, 181); // Deep Indigo (#3F51B5)
+      doc.setTextColor(63, 81, 181); 
       doc.setFont("helvetica", "bold");
       doc.text("PARTNERVERSE", 105, 20, { align: "center" });
       
@@ -73,11 +73,9 @@ export default function PaymentsPage() {
       doc.setFont("helvetica", "normal");
       doc.text("COMPROBANTE OFICIAL DE LIQUIDACIÓN", 105, 28, { align: "center" });
       
-      // Línea divisoria
       doc.setDrawColor(200);
       doc.line(20, 35, 190, 35);
       
-      // Información de la transacción
       doc.setFontSize(14);
       doc.setTextColor(40);
       doc.setFont("helvetica", "bold");
@@ -96,23 +94,20 @@ export default function PaymentsPage() {
       doc.setFont("helvetica", "normal");
       doc.text(selectedPayment.description || "Comisiones devengadas por ventas SaaS", 20, 105);
       
-      // Cuadro de Total resaltado
       doc.setFillColor(245, 247, 249);
       doc.rect(20, 120, 170, 25, 'F');
       
       doc.setFontSize(16);
-      doc.setTextColor(0, 150, 136); // Teal Accent (#009688)
+      doc.setTextColor(0, 150, 136); 
       doc.setFont("helvetica", "bold");
       doc.text("TOTAL NETO PAGADO:", 30, 137);
       doc.text(`$${selectedPayment.amount?.toLocaleString() || '0'}`, 180, 137, { align: "right" });
       
-      // Pie de página institucional
       doc.setFontSize(8);
       doc.setTextColor(150);
       doc.text("Documento generado automáticamente por el sistema PartnerVerse.", 105, 160, { align: "center" });
       doc.text("Este recibo tiene validez como soporte contable digital.", 105, 165, { align: "center" });
 
-      // Ejecutar descarga física del archivo
       doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
       
       toast({

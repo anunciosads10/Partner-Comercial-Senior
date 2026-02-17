@@ -32,7 +32,7 @@ import { jsPDF } from 'jspdf';
 
 /**
  * @fileOverview Página de historial de pagos y liquidaciones.
- * Permite a los partners y administradores visualizar sus recibos de comisiones.
+ * Implementa motor de exportación PDF corporativo y gestión de recibos.
  */
 
 export default function PaymentsPage() {
@@ -73,79 +73,77 @@ export default function PaymentsPage() {
     try {
       const doc = new jsPDF();
       
-      // Header branding
-      doc.setFontSize(22);
-      doc.setTextColor(59, 130, 246);
+      // Branding Corporativo
+      doc.setFontSize(24);
+      doc.setTextColor(59, 130, 246); // Primary Blue
       doc.setFont("helvetica", "bold");
-      doc.text("PARTNERVERSE", 105, 20, { align: "center" });
+      doc.text("PARTNERVERSE", 105, 25, { align: "center" });
       
-      doc.setFontSize(9);
-      doc.setTextColor(120);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
-      doc.text("SISTEMA DE GESTIÓN DE SOCIOS SAAS", 105, 27, { align: "center" });
+      doc.text("SISTEMA DE GESTIÓN DE SOCIOS SAAS - COMPROBANTE OFICIAL", 105, 32, { align: "center" });
       
-      doc.setDrawColor(200);
-      doc.line(20, 35, 190, 35);
+      doc.setDrawColor(220);
+      doc.line(20, 40, 190, 40);
       
-      // Receipt Title
-      doc.setFontSize(14);
-      doc.setTextColor(40);
+      // Título del Recibo
+      doc.setFontSize(16);
+      doc.setTextColor(30);
       doc.setFont("helvetica", "bold");
-      doc.text("RECIBO OFICIAL DE LIQUIDACIÓN", 20, 48);
+      doc.text("RECIBO DE LIQUIDACIÓN DE COMISIONES", 20, 55);
       
-      // Transaction Info
+      // Información de Transacción
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.setTextColor(80);
-      doc.text(`ID TRANSACCIÓN: ${selectedPayment.id}`, 20, 58);
-      doc.text(`ESTADO: PROCESADO / VERIFICADO`, 190, 58, { align: "right" });
+      doc.setTextColor(100);
+      doc.text(`ID TRANSACCIÓN: ${selectedPayment.id}`, 20, 65);
+      doc.text(`ESTADO: PROCESADO`, 190, 65, { align: "right" });
       
-      doc.line(20, 65, 190, 65);
+      doc.line(20, 72, 190, 72);
       
-      // Body Content
-      doc.setTextColor(40);
+      // Detalles del Beneficiario
+      doc.setTextColor(60);
       doc.setFont("helvetica", "bold");
-      doc.text("INFORMACIÓN DEL BENEFICIARIO", 20, 78);
+      doc.text("DATOS DEL SOCIO", 20, 85);
       
       doc.setFont("helvetica", "normal");
-      doc.text(`Socio:`, 20, 88);
-      doc.text(`${userData?.name || 'Socio Verificado'}`, 60, 88);
+      doc.text(`Nombre: ${userData?.name || 'Socio Verificado'}`, 20, 95);
+      doc.text(`Email: ${user?.email || 'N/A'}`, 20, 102);
+      doc.text(`Fecha: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO') : 'N/A'}`, 20, 109);
       
-      doc.text(`Email:`, 20, 96);
-      doc.text(`${user?.email || 'N/A'}`, 60, 96);
+      doc.line(20, 118, 190, 118);
       
-      doc.text(`Fecha Valor:`, 20, 104);
-      doc.text(`${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}`, 60, 104);
-      
+      // Concepto Financiero
       doc.setFont("helvetica", "bold");
-      doc.text("CONCEPTO DE LIQUIDACIÓN", 20, 118);
+      doc.text("CONCEPTO DE PAGO", 20, 130);
       
       doc.setFont("helvetica", "normal");
       const description = selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.';
-      const splitDescription = doc.splitTextToSize(description, 160);
-      doc.text(splitDescription, 20, 128);
+      const splitDescription = doc.splitTextToSize(description, 170);
+      doc.text(splitDescription, 20, 140);
       
-      doc.line(20, 145, 190, 145);
+      doc.line(20, 155, 190, 155);
       
-      // Financial Summary
-      doc.setFontSize(18);
-      doc.setTextColor(59, 130, 246);
+      // Resumen Financiero Destacado
+      doc.setFontSize(20);
+      doc.setTextColor(59, 130, 246); // Primary Blue
       doc.setFont("helvetica", "bold");
-      doc.text(`TOTAL LIQUIDADO:`, 20, 160);
-      doc.text(`$${selectedPayment.amount?.toLocaleString('es-CO') || '0'}`, 190, 160, { align: "right" });
+      doc.text(`TOTAL LIQUIDADO:`, 20, 175);
+      doc.text(`$${selectedPayment.amount?.toLocaleString('es-CO') || '0'}`, 190, 175, { align: "right" });
       
-      doc.line(20, 170, 190, 170);
+      doc.line(20, 185, 190, 185);
       
-      // Legal Footer
+      // Footer Legal
       doc.setFontSize(8);
       doc.setFont("helvetica", "italic");
-      doc.setTextColor(150);
+      doc.setTextColor(180);
       const footerText = "Este documento constituye un comprobante digital oficial de PartnerVerse. La emisión de este recibo confirma que los fondos han sido procesados según los términos de servicio vigentes.";
       const splitFooter = doc.splitTextToSize(footerText, 170);
-      doc.text(splitFooter, 105, 185, { align: "center" });
+      doc.text(splitFooter, 105, 200, { align: "center" });
       
       doc.setFont("helvetica", "normal");
-      doc.text("© 2024 PartnerVerse Platform. Todos los derechos reservados.", 105, 205, { align: "center" });
+      doc.text("© 2024 PartnerVerse Platform. Todos los derechos reservados.", 105, 220, { align: "center" });
 
       doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
       

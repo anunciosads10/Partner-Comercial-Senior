@@ -27,6 +27,11 @@ import {
 } from './ui/sidebar';
 import { cn } from '../lib/utils';
 
+/**
+ * @fileOverview Navegación Principal del Dashboard.
+ * Implementa lógica de cierre automático en móviles y filtrado por rol.
+ */
+
 const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },

@@ -12,7 +12,6 @@ import {
   Users as UsersIcon,
   MoreHorizontal,
   Info,
-  Trash2,
   ShieldAlert,
   Calendar,
   Mail,
@@ -46,7 +45,8 @@ import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-update
 import { useToast } from '../../../hooks/use-toast';
 
 /**
- * @fileOverview Vista de Partners con rutas relativas para producción.
+ * @fileOverview Vista de Partners optimizada para SuperAdmin y Admin.
+ * Resuelve conflictos de UI Freeze mediante el desacoplamiento de eventos de Radix UI.
  */
 
 function AdminPartnersView({ userData }) {
@@ -229,20 +229,31 @@ function SuperAdminPartnersView() {
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
-                            onSelect={() => setSelectedPartner(partner)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setTimeout(() => {
+                                setSelectedPartner(partner);
+                              }, 150);
+                            }}
                           >
                             <Info className="h-4 w-4 text-primary" /> Ver Detalles
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
-                            onSelect={() => handleViewPublicProfile(partner.name)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setTimeout(() => handleViewPublicProfile(partner.name), 150);
+                            }}
                           >
                             <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
-                            onSelect={() => handleSuspend(partner.id)}
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              setTimeout(() => handleSuspend(partner.id), 150);
+                            }}
                           >
                             <ShieldAlert className="h-4 w-4" /> Suspender Cuenta
                           </DropdownMenuItem>
@@ -257,8 +268,9 @@ function SuperAdminPartnersView() {
         </CardContent>
       </Card>
 
-      {/* Modal de Detalles del Socio */}
-      <Dialog open={!!selectedPartner} onOpenChange={(open) => !open && setSelectedPartner(null)}>
+      <Dialog open={!!selectedPartner} onOpenChange={(open) => {
+        if (!open) setSelectedPartner(null);
+      }}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center gap-3">

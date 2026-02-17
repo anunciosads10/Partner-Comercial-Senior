@@ -151,12 +151,10 @@ function SuperAdminPartnersView() {
   };
 
   /**
-   * Cierra el modal y fuerza la restauración de la interacción de la UI.
-   * Esto previene el "Freeze" causado por conflictos de foco en Radix UI.
+   * Cierra el modal y restaura la interacción del body para evitar el UI Freeze.
    */
   const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
-    // Cleanup de emergencia para restaurar la interactividad del navegador
     setTimeout(() => {
       if (typeof document !== 'undefined') {
         document.body.style.pointerEvents = '';

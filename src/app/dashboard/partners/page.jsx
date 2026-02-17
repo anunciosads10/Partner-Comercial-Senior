@@ -13,7 +13,12 @@ import {
   MoreHorizontal,
   Info,
   Trash2,
-  ShieldAlert
+  ShieldAlert,
+  Calendar,
+  Mail,
+  MapPin,
+  CheckCircle2,
+  AlertOctagon
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
@@ -28,6 +33,15 @@ import {
   DropdownMenuTrigger 
 } from '../../../components/ui/dropdown-menu';
 import { Switch } from '../../../components/ui/switch';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter 
+} from '../../../components/ui/dialog';
+import { Separator } from '../../../components/ui/separator';
 import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useToast } from '../../../hooks/use-toast';
 
@@ -57,7 +71,7 @@ function AdminPartnersView({ userData }) {
   return (
     <div className="space-y-6">
       <div className="grid gap-6 md:grid-cols-3">
-        <Card className="md:col-span-1">
+        <Card className="md:col-span-1 border-primary/10 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Mi Estatus</CardTitle>
           </CardHeader>
@@ -73,7 +87,7 @@ function AdminPartnersView({ userData }) {
           </CardContent>
         </Card>
 
-        <Card className="md:col-span-2">
+        <Card className="md:col-span-2 border-primary/10 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Plataformas Disponibles</CardTitle>
           </CardHeader>
@@ -109,6 +123,7 @@ function SuperAdminPartnersView() {
   const { user } = useUser();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [selectedPartner, setSelectedPartner] = React.useState(null);
   
   const partnersRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -130,6 +145,24 @@ function SuperAdminPartnersView() {
     });
   };
 
+  const handleSuspend = (partnerId) => {
+    if (!firestore) return;
+    const docRef = doc(firestore, 'partners', partnerId);
+    updateDocumentNonBlocking(docRef, { status: 'Suspended' });
+    toast({
+      variant: "destructive",
+      title: "Cuenta Suspendida",
+      description: "El socio ha sido suspendido por políticas de cumplimiento.",
+    });
+  };
+
+  const handleViewPublicProfile = (partnerName) => {
+    toast({
+      title: "Enlace Generado",
+      description: `Accediendo al perfil público de ${partnerName}...`,
+    });
+  };
+
   if (isLoading) {
     return (
       <div className="flex justify-center p-12">
@@ -139,77 +172,171 @@ function SuperAdminPartnersView() {
   }
 
   return (
-    <Card className="border-primary/10 shadow-sm">
-      <CardHeader>
-        <CardTitle>Gestión Global de Partners</CardTitle>
-        <CardDescription>Panel de control para la activación y supervisión de la red de socios.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50">
-              <TableHead>Socio</TableHead>
-              <TableHead>Ubicación</TableHead>
-              <TableHead>Tier</TableHead>
-              <TableHead>Estado y Acciones</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {partners?.map((partner) => (
-              <TableRow key={partner.id} className="hover:bg-muted/20 transition-colors">
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-bold text-sm">{partner.name}</span>
-                    <span className="text-[10px] text-muted-foreground">{partner.email}</span>
-                  </div>
-                </TableCell>
-                <TableCell className="text-sm">{partner.pais || 'No asignado'}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold">
-                    {partner.tier}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Switch 
-                        checked={partner.status === 'Active'} 
-                        onCheckedChange={() => handleToggleStatus(partner.id, partner.status)}
-                      />
-                      <Badge variant={partner.status === 'Active' ? 'default' : 'destructive'} className="text-[10px] uppercase min-w-[65px] justify-center">
-                        {partner.status}
-                      </Badge>
-                    </div>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuLabel>Gestión de Socio</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
-                          <Info className="h-4 w-4" /> Ver Detalles
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 cursor-pointer">
-                          <ExternalLink className="h-4 w-4" /> Perfil Público
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem className="gap-2 text-destructive focus:text-destructive cursor-pointer">
-                          <ShieldAlert className="h-4 w-4" /> Suspender Cuenta
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </TableCell>
+    <>
+      <Card className="border-primary/10 shadow-sm">
+        <CardHeader>
+          <CardTitle>Gestión Global de Partners</CardTitle>
+          <CardDescription>Panel de control para la activación y supervisión de la red de socios.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>Socio</TableHead>
+                <TableHead>Ubicación</TableHead>
+                <TableHead>Tier</TableHead>
+                <TableHead>Estado y Acciones</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {partners?.map((partner) => (
+                <TableRow key={partner.id} className="hover:bg-muted/20 transition-colors">
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-bold text-sm">{partner.name}</span>
+                      <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">{partner.pais || 'No asignado'}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                      {partner.tier}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <Switch 
+                          checked={partner.status === 'Active'} 
+                          onCheckedChange={() => handleToggleStatus(partner.id, partner.status)}
+                        />
+                        <Badge 
+                          variant={partner.status === 'Active' ? 'default' : partner.status === 'Suspended' ? 'destructive' : 'secondary'} 
+                          className="text-[10px] uppercase min-w-[65px] justify-center"
+                        >
+                          {partner.status}
+                        </Badge>
+                      </div>
+
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel>Gestión de Socio</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onSelect={() => setSelectedPartner(partner)}
+                          >
+                            <Info className="h-4 w-4 text-primary" /> Ver Detalles
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            className="gap-2 cursor-pointer"
+                            onSelect={() => handleViewPublicProfile(partner.name)}
+                          >
+                            <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
+                            onSelect={() => handleSuspend(partner.id)}
+                          >
+                            <ShieldAlert className="h-4 w-4" /> Suspender Cuenta
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Modal de Detalles del Socio */}
+      <Dialog open={!!selectedPartner} onOpenChange={(open) => !open && setSelectedPartner(null)}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader className="pb-4 border-b">
+            <div className="flex items-center gap-3">
+              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <UsersIcon className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-black uppercase tracking-tight">Detalles del Socio</DialogTitle>
+                <DialogDescription>Información técnica y administrativa del partner.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          {selectedPartner && (
+            <div className="py-6 space-y-6">
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Correo Electrónico
+                  </p>
+                  <p className="text-sm font-medium">{selectedPartner.email}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Nivel Actual</p>
+                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 text-primary">
+                    {selectedPartner.tier}
+                  </Badge>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                    <MapPin className="h-3 w-3" /> Territorio
+                  </p>
+                  <p className="text-sm font-medium">{selectedPartner.pais || 'Sin Asignar'}</p>
+                </div>
+                <div className="space-y-1 text-right">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1 justify-end">
+                    <Calendar className="h-3 w-3" /> Fecha de Ingreso
+                  </p>
+                  <p className="text-sm font-medium">
+                    {selectedPartner.joinDate ? new Date(selectedPartner.joinDate).toLocaleDateString() : 'N/A'}
+                  </p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div className="bg-muted/30 p-4 rounded-lg flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Estado del Sistema</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    {selectedPartner.status === 'Active' ? (
+                      <CheckCircle2 className="h-4 w-4 text-accent" />
+                    ) : (
+                      <AlertOctagon className="h-4 w-4 text-destructive" />
+                    )}
+                    <span className="text-sm font-black uppercase">{selectedPartner.status}</span>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] uppercase font-bold text-muted-foreground">ID Interno</p>
+                  <p className="text-[10px] font-mono mt-1 opacity-50">{selectedPartner.id}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="border-t pt-4">
+            <Button variant="outline" onClick={() => setSelectedPartner(null)}>Cerrar Ventana</Button>
+            <Button onClick={() => selectedPartner && handleViewPublicProfile(selectedPartner.name)}>
+              Ir al Perfil
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

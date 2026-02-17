@@ -42,7 +42,7 @@ function PartnerNode({ partner, depth = 0 }) {
         )}
       </div>
       {partner.children && partner.children.map((child) => (
-        <PartnerNode key={child.id} childPartner={child} partner={child} depth={depth + 1} />
+        <PartnerNode key={child.id} partner={child} depth={depth + 1} />
       ))}
     </div>
   );

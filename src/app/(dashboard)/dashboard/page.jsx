@@ -1,6 +1,7 @@
 /**
- * Este archivo ha sido neutralizado para resolver el conflicto de rutas paralelas en Next.js 15.
- * La ruta principal del dashboard se gestiona ahora exclusivamente desde src/app/dashboard/page.jsx.
- * Se elimina el export default para que Next.js ignore este archivo como una página.
+ * @fileOverview Archivo neutralizado para resolver el conflicto de Parallel Pages en Next.js 15.
+ * La ruta /dashboard se gestiona ahora exclusivamente desde src/app/dashboard/page.jsx.
  */
-// export default function NeutralizedPage() { return null; }
+export default function NeutralizedDashboardPage() {
+  return null;
+}

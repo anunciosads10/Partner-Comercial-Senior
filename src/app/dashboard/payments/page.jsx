@@ -62,10 +62,56 @@ export default function PaymentsPage() {
   };
 
   const handleDownloadPDF = () => {
+    if (!selectedPayment) return;
+
     toast({
-      title: "Generando PDF",
+      title: "Generando documento",
       description: "El recibo se está procesando para su descarga digital.",
     });
+
+    const content = `
+==========================================
+PARTNERVERSE - RECIBO OFICIAL DE PAGO
+==========================================
+
+ID TRANSACCIÓN: ${selectedPayment.id}
+ESTADO: PROCESADO
+
+FECHA: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' }) : 'N/A'}
+BENEFICIARIO: ${userData?.name || 'Socio Verificado'}
+EMAIL: ${user?.email || 'N/A'}
+
+------------------------------------------
+CONCEPTO:
+${selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.'}
+
+------------------------------------------
+TOTAL LIQUIDADO: $${selectedPayment.amount?.toLocaleString('es-CO') || '0'}
+
+==========================================
+Este documento es una representación digital 
+de una transacción electrónica oficial.
+PartnerVerse SaaS Platform.
+==========================================
+    `;
+
+    try {
+      const blob = new Blob([content.trim()], { type: 'text/plain;charset=utf-8' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `recibo-partnerverse-${selectedPayment.id}.txt`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error de descarga",
+        description: "No se pudo procesar la descarga del archivo.",
+      });
+    }
   };
 
   if (isLoading) {
@@ -150,7 +196,6 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        {/* Modal de Recibo Profesional */}
         <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
           <DialogContent className="sm:max-w-[450px]">
             <DialogHeader className="space-y-3 pb-4 border-b">
@@ -211,21 +256,18 @@ export default function PaymentsPage() {
                     ${selectedPayment.amount?.toLocaleString('es-CO') || '0'}
                   </p>
                 </div>
-
-                <div className="pt-4 text-center">
-                  <p className="text-[9px] text-muted-foreground uppercase leading-tight">
-                    Este documento es una representación digital de una transacción electrónica.<br />
-                    PartnerVerse SaaS Platform - Ecosistema de Socios Senior.
-                  </p>
-                </div>
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-2 justify-center sm:justify-end">
+            <DialogFooter className="gap-2 sm:gap-2">
               <Button variant="outline" className="gap-2" onClick={handlePrint}>
                 <Printer className="h-4 w-4" /> Imprimir
               </Button>
-              <Button variant="outline" className="gap-2 text-primary border-primary/20 hover:bg-primary/5" onClick={handleDownloadPDF}>
+              <Button 
+                variant="outline" 
+                className="gap-2 text-primary border-primary/20" 
+                onClick={handleDownloadPDF}
+              >
                 <FileDown className="h-4 w-4" /> PDF
               </Button>
               <Button onClick={() => setSelectedPayment(null)}>

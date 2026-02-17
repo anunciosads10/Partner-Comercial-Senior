@@ -17,7 +17,8 @@ import {
   Mail,
   MapPin,
   CheckCircle2,
-  AlertOctagon
+  AlertOctagon,
+  X
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
@@ -43,11 +44,6 @@ import {
 import { Separator } from '../../../components/ui/separator';
 import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useToast } from '../../../hooks/use-toast';
-
-/**
- * @fileOverview Vista de Partners optimizada para SuperAdmin y Admin.
- * Resuelve conflictos de UI Freeze mediante el desacoplamiento de eventos de Radix UI.
- */
 
 function AdminPartnersView({ userData }) {
   const { user } = useUser();
@@ -136,9 +132,7 @@ function SuperAdminPartnersView() {
     if (!firestore) return;
     const newStatus = currentStatus === 'Active' ? 'Inactive' : 'Active';
     const docRef = doc(firestore, 'partners', partnerId);
-    
     updateDocumentNonBlocking(docRef, { status: newStatus });
-    
     toast({
       title: "Estado Actualizado",
       description: `El socio ha sido ${newStatus === 'Active' ? 'activado' : 'desactivado'} exitosamente.`,
@@ -156,11 +150,9 @@ function SuperAdminPartnersView() {
     });
   };
 
-  const handleViewPublicProfile = (partnerName) => {
-    toast({
-      title: "Enlace Generado",
-      description: `Accediendo al perfil público de ${partnerName}...`,
-    });
+  const closeDetails = () => {
+    // Limpieza atómica del estado para evitar UI Freeze al cerrar
+    setSelectedPartner(null);
   };
 
   if (isLoading) {
@@ -231,9 +223,8 @@ function SuperAdminPartnersView() {
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              setTimeout(() => {
-                                setSelectedPartner(partner);
-                              }, 150);
+                              // Desacoplamiento de eventos para evitar UI Freeze entre Dropdown y Dialog
+                              setTimeout(() => setSelectedPartner(partner), 150);
                             }}
                           >
                             <Info className="h-4 w-4 text-primary" /> Ver Detalles
@@ -242,7 +233,7 @@ function SuperAdminPartnersView() {
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              setTimeout(() => handleViewPublicProfile(partner.name), 150);
+                              toast({ title: "Enlace Generado", description: "Accediendo al perfil público..." });
                             }}
                           >
                             <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
@@ -252,7 +243,7 @@ function SuperAdminPartnersView() {
                             className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
                             onSelect={(e) => {
                               e.preventDefault();
-                              setTimeout(() => handleSuspend(partner.id), 150);
+                              handleSuspend(partner.id);
                             }}
                           >
                             <ShieldAlert className="h-4 w-4" /> Suspender Cuenta
@@ -268,9 +259,7 @@ function SuperAdminPartnersView() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedPartner} onOpenChange={(open) => {
-        if (!open) setSelectedPartner(null);
-      }}>
+      <Dialog open={!!selectedPartner} onOpenChange={(open) => !open && closeDetails()}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center gap-3">
@@ -341,10 +330,8 @@ function SuperAdminPartnersView() {
           )}
 
           <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={() => setSelectedPartner(null)}>Cerrar Ventana</Button>
-            <Button onClick={() => selectedPartner && handleViewPublicProfile(selectedPartner.name)}>
-              Ir al Perfil
-            </Button>
+            <Button variant="outline" onClick={closeDetails}>Cerrar Ventana</Button>
+            <Button onClick={closeDetails}>Aceptar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

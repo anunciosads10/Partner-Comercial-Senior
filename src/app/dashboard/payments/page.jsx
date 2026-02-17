@@ -30,11 +30,6 @@ import { Separator } from '../../../components/ui/separator';
 import { useToast } from '../../../hooks/use-toast';
 import { jsPDF } from 'jspdf';
 
-/**
- * @fileOverview Página de historial de pagos y liquidaciones.
- * Implementa motor de exportación PDF corporativo y gestión de recibos.
- */
-
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -58,101 +53,74 @@ export default function PaymentsPage() {
 
   const { data: payments, isLoading } = useCollection(paymentsRef);
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const handleDownloadPDF = () => {
     if (!selectedPayment) return;
-
-    toast({
-      title: "Generando PDF",
-      description: "Construyendo documento oficial de liquidación...",
-    });
 
     try {
       const doc = new jsPDF();
       
-      // Branding Corporativo
-      doc.setFontSize(24);
-      doc.setTextColor(59, 130, 246); // Primary Blue
+      // Estilo Corporativo PartnerVerse
+      doc.setFontSize(22);
+      doc.setTextColor(59, 130, 246); // Color Primary Azul
       doc.setFont("helvetica", "bold");
-      doc.text("PARTNERVERSE", 105, 25, { align: "center" });
+      doc.text("PARTNERVERSE", 105, 20, { align: "center" });
       
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
-      doc.text("SISTEMA DE GESTIÓN DE SOCIOS SAAS - COMPROBANTE OFICIAL", 105, 32, { align: "center" });
+      doc.text("RECIBO DE LIQUIDACIÓN OFICIAL", 105, 28, { align: "center" });
       
-      doc.setDrawColor(220);
-      doc.line(20, 40, 190, 40);
+      // Línea divisoria
+      doc.setDrawColor(200);
+      doc.line(20, 35, 190, 35);
       
-      // Título del Recibo
+      // Información de la transacción
+      doc.setFontSize(14);
+      doc.setTextColor(40);
+      doc.setFont("helvetica", "bold");
+      doc.text("DETALLES DE LA TRANSACCIÓN", 20, 50);
+      
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`ID Pago: ${selectedPayment.id}`, 20, 60);
+      doc.text(`Fecha: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}`, 20, 67);
+      doc.text(`Beneficiario: ${userData?.name || 'Socio'}`, 20, 74);
+      
+      doc.line(20, 85, 190, 85);
+      
+      doc.setFont("helvetica", "bold");
+      doc.text("CONCEPTO", 20, 95);
+      doc.setFont("helvetica", "normal");
+      doc.text(selectedPayment.description || "Liquidación de comisiones SaaS", 20, 105);
+      
+      // Cuadro de Total
+      doc.setFillColor(240, 240, 240);
+      doc.rect(20, 120, 170, 25, 'F');
+      
       doc.setFontSize(16);
-      doc.setTextColor(30);
+      doc.setTextColor(59, 130, 246);
       doc.setFont("helvetica", "bold");
-      doc.text("RECIBO DE LIQUIDACIÓN DE COMISIONES", 20, 55);
+      doc.text("TOTAL PAGADO:", 30, 137);
+      doc.text(`$${selectedPayment.amount?.toLocaleString() || '0'}`, 180, 137, { align: "right" });
       
-      // Información de Transacción
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(100);
-      doc.text(`ID TRANSACCIÓN: ${selectedPayment.id}`, 20, 65);
-      doc.text(`ESTADO: PROCESADO`, 190, 65, { align: "right" });
-      
-      doc.line(20, 72, 190, 72);
-      
-      // Detalles del Beneficiario
-      doc.setTextColor(60);
-      doc.setFont("helvetica", "bold");
-      doc.text("DATOS DEL SOCIO", 20, 85);
-      
-      doc.setFont("helvetica", "normal");
-      doc.text(`Nombre: ${userData?.name || 'Socio Verificado'}`, 20, 95);
-      doc.text(`Email: ${user?.email || 'N/A'}`, 20, 102);
-      doc.text(`Fecha: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO') : 'N/A'}`, 20, 109);
-      
-      doc.line(20, 118, 190, 118);
-      
-      // Concepto Financiero
-      doc.setFont("helvetica", "bold");
-      doc.text("CONCEPTO DE PAGO", 20, 130);
-      
-      doc.setFont("helvetica", "normal");
-      const description = selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.';
-      const splitDescription = doc.splitTextToSize(description, 170);
-      doc.text(splitDescription, 20, 140);
-      
-      doc.line(20, 155, 190, 155);
-      
-      // Resumen Financiero Destacado
-      doc.setFontSize(20);
-      doc.setTextColor(59, 130, 246); // Primary Blue
-      doc.setFont("helvetica", "bold");
-      doc.text(`TOTAL LIQUIDADO:`, 20, 175);
-      doc.text(`$${selectedPayment.amount?.toLocaleString('es-CO') || '0'}`, 190, 175, { align: "right" });
-      
-      doc.line(20, 185, 190, 185);
-      
-      // Footer Legal
+      // Pie de página
       doc.setFontSize(8);
-      doc.setFont("helvetica", "italic");
-      doc.setTextColor(180);
-      const footerText = "Este documento constituye un comprobante digital oficial de PartnerVerse. La emisión de este recibo confirma que los fondos han sido procesados según los términos de servicio vigentes.";
-      const splitFooter = doc.splitTextToSize(footerText, 170);
-      doc.text(splitFooter, 105, 200, { align: "center" });
-      
-      doc.setFont("helvetica", "normal");
-      doc.text("© 2024 PartnerVerse Platform. Todos los derechos reservados.", 105, 220, { align: "center" });
+      doc.setTextColor(150);
+      doc.text("Este documento es un comprobante digital generado automáticamente por la plataforma PartnerVerse.", 105, 160, { align: "center" });
 
-      doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
+      // Disparo de descarga real
+      doc.save(`recibo-${selectedPayment.id}.pdf`);
       
+      toast({
+        title: "PDF Generado",
+        description: "El recibo oficial se ha descargado correctamente.",
+      });
     } catch (error) {
-      console.error("Error generating PDF:", error);
+      console.error("Error al generar PDF:", error);
       toast({
         variant: "destructive",
-        title: "Error de descarga",
-        description: "No se pudo procesar la generación del archivo PDF.",
+        title: "Error de Exportación",
+        description: "No se pudo generar el archivo PDF en este momento.",
       });
     }
   };
@@ -175,24 +143,15 @@ export default function PaymentsPage() {
             <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
               <CreditCard className="h-8 w-8" /> Pagos
             </h1>
-            <p className="text-muted-foreground text-sm">
-              Historial de liquidaciones y transacciones de comisiones.
-            </p>
+            <p className="text-muted-foreground text-sm">Historial de liquidaciones y transacciones.</p>
           </div>
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" /> Exportar
-          </Button>
+          <Button variant="outline" className="gap-2"><Download className="h-4 w-4" /> Exportar</Button>
         </div>
 
         <Card className="border-primary/10 shadow-sm">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
-            <div className="space-y-1">
-              <CardTitle className="text-lg">Transacciones Recientes</CardTitle>
-              <CardDescription>Resumen detallado de pagos procesados.</CardDescription>
-            </div>
-            <Button variant="ghost" size="sm" className="h-8 gap-2">
-              <Filter className="h-4 w-4" /> Filtrar
-            </Button>
+            <CardTitle className="text-lg">Transacciones</CardTitle>
+            <Button variant="ghost" size="sm" className="h-8 gap-2"><Filter className="h-4 w-4" /> Filtrar</Button>
           </CardHeader>
           <CardContent>
             <Table>
@@ -205,35 +164,16 @@ export default function PaymentsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {payments && payments.length > 0 ? (
-                  payments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors">
-                      <TableCell className="font-medium text-xs">
-                        {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('es-CO') : 'N/A'}
-                      </TableCell>
-                      <TableCell className="text-xs">{payment.description || 'Liquidación de comisiones'}</TableCell>
-                      <TableCell>
-                        <span className="font-bold text-primary">${payment.amount?.toLocaleString('es-CO') || '0'}</span>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="h-7 text-[10px] uppercase font-bold text-accent hover:text-accent hover:bg-accent/10"
-                          onClick={() => setSelectedPayment(payment)}
-                        >
-                          Ver Recibo
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : (
-                  <TableRow>
-                    <TableCell colSpan={4} className="text-center py-12 text-muted-foreground italic">
-                      No se registran pagos pendientes ni procesados.
+                {payments?.map((payment) => (
+                  <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell className="text-xs">{payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString() : 'N/A'}</TableCell>
+                    <TableCell className="text-xs">{payment.description || 'Comisión'}</TableCell>
+                    <TableCell><span className="font-bold text-primary">${payment.amount?.toLocaleString()}</span></TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setSelectedPayment(payment)}>Ver Recibo</Button>
                     </TableCell>
                   </TableRow>
-                )}
+                ))}
               </TableBody>
             </Table>
           </CardContent>
@@ -246,76 +186,32 @@ export default function PaymentsPage() {
                 <FileText className="h-5 w-5" />
                 <DialogTitle className="text-xl font-black uppercase">Recibo de Pago</DialogTitle>
               </div>
-              <DialogDescription>
-                Detalles oficiales de la transacción procesada por PartnerVerse.
-              </DialogDescription>
+              <DialogDescription>Detalles oficiales de la transacción.</DialogDescription>
             </DialogHeader>
 
             {selectedPayment && (
               <div className="py-6 space-y-6">
                 <div className="flex justify-between items-start">
                   <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">ID de Transacción</p>
+                    <p className="text-[10px] uppercase font-bold text-muted-foreground">ID Transacción</p>
                     <p className="font-mono text-sm">{selectedPayment.id}</p>
                   </div>
                   <div className="text-right space-y-1">
                     <p className="text-[10px] uppercase font-bold text-muted-foreground">Estado</p>
-                    <div className="flex items-center gap-1 text-accent justify-end">
-                      <CheckCircle2 className="h-3 w-3" />
-                      <span className="text-xs font-bold uppercase">Procesado</span>
-                    </div>
+                    <Badge variant="outline" className="text-accent border-accent/20">Procesado</Badge>
                   </div>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" /> Fecha
-                    </p>
-                    <p className="text-sm font-medium">
-                      {selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString('es-CO', { 
-                        day: 'numeric', 
-                        month: 'long', 
-                        year: 'numeric' 
-                      }) : 'N/A'}
-                    </p>
-                  </div>
-                  <div className="space-y-1 text-right">
-                    <p className="text-[10px] uppercase font-bold text-muted-foreground">Socio Beneficiario</p>
-                    <p className="text-sm font-medium">{userData?.name || 'Socio Verificado'}</p>
-                  </div>
-                </div>
-
-                <Separator />
-
-                <div className="bg-muted/30 p-4 rounded-lg space-y-2">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Concepto</p>
-                  <p className="text-sm italic">{selectedPayment.description || 'Liquidación automática de comisiones por ventas en plataformas SaaS afiliadas.'}</p>
-                </div>
-
                 <div className="flex justify-between items-center pt-2">
                   <p className="text-lg font-bold text-muted-foreground">Total Liquidado</p>
-                  <p className="text-2xl font-black text-primary">
-                    ${selectedPayment.amount?.toLocaleString('es-CO') || '0'}
-                  </p>
+                  <p className="text-2xl font-black text-primary">${selectedPayment.amount?.toLocaleString()}</p>
                 </div>
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-2">
-              <Button variant="outline" className="gap-2" onClick={handlePrint}>
-                <Printer className="h-4 w-4" /> Imprimir
-              </Button>
-              <Button 
-                variant="outline" 
-                className="gap-2 text-primary border-primary/20" 
-                onClick={handleDownloadPDF}
-              >
-                <FileDown className="h-4 w-4" /> PDF
-              </Button>
-              <Button onClick={() => setSelectedPayment(null)}>
-                Cerrar
-              </Button>
+            <DialogFooter className="gap-2">
+              <Button variant="outline" className="gap-2" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
+              <Button variant="outline" className="gap-2 text-primary border-primary/20" onClick={handleDownloadPDF}><FileDown className="h-4 w-4" /> PDF</Button>
+              <Button onClick={() => setSelectedPayment(null)}>Cerrar</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

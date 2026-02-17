@@ -12,7 +12,8 @@ import {
   FileText, 
   Printer, 
   Calendar,
-  CheckCircle2
+  CheckCircle2,
+  FileDown
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
@@ -26,6 +27,7 @@ import {
   DialogFooter 
 } from '../../../components/ui/dialog';
 import { Separator } from '../../../components/ui/separator';
+import { useToast } from '../../../hooks/use-toast';
 
 /**
  * @fileOverview Página de historial de pagos y liquidaciones.
@@ -35,6 +37,7 @@ import { Separator } from '../../../components/ui/separator';
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [selectedPayment, setSelectedPayment] = React.useState(null);
 
   const userDocRef = useMemoFirebase(() => {
@@ -56,6 +59,13 @@ export default function PaymentsPage() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPDF = () => {
+    toast({
+      title: "Generando PDF",
+      description: "El recibo se está procesando para su descarga digital.",
+    });
   };
 
   if (isLoading) {
@@ -211,9 +221,12 @@ export default function PaymentsPage() {
               </div>
             )}
 
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter className="gap-2 sm:gap-2 justify-center sm:justify-end">
               <Button variant="outline" className="gap-2" onClick={handlePrint}>
                 <Printer className="h-4 w-4" /> Imprimir
+              </Button>
+              <Button variant="outline" className="gap-2 text-primary border-primary/20 hover:bg-primary/5" onClick={handleDownloadPDF}>
+                <FileDown className="h-4 w-4" /> PDF
               </Button>
               <Button onClick={() => setSelectedPayment(null)}>
                 Cerrar

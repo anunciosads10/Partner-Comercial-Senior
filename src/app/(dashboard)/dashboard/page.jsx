@@ -1,2 +1,5 @@
-// Archivo neutralizado físicamente para eliminar el conflicto de Parallel Pages con src/app/dashboard/page.jsx en Next.js 15.
-// Al no tener exportaciones de componentes, Next.js ignora este archivo en el sistema de enrutamiento.
+/**
+ * Archivo neutralizado para resolver el conflicto de Parallel Pages en Next.js 15.
+ * La ruta principal del dashboard se gestiona exclusivamente en src/app/dashboard/page.jsx.
+ * Se elimina el export default para que Next.js no lo reconozca como una página.
+ */

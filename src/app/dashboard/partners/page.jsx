@@ -11,7 +11,9 @@ import {
   MoreHorizontal,
   Info,
   ShieldAlert,
-  X
+  X,
+  UserPlus,
+  Save
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -27,36 +29,23 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
 /**
- * @fileOverview Gestión de Partners con motor de limpieza de UI para prevenir bloqueos de interacción.
+ * @fileOverview Gestión de Partners con motor de limpieza de UI y creación de nuevos socios.
  */
 
 function PartnerDetailsModal({ partner, open, onClose }) {
   if (!open || !partner) return null;
 
-  const handleBackdropClick = (e) => {
-    if (e.target === e.currentTarget) {
-      e.preventDefault();
-      e.stopPropagation();
-      onClose();
-    }
-  };
-
-  const handleCloseClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onClose();
-  };
-
   return (
     <div 
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
-      onClick={handleBackdropClick}
-      role="dialog"
-      aria-modal="true"
+      onClick={onClose}
     >
       <div 
         className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200"
@@ -73,8 +62,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
             </div>
           </div>
           <button
-            onClick={handleCloseClick}
-            type="button"
+            onClick={onClose}
             className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
           >
             <X className="w-6 h-6" />
@@ -82,10 +70,10 @@ function PartnerDetailsModal({ partner, open, onClose }) {
         </div>
 
         <div className="p-6 space-y-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Correo Electrónico</span>
-              <p className="text-sm font-semibold text-foreground">{partner.email}</p>
+              <p className="text-sm font-semibold">{partner.email}</p>
             </div>
             <div className="text-right space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Nivel Actual</span>
@@ -97,14 +85,14 @@ function PartnerDetailsModal({ partner, open, onClose }) {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          <div className="grid grid-cols-2 gap-8">
             <div className="space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Territorio</span>
-              <p className="text-sm font-semibold text-foreground">{partner.pais || 'Sin asignar'}</p>
+              <p className="text-sm font-semibold">{partner.pais || 'Sin asignar'}</p>
             </div>
             <div className="text-right space-y-1">
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Fecha de Ingreso</span>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-semibold">
                 {partner.joinDate || 'N/A'}
               </p>
             </div>
@@ -117,7 +105,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
               <span className="text-[10px] font-bold text-muted-foreground uppercase">Estado del Sistema</span>
               <div className="flex items-center gap-2">
                 <div className={`w-2.5 h-2.5 rounded-full ${partner.status === 'Active' ? 'bg-green-500' : 'bg-destructive'}`}></div>
-                <span className="text-sm font-black uppercase text-foreground">{partner.status}</span>
+                <span className="text-sm font-black uppercase">{partner.status}</span>
               </div>
             </div>
             <div className="text-right space-y-1">
@@ -128,8 +116,98 @@ function PartnerDetailsModal({ partner, open, onClose }) {
         </div>
 
         <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">
-          <Button variant="outline" onClick={handleCloseClick}>Cerrar Ventana</Button>
-          <Button onClick={handleCloseClick}>Aceptar</Button>
+          <Button variant="outline" onClick={onClose}>Cerrar Ventana</Button>
+          <Button onClick={onClose}>Aceptar</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreatePartnerModal({ open, onClose, firestore }) {
+  const { toast } = useToast();
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [formData, setFormData] = React.useState({
+    name: '',
+    email: '',
+    tier: 'Silver',
+    pais: '',
+    status: 'Active'
+  });
+
+  if (!open) return null;
+
+  const handleSave = () => {
+    if (!formData.name || !formData.email) {
+      toast({ variant: "destructive", title: "Datos incompletos", description: "Nombre y email son obligatorios." });
+      return;
+    }
+
+    setIsSaving(true);
+    const partnersCol = collection(firestore, 'partners');
+    const newPartner = {
+      ...formData,
+      id: formData.email.replace(/[^a-zA-Z0-9]/g, '-'),
+      joinDate: new Date().toISOString()
+    };
+
+    addDocumentNonBlocking(partnersCol, newPartner);
+    toast({ title: "Socio Registrado", description: `${formData.name} ha sido añadido a la red.` });
+    setIsSaving(false);
+    onClose();
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <UserPlus className="h-6 w-6 text-primary" />
+            <h2 className="text-xl font-black uppercase tracking-tight">Nuevo Socio Comercial</h2>
+          </div>
+          <button onClick={onClose} className="text-muted-foreground hover:bg-muted rounded-full p-2">
+            <X className="h-5 w-5"/>
+          </button>
+        </div>
+        <div className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label>Nombre Completo</Label>
+            <Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Ej. Alexander Jiménez" />
+          </div>
+          <div className="space-y-2">
+            <Label>Email Corporativo</Label>
+            <Input value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="m@ejemplo.com" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>País</Label>
+              <Input value={formData.pais} onChange={(e) => setFormData({...formData, pais: e.target.value})} placeholder="Ej. Colombia" />
+            </div>
+            <div className="space-y-2">
+              <Label>Nivel (Tier)</Label>
+              <Select value={formData.tier} onValueChange={(val) => setFormData({...formData, tier: val})}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Silver">Silver</SelectItem>
+                  <SelectItem value="Gold">Gold</SelectItem>
+                  <SelectItem value="Platinum">Platinum</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
+        <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">
+          <Button variant="outline" onClick={onClose}>Cancelar</Button>
+          <Button onClick={handleSave} disabled={isSaving}>
+            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+            Guardar Partner
+          </Button>
         </div>
       </div>
     </div>
@@ -211,6 +289,7 @@ function SuperAdminPartnersView() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [selectedPartner, setSelectedPartner] = React.useState(null);
+  const [isCreateOpen, setIsCreateOpen] = React.useState(false);
   
   const partnersRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
@@ -241,16 +320,12 @@ function SuperAdminPartnersView() {
     });
   };
 
-  /**
-   * Motor de limpieza atómica para prevenir UI Freeze.
-   * Fuerza la restauración de la interacción del navegador tras cerrar diálogos.
-   */
   const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
+    setIsCreateOpen(false);
     if (typeof document !== 'undefined') {
       document.body.style.pointerEvents = '';
       document.body.style.overflow = '';
-      document.body.style.userSelect = '';
       document.body.removeAttribute('data-scroll-locked');
     }
   }, []);
@@ -265,6 +340,12 @@ function SuperAdminPartnersView() {
 
   return (
     <>
+      <div className="flex justify-end mb-4">
+        <Button onClick={() => setIsCreateOpen(true)} className="gap-2 font-bold shadow-lg">
+          <UserPlus className="h-4 w-4" /> Registrar Nuevo Partner
+        </Button>
+      </div>
+
       <Card className="border-primary/10 shadow-sm animate-in fade-in duration-500">
         <CardHeader>
           <CardTitle className="uppercase font-black text-primary tracking-tight">Gestión Maestra de Partners</CardTitle>
@@ -316,44 +397,18 @@ function SuperAdminPartnersView() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent 
-                          align="end" 
-                          className="w-56"
-                          onCloseAutoFocus={(e) => e.preventDefault()}
-                        >
-                          <DropdownMenuLabel className="font-black uppercase text-[10px] tracking-widest opacity-50">Auditoría de Socio</DropdownMenuLabel>
+                        <DropdownMenuContent align="end" className="w-56">
+                          <DropdownMenuLabel className="font-black uppercase text-[10px] tracking-widest opacity-50">Auditoría</DropdownMenuLabel>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="gap-2 cursor-pointer font-bold"
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setTimeout(() => setSelectedPartner(partner), 50);
-                            }}
-                          >
+                          <DropdownMenuItem className="gap-2 cursor-pointer font-bold" onSelect={() => setSelectedPartner(partner)}>
                             <Info className="h-4 w-4 text-primary" /> Ver Ficha Técnica
                           </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            className="gap-2 cursor-pointer font-bold"
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              const publicUrl = `/partners/${partner.id}/public`;
-                              window.open(publicUrl, '_blank');
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4 text-accent" /> Ver Perfil Público
+                          <DropdownMenuItem className="gap-2 cursor-pointer font-bold" onSelect={() => window.open(`/partners/${partner.id}/public`, '_blank')}>
+                            <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="gap-2 text-destructive focus:text-destructive cursor-pointer font-black uppercase text-[10px] tracking-tighter"
-                            onSelect={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleSuspend(partner.id);
-                            }}
-                          >
-                            <ShieldAlert className="h-4 w-4" /> Suspender Cuenta
+                          <DropdownMenuItem className="gap-2 text-destructive font-black uppercase text-[10px]" onSelect={() => handleSuspend(partner.id)}>
+                            <ShieldAlert className="h-4 w-4" /> Suspender
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -366,11 +421,8 @@ function SuperAdminPartnersView() {
         </CardContent>
       </Card>
 
-      <PartnerDetailsModal 
-        partner={selectedPartner} 
-        open={!!selectedPartner} 
-        onClose={closeDetails} 
-      />
+      <PartnerDetailsModal partner={selectedPartner} open={!!selectedPartner} onClose={closeDetails} />
+      <CreatePartnerModal open={isCreateOpen} onClose={closeDetails} firestore={firestore} />
     </>
   );
 }

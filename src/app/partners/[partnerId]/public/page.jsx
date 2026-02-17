@@ -1,30 +1,32 @@
 'use client';
 
 import * as React from 'react';
-import { useParams } from 'next/navigation';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { useParams } from 'next/navigation';
 import { 
-  Loader2, 
-  Award, 
+  Users, 
   Globe, 
-  Mail, 
-  Calendar,
-  ShieldCheck,
-  Briefcase,
-  Star
+  ShieldCheck, 
+  Calendar, 
+  ArrowLeft,
+  Mail,
+  Award,
+  Loader2
 } from 'lucide-react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 /**
- * @fileOverview Perfil Público de un Socio PartnerVerse.
- * Muestra las credenciales y el estatus oficial del partner a terceros.
+ * @fileOverview Perfil Público de un Partner.
+ * Muestra la información de acreditación oficial para clientes y prospectos.
  */
 export default function PublicPartnerProfile() {
-  const { partnerId } = useParams();
+  const params = useParams();
+  const partnerId = params?.partnerId;
   const firestore = useFirestore();
 
   const partnerRef = useMemoFirebase(() => {
@@ -36,7 +38,7 @@ export default function PublicPartnerProfile() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-secondary/30">
+      <div className="flex items-center justify-center min-h-screen bg-slate-50">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
       </div>
     );
@@ -44,121 +46,91 @@ export default function PublicPartnerProfile() {
 
   if (!partner) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center text-center p-4 bg-secondary/30">
-        <ShieldCheck className="h-20 w-20 text-muted-foreground/30 mb-4" />
-        <h1 className="text-2xl font-bold">Perfil No Encontrado</h1>
-        <p className="text-muted-foreground">Este ID de socio no existe o su perfil es privado.</p>
-        <Button className="mt-4" onClick={() => window.location.href = '/'}>Volver al Inicio</Button>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 text-center p-4">
+        <h1 className="text-4xl font-black text-primary mb-4">404</h1>
+        <p className="text-muted-foreground mb-8">El perfil de socio solicitado no existe o no es público.</p>
+        <Link href="/">
+          <Button variant="default">Volver al Inicio</Button>
+        </Link>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-secondary/30 py-12 px-4">
-      <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in duration-700">
-        
-        {/* Header de Verificación */}
-        <div className="bg-primary p-6 rounded-t-2xl text-primary-foreground flex flex-col md:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4">
-            <div className="h-16 w-16 bg-white/10 rounded-full flex items-center justify-center border border-white/20">
-              <Globe className="h-8 w-8" />
-            </div>
-            <div>
-              <h1 className="text-2xl font-black uppercase tracking-tight">{partner.name}</h1>
-              <div className="flex items-center gap-2 text-white/80 text-sm">
-                <ShieldCheck className="h-4 w-4 text-accent" />
-                Socio Comercial Verificado por PartnerVerse
-              </div>
-            </div>
-          </div>
-          <Badge variant="secondary" className="bg-accent text-accent-foreground font-black px-4 py-1 text-sm uppercase">
-            {partner.tier || 'Silver Member'}
+    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6">
+      <div className="max-w-4xl mx-auto space-y-8">
+        <div className="flex items-center justify-between">
+          <Link href="/">
+            <Button variant="ghost" className="gap-2">
+              <ArrowLeft className="h-4 w-4" /> Salir de vista pública
+            </Button>
+          </Link>
+          <Badge variant="outline" className="bg-white border-primary/20 text-primary font-bold px-4 py-1">
+            PERFIL VERIFICADO
           </Badge>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <Card className="border-none shadow-2xl overflow-hidden">
+          <div className="h-32 bg-primary"></div>
+          <CardHeader className="relative pt-16 text-center">
+            <div className="absolute -top-12 left-1/2 -translate-x-1/2 h-24 w-24 rounded-full border-4 border-white bg-white shadow-lg flex items-center justify-center">
+              <Users className="h-12 w-12 text-primary" />
+            </div>
+            <CardTitle className="text-3xl font-black uppercase tracking-tight text-primary">
+              {partner.name}
+            </CardTitle>
+            <CardDescription className="flex items-center justify-center gap-2 mt-2">
+              <Globe className="h-4 w-4" /> Socio Autorizado de PartnerVerse
+            </CardDescription>
+            <div className="flex justify-center gap-2 mt-4">
+              <Badge variant="default" className="uppercase font-black px-4">
+                Tier {partner.tier || 'Silver'}
+              </Badge>
+              <Badge variant="secondary" className="uppercase font-bold">
+                {partner.pais || 'Global'}
+              </Badge>
+            </div>
+          </CardHeader>
           
-          {/* Columna Izquierda: Info Rápida */}
-          <div className="md:col-span-1 space-y-6">
-            <Card>
-              <CardContent className="p-6 space-y-4">
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Territorio Oficial</p>
-                  <p className="text-sm font-semibold flex items-center gap-2">
-                    <Star className="h-3 w-3 text-primary" /> {partner.pais || 'Global'}
-                  </p>
-                </div>
-                <Separator />
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Miembro Desde</p>
-                  <p className="text-sm font-semibold flex items-center gap-2">
-                    <Calendar className="h-3 w-3 text-primary" /> {partner.joinDate || '2024'}
-                  </p>
-                </div>
-                <Separator />
-                <div className="space-y-1">
-                  <p className="text-[10px] font-bold text-muted-foreground uppercase">Estatus Operativo</p>
-                  <Badge className={partner.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}>
-                    {partner.status === 'Active' ? 'EN OPERACIÓN' : 'INACTIVO'}
-                  </Badge>
-                </div>
-              </CardContent>
-            </Card>
+          <CardContent className="p-8 space-y-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/30">
+                <ShieldCheck className="h-8 w-8 text-accent mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Estatus</span>
+                <p className="text-sm font-black text-foreground uppercase">{partner.status}</p>
+              </div>
+              <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/30">
+                <Calendar className="h-8 w-8 text-primary mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Miembro desde</span>
+                <p className="text-sm font-black text-foreground">{partner.joinDate ? new Date(partner.joinDate).toLocaleDateString() : 'N/A'}</p>
+              </div>
+              <div className="flex flex-col items-center text-center p-4 rounded-xl bg-muted/30">
+                <Award className="h-8 w-8 text-yellow-600 mb-2" />
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Verificación</span>
+                <p className="text-sm font-black text-foreground uppercase">Oficial</p>
+              </div>
+            </div>
 
-            <Button className="w-full gap-2 font-bold" variant="outline">
-              <Mail className="h-4 w-4" /> Contactar Socio
-            </Button>
+            <Separator />
+
+            <div className="space-y-4">
+              <h3 className="text-lg font-black uppercase tracking-tight text-primary flex items-center gap-2">
+                <Mail className="h-5 w-5" /> Información de Contacto
+              </h3>
+              <p className="text-muted-foreground leading-relaxed">
+                Este socio comercial está plenamente capacitado para ofrecer consultoría y servicios sobre las plataformas SaaS afiliadas a PartnerVerse. Para validar la autenticidad de este certificado, puede contactar directamente con nuestro departamento de soporte.
+              </p>
+              <div className="bg-slate-100 p-4 rounded-lg flex items-center justify-center border border-dashed border-slate-300">
+                 <p className="text-sm font-mono font-bold text-primary">{partner.email}</p>
+              </div>
+            </div>
+          </CardContent>
+          <div className="p-4 bg-muted/10 text-center border-t">
+            <p className="text-[10px] text-muted-foreground font-medium">
+              &copy; 2024 PartnerVerse - Todos los derechos reservados. ID del Socio: {partner.id}
+            </p>
           </div>
-
-          {/* Columna Derecha: Detalles y Especialidades */}
-          <div className="md:col-span-2 space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Briefcase className="h-5 w-5 text-primary" /> Perfil Profesional
-                </CardTitle>
-                <CardDescription>Resumen de capacidades y acreditaciones comerciales.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <p className="text-muted-foreground leading-relaxed">
-                  Socio Senior con certificación en soluciones SaaS para gestión empresarial. 
-                  Especializado en la implementación estratégica de herramientas tecnológicas 
-                  en {partner.pais || 'territorios de alta demanda'}.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-4 bg-muted/50 rounded-xl border border-dashed flex items-start gap-3">
-                    <Award className="h-5 w-5 text-accent shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold uppercase">Expertise Gold</p>
-                      <p className="text-[10px] text-muted-foreground">Estratega de canales de venta</p>
-                    </div>
-                  </div>
-                  <div className="p-4 bg-muted/50 rounded-xl border border-dashed flex items-start gap-3">
-                    <Award className="h-5 w-5 text-accent shrink-0" />
-                    <div>
-                      <p className="text-xs font-bold uppercase">Soporte Técnico</p>
-                      <p className="text-[10px] text-muted-foreground">Certificado en despliegue SaaS</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-        </div>
-
-        {/* Footer de Credibilidad */}
-        <div className="text-center space-y-2 py-8">
-          <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">
-            Sello de Garantía PartnerVerse &copy; 2024
-          </p>
-          <div className="flex justify-center gap-4 opacity-30">
-             <ShieldCheck className="h-6 w-6" />
-             <Globe className="h-6 w-6" />
-             <Award className="h-6 w-6" />
-          </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

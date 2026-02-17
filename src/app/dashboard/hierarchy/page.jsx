@@ -11,7 +11,6 @@ import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/aler
 
 /**
  * Componente funcional para renderizar un nodo de partner en la jerarquía.
- * @param {Object} props - Propiedades del componente.
  */
 function PartnerNode({ partner, depth = 0 }) {
   if (!partner) return null;
@@ -43,7 +42,7 @@ function PartnerNode({ partner, depth = 0 }) {
         )}
       </div>
       {partner.children && partner.children.map((child) => (
-        <PartnerNode key={child.id} partner={child} depth={depth + 1} />
+        <PartnerNode key={child.id} childPartner={child} partner={child} depth={depth + 1} />
       ))}
     </div>
   );

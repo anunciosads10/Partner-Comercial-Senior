@@ -141,7 +141,7 @@ export default function PaymentsPage() {
         </Card>
 
         {/* Modal de Recibo Profesional */}
-        <Dialog open={!!selectedPayment} onOpenChange={() => setSelectedPayment(null)}>
+        <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
           <DialogContent className="sm:max-w-[450px]">
             <DialogHeader className="space-y-3 pb-4 border-b">
               <div className="flex items-center gap-2 text-primary">

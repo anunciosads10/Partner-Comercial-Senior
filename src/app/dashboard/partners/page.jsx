@@ -7,17 +7,10 @@ import { doc, collection } from 'firebase/firestore';
 import { 
   Loader2, 
   ExternalLink, 
-  Award, 
-  Globe, 
   Users as UsersIcon,
   MoreHorizontal,
   Info,
   ShieldAlert,
-  Calendar,
-  Mail,
-  MapPin,
-  CheckCircle2,
-  AlertOctagon,
   X
 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
@@ -33,17 +26,145 @@ import {
   DropdownMenuTrigger 
 } from '../../../components/ui/dropdown-menu';
 import { Switch } from '../../../components/ui/switch';
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter 
-} from '../../../components/ui/dialog';
 import { Separator } from '../../../components/ui/separator';
 import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
 import { useToast } from '../../../hooks/use-toast';
+
+/**
+ * @fileOverview Gestión de Partners con Modal de alta fidelidad y control de propagación estricto para evitar UI Freeze.
+ */
+
+function PartnerDetailsModal({ partner, open, onClose }) {
+  if (!open || !partner) return null;
+
+  // Handler para el fondo (Backdrop)
+  const handleBackdropClick = (e) => {
+    if (e.target === e.currentTarget) {
+      e.preventDefault();
+      e.stopPropagation();
+      onClose();
+    }
+  };
+
+  // Handler para botones de cierre
+  const handleCloseClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onClose();
+  };
+
+  // Prevenir propagación desde el contenido del modal
+  const handleContentClick = (e) => {
+    e.stopPropagation();
+  };
+
+  return (
+    <div 
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+    >
+      <div 
+        className="bg-white rounded-xl shadow-2xl max-w-2xl w-full overflow-hidden animate-in fade-in zoom-in duration-200"
+        onClick={handleContentClick}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b bg-muted/10">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-primary/10 rounded-xl">
+               <Info className="w-6 h-6 text-primary" />
+            </div>
+            <div>
+              <h2 className="text-xl font-black text-primary uppercase tracking-tight">DETALLES DEL SOCIO</h2>
+              <p className="text-sm text-muted-foreground">Información técnica y administrativa del partner.</p>
+            </div>
+          </div>
+          <button
+            onClick={handleCloseClick}
+            type="button"
+            className="p-2 text-muted-foreground hover:bg-muted rounded-full transition-colors"
+          >
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>
+                Correo Electrónico
+              </span>
+              <p className="text-sm font-semibold text-foreground">{partner.email}</p>
+            </div>
+            <div className="text-right space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Nivel Actual</span>
+              <div>
+                <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 text-primary">
+                  {partner.tier || 'Silver'}
+                </Badge>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                Territorio
+              </span>
+              <p className="text-sm font-semibold text-foreground">{partner.pais || 'Sin asignar'}</p>
+            </div>
+            <div className="text-right space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2 justify-end">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                Fecha de Ingreso
+              </span>
+              <p className="text-sm font-semibold text-foreground">
+                {partner.joinDate ? new Date(partner.joinDate).toLocaleDateString() : 'N/A'}
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          <div className="bg-muted/30 p-4 rounded-xl flex items-center justify-between border">
+            <div className="space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Estado del Sistema</span>
+              <div className="flex items-center gap-2">
+                <div className={`w-2.5 h-2.5 rounded-full ${partner.status === 'Active' ? 'bg-accent' : 'bg-destructive'}`}></div>
+                <span className="text-sm font-black uppercase text-foreground">{partner.status}</span>
+              </div>
+            </div>
+            <div className="text-right space-y-1">
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">ID Interno</span>
+              <p className="text-[10px] font-mono text-muted-foreground opacity-60">{partner.id}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">
+          <Button
+            variant="outline"
+            onClick={handleCloseClick}
+            type="button"
+          >
+            Cerrar Ventana
+          </Button>
+          <Button
+            onClick={handleCloseClick}
+            type="button"
+          >
+            Aceptar
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function AdminPartnersView({ userData }) {
   const { user } = useUser();
@@ -151,16 +272,16 @@ function SuperAdminPartnersView() {
   };
 
   /**
-   * Cierra el modal y restaura la interacción del body para evitar el UI Freeze.
+   * Cierra el modal y restaura la interacción del body de forma atómica.
+   * Evita el bloqueo de la UI (Freeze) restaurando pointer-events y overflow.
    */
   const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
-    setTimeout(() => {
-      if (typeof document !== 'undefined') {
-        document.body.style.pointerEvents = '';
-        document.body.style.overflow = '';
-      }
-    }, 100);
+    if (typeof document !== 'undefined') {
+      document.body.style.pointerEvents = '';
+      document.body.style.overflow = '';
+      document.body.style.userSelect = '';
+    }
   }, []);
 
   if (isLoading) {
@@ -235,8 +356,9 @@ function SuperAdminPartnersView() {
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              // Desacoplar eventos para evitar el bloqueo de UI
-                              setTimeout(() => setSelectedPartner(partner), 150);
+                              e.stopPropagation();
+                              // Desacoplamiento para evitar UI Freeze por foco agresivo
+                              setTimeout(() => setSelectedPartner(partner), 10);
                             }}
                           >
                             <Info className="h-4 w-4 text-primary" /> Ver Detalles
@@ -245,6 +367,7 @@ function SuperAdminPartnersView() {
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               toast({ title: "Enlace Generado", description: "Accediendo al perfil público..." });
                             }}
                           >
@@ -255,6 +378,7 @@ function SuperAdminPartnersView() {
                             className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
                             onSelect={(e) => {
                               e.preventDefault();
+                              e.stopPropagation();
                               handleSuspend(partner.id);
                             }}
                           >
@@ -271,87 +395,11 @@ function SuperAdminPartnersView() {
         </CardContent>
       </Card>
 
-      <Dialog 
+      <PartnerDetailsModal 
+        partner={selectedPartner} 
         open={!!selectedPartner} 
-        onOpenChange={(open) => {
-          if (!open) closeDetails();
-        }}
-      >
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader className="pb-4 border-b">
-            <div className="flex items-center gap-3">
-              <div className="h-12 w-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <UsersIcon className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Detalles del Socio</DialogTitle>
-                <DialogDescription>Información técnica y administrativa del partner.</DialogDescription>
-              </div>
-            </div>
-          </DialogHeader>
-
-          {selectedPartner && (
-            <div className="py-6 space-y-6">
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                    <Mail className="h-3 w-3" /> Correo Electrónico
-                  </p>
-                  <p className="text-sm font-medium">{selectedPartner.email}</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Nivel Actual</p>
-                  <Badge variant="outline" className="text-[10px] uppercase font-bold border-primary/20 text-primary">
-                    {selectedPartner.tier}
-                  </Badge>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-1">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
-                    <MapPin className="h-3 w-3" /> Territorio
-                  </p>
-                  <p className="text-sm font-medium">{selectedPartner.pais || 'Sin Asignar'}</p>
-                </div>
-                <div className="space-y-1 text-right">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1 justify-end">
-                    <Calendar className="h-3 w-3" /> Fecha de Ingreso
-                  </p>
-                  <p className="text-sm font-medium">
-                    {selectedPartner.joinDate ? new Date(selectedPartner.joinDate).toLocaleDateString() : 'N/A'}
-                  </p>
-                </div>
-              </div>
-
-              <Separator />
-
-              <div className="bg-muted/30 p-4 rounded-lg flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">Estado del Sistema</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    {selectedPartner.status === 'Active' ? (
-                      <CheckCircle2 className="h-4 w-4 text-accent" />
-                    ) : (
-                      <AlertOctagon className="h-4 w-4 text-destructive" />
-                    )}
-                    <span className="text-sm font-black uppercase">{selectedPartner.status}</span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] uppercase font-bold text-muted-foreground">ID Interno</p>
-                  <p className="text-[10px] font-mono mt-1 opacity-50">{selectedPartner.id}</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          <DialogFooter className="border-t pt-4">
-            <Button variant="outline" onClick={closeDetails}>Cerrar Ventana</Button>
-            <Button onClick={closeDetails}>Aceptar</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        onClose={closeDetails} 
+      />
     </>
   );
 }

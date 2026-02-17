@@ -31,7 +31,7 @@ import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-update
 import { useToast } from '../../../hooks/use-toast';
 
 /**
- * @fileOverview Gestión de Partners con Modal de alta fidelidad y control de propagación estricto.
+ * @fileOverview Gestión de Partners con motor de limpieza de UI para prevenir bloqueos de interacción.
  */
 
 function PartnerDetailsModal({ partner, open, onClose }) {
@@ -64,12 +64,12 @@ function PartnerDetailsModal({ partner, open, onClose }) {
       >
         <div className="flex items-center justify-between p-6 border-b bg-muted/10">
           <div className="flex items-center gap-4">
-            <div className="p-3 bg-primary/10 rounded-xl">
+            <div className="p-3 bg-primary/10 rounded-xl border border-primary/20">
                <Info className="w-6 h-6 text-primary" />
             </div>
             <div>
               <h2 className="text-xl font-black text-primary uppercase tracking-tight">Detalles del Socio</h2>
-              <p className="text-sm text-muted-foreground">Ficha técnica y administrativa.</p>
+              <p className="text-sm text-muted-foreground">Ficha técnica administrativa.</p>
             </div>
           </div>
           <button
@@ -84,9 +84,7 @@ function PartnerDetailsModal({ partner, open, onClose }) {
         <div className="p-6 space-y-8">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
             <div className="space-y-1">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
-                Correo Electrónico
-              </span>
+              <span className="text-[10px] font-bold text-muted-foreground uppercase">Correo Electrónico</span>
               <p className="text-sm font-semibold text-foreground">{partner.email}</p>
             </div>
             <div className="text-right space-y-1">
@@ -158,7 +156,7 @@ function AdminPartnersView({ userData }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid gap-6 md:grid-cols-3">
         <Card className="md:col-span-1 border-primary/10 shadow-sm">
           <CardHeader>
@@ -167,11 +165,11 @@ function AdminPartnersView({ userData }) {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Nivel:</span>
-              <Badge variant="secondary">{userData?.tier || 'Silver'}</Badge>
+              <Badge variant="secondary" className="font-bold">{userData?.tier || 'Silver'}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Territorio:</span>
-              <span className="text-sm">{userData?.pais || 'Global'}</span>
+              <span className="text-sm font-bold">{userData?.pais || 'Global'}</span>
             </div>
           </CardContent>
         </Card>
@@ -183,7 +181,7 @@ function AdminPartnersView({ userData }) {
           <CardContent>
             <Table>
               <TableHeader>
-                <TableRow>
+                <TableRow className="bg-muted/50">
                   <TableHead>SaaS</TableHead>
                   <TableHead>Comisión</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
@@ -191,11 +189,11 @@ function AdminPartnersView({ userData }) {
               </TableHeader>
               <TableBody>
                 {platforms?.map((platform) => (
-                  <TableRow key={platform.id}>
-                    <TableCell className="font-semibold">{platform.name}</TableCell>
-                    <TableCell>{platform.baseCommission}%</TableCell>
+                  <TableRow key={platform.id} className="hover:bg-muted/20">
+                    <TableCell className="font-black text-sm">{platform.name}</TableCell>
+                    <TableCell className="text-primary font-bold">{platform.baseCommission}%</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">Ver Enlace</Button>
+                      <Button variant="ghost" size="sm" className="font-bold">Ver Enlace</Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -227,7 +225,7 @@ function SuperAdminPartnersView() {
     const docRef = doc(firestore, 'partners', partnerId);
     updateDocumentNonBlocking(docRef, { status: newStatus });
     toast({
-      title: "Estado Actualizado",
+      title: "Estado Sincronizado",
       description: `El socio ha sido ${newStatus === 'Active' ? 'activado' : 'desactivado'}.`,
     });
   };
@@ -239,10 +237,14 @@ function SuperAdminPartnersView() {
     toast({
       variant: "destructive",
       title: "Cuenta Suspendida",
-      description: "El socio ha sido suspendido exitosamente.",
+      description: "El socio ha sido revocado de forma inmediata.",
     });
   };
 
+  /**
+   * Motor de limpieza atómica para prevenir UI Freeze.
+   * Fuerza la restauración de la interacción del navegador tras cerrar diálogos.
+   */
   const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
     if (typeof document !== 'undefined') {
@@ -262,10 +264,10 @@ function SuperAdminPartnersView() {
 
   return (
     <>
-      <Card className="border-primary/10 shadow-sm">
+      <Card className="border-primary/10 shadow-sm animate-in fade-in duration-500">
         <CardHeader>
-          <CardTitle>Gestión Global de Partners</CardTitle>
-          <CardDescription>Panel de control para la activación y supervisión.</CardDescription>
+          <CardTitle className="uppercase font-black text-primary tracking-tight">Gestión Maestra de Partners</CardTitle>
+          <CardDescription>Control de activación, suspensión y auditoría de la red.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -282,13 +284,13 @@ function SuperAdminPartnersView() {
                 <TableRow key={partner.id} className="hover:bg-muted/20 transition-colors">
                   <TableCell>
                     <div className="flex flex-col">
-                      <span className="font-bold text-sm">{partner.name}</span>
-                      <span className="text-[10px] text-muted-foreground">{partner.email}</span>
+                      <span className="font-black text-sm uppercase tracking-tight">{partner.name}</span>
+                      <span className="text-[10px] text-muted-foreground font-medium">{partner.email}</span>
                     </div>
                   </TableCell>
-                  <TableCell className="text-sm">{partner.pais || 'No asignado'}</TableCell>
+                  <TableCell className="text-sm font-medium">{partner.pais || 'Territorio Global'}</TableCell>
                   <TableCell>
-                    <Badge variant="outline" className="text-[10px] uppercase font-bold">
+                    <Badge variant="outline" className="text-[10px] uppercase font-black border-primary/20 text-primary">
                       {partner.tier}
                     </Badge>
                   </TableCell>
@@ -301,7 +303,7 @@ function SuperAdminPartnersView() {
                         />
                         <Badge 
                           variant={partner.status === 'Active' ? 'default' : partner.status === 'Suspended' ? 'destructive' : 'secondary'} 
-                          className="text-[10px] uppercase min-w-[65px] justify-center"
+                          className="text-[10px] uppercase min-w-[75px] justify-center font-black"
                         >
                           {partner.status}
                         </Badge>
@@ -309,7 +311,7 @@ function SuperAdminPartnersView() {
 
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:bg-muted">
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -318,36 +320,32 @@ function SuperAdminPartnersView() {
                           className="w-56"
                           onCloseAutoFocus={(e) => e.preventDefault()}
                         >
-                          <DropdownMenuLabel>Gestión de Socio</DropdownMenuLabel>
+                          <DropdownMenuLabel className="font-black uppercase text-[10px] tracking-widest opacity-50">Auditoría de Socio</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            className="gap-2 cursor-pointer"
+                            className="gap-2 cursor-pointer font-bold"
                             onSelect={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               setTimeout(() => setSelectedPartner(partner), 50);
                             }}
                           >
-                            <Info className="h-4 w-4 text-primary" /> Ver Detalles
+                            <Info className="h-4 w-4 text-primary" /> Ver Ficha Técnica
                           </DropdownMenuItem>
                           <DropdownMenuItem 
-                            className="gap-2 cursor-pointer"
+                            className="gap-2 cursor-pointer font-bold"
                             onSelect={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               const publicUrl = `/partners/${partner.id}/public`;
                               window.open(publicUrl, '_blank');
-                              toast({ 
-                                title: "Perfil Público", 
-                                description: `Accediendo al perfil de ${partner.name}...` 
-                              });
                             }}
                           >
-                            <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
+                            <ExternalLink className="h-4 w-4 text-accent" /> Ver Perfil Público
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
-                            className="gap-2 text-destructive focus:text-destructive cursor-pointer font-bold"
+                            className="gap-2 text-destructive focus:text-destructive cursor-pointer font-black uppercase text-[10px] tracking-tighter"
                             onSelect={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
@@ -402,11 +400,11 @@ export default function PartnersPage() {
   return (
     <AuthenticatedLayout>
       <div className="space-y-6">
-        <div>
+        <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
-            <UsersIcon className="h-8 w-8" /> Partners
+            <UsersIcon className="h-8 w-8" /> Gestión de Partners
           </h1>
-          <p className="text-muted-foreground text-sm">Administración de la red de socios.</p>
+          <p className="text-muted-foreground text-sm font-medium">Administración estratégica de la red de socios comerciales.</p>
         </div>
         {isSuperAdmin ? <SuperAdminPartnersView /> : <AdminPartnersView userData={userData} />}
       </div>

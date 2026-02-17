@@ -150,9 +150,20 @@ function SuperAdminPartnersView() {
     });
   };
 
-  const closeDetails = () => {
+  /**
+   * Cierra el modal y fuerza la restauración de la interacción de la UI.
+   * Esto previene el "Freeze" causado por conflictos de foco en Radix UI.
+   */
+  const closeDetails = React.useCallback(() => {
     setSelectedPartner(null);
-  };
+    // Cleanup de emergencia para restaurar la interactividad del navegador
+    setTimeout(() => {
+      if (typeof document !== 'undefined') {
+        document.body.style.pointerEvents = '';
+        document.body.style.overflow = '';
+      }
+    }, 100);
+  }, []);
 
   if (isLoading) {
     return (
@@ -218,7 +229,7 @@ function SuperAdminPartnersView() {
                         <DropdownMenuContent 
                           align="end" 
                           className="w-56"
-                          onCloseAutoFocus={(e) => e.preventDefault()} // Fix para prevenir UI Freeze al cerrar
+                          onCloseAutoFocus={(e) => e.preventDefault()}
                         >
                           <DropdownMenuLabel>Gestión de Socio</DropdownMenuLabel>
                           <DropdownMenuSeparator />
@@ -226,7 +237,7 @@ function SuperAdminPartnersView() {
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              // Desacoplar apertura del menú para evitar parálisis de foco
+                              // Desacoplar eventos para evitar el bloqueo de UI
                               setTimeout(() => setSelectedPartner(partner), 150);
                             }}
                           >
@@ -262,7 +273,12 @@ function SuperAdminPartnersView() {
         </CardContent>
       </Card>
 
-      <Dialog open={!!selectedPartner} onOpenChange={(open) => !open && closeDetails()}>
+      <Dialog 
+        open={!!selectedPartner} 
+        onOpenChange={(open) => {
+          if (!open) closeDetails();
+        }}
+      >
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader className="pb-4 border-b">
             <div className="flex items-center gap-3">

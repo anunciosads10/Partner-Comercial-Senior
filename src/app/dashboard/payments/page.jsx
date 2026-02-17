@@ -53,6 +53,9 @@ export default function PaymentsPage() {
 
   const { data: payments, isLoading } = useCollection(paymentsRef);
 
+  /**
+   * Genera y descarga un recibo PDF profesional utilizando jsPDF.
+   */
   const handleDownloadPDF = () => {
     if (!selectedPayment) return;
 
@@ -61,14 +64,14 @@ export default function PaymentsPage() {
       
       // Estilo Corporativo PartnerVerse
       doc.setFontSize(22);
-      doc.setTextColor(59, 130, 246); // Color Primary Azul
+      doc.setTextColor(63, 81, 181); // Deep Indigo (#3F51B5)
       doc.setFont("helvetica", "bold");
       doc.text("PARTNERVERSE", 105, 20, { align: "center" });
       
       doc.setFontSize(10);
       doc.setTextColor(100);
       doc.setFont("helvetica", "normal");
-      doc.text("RECIBO DE LIQUIDACIÓN OFICIAL", 105, 28, { align: "center" });
+      doc.text("COMPROBANTE OFICIAL DE LIQUIDACIÓN", 105, 28, { align: "center" });
       
       // Línea divisoria
       doc.setDrawColor(200);
@@ -78,54 +81,49 @@ export default function PaymentsPage() {
       doc.setFontSize(14);
       doc.setTextColor(40);
       doc.setFont("helvetica", "bold");
-      doc.text("DETALLES DE LA TRANSACCIÓN", 20, 50);
+      doc.text("DETALLES DEL PAGO", 20, 50);
       
       doc.setFontSize(10);
       doc.setFont("helvetica", "normal");
-      doc.text(`ID Pago: ${selectedPayment.id}`, 20, 60);
-      doc.text(`Fecha: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}`, 20, 67);
-      doc.text(`Beneficiario: ${userData?.name || 'Socio'}`, 20, 74);
+      doc.text(`ID Referencia: ${selectedPayment.id}`, 20, 60);
+      doc.text(`Fecha Emisión: ${selectedPayment.paymentDate ? new Date(selectedPayment.paymentDate).toLocaleDateString() : 'N/A'}`, 20, 67);
+      doc.text(`Beneficiario: ${userData?.name || 'Socio PartnerVerse'}`, 20, 74);
       
       doc.line(20, 85, 190, 85);
       
       doc.setFont("helvetica", "bold");
-      doc.text("CONCEPTO", 20, 95);
+      doc.text("CONCEPTO DE LIQUIDACIÓN", 20, 95);
       doc.setFont("helvetica", "normal");
-      doc.text(selectedPayment.description || "Liquidación de comisiones SaaS", 20, 105);
+      doc.text(selectedPayment.description || "Comisiones devengadas por ventas SaaS", 20, 105);
       
-      // Cuadro de Total
-      doc.setFillColor(240, 240, 240);
+      // Cuadro de Total resaltado
+      doc.setFillColor(245, 247, 249);
       doc.rect(20, 120, 170, 25, 'F');
       
       doc.setFontSize(16);
-      doc.setTextColor(59, 130, 246);
+      doc.setTextColor(0, 150, 136); // Teal Accent (#009688)
       doc.setFont("helvetica", "bold");
-      doc.text("TOTAL PAGADO:", 30, 137);
+      doc.text("TOTAL NETO PAGADO:", 30, 137);
       doc.text(`$${selectedPayment.amount?.toLocaleString() || '0'}`, 180, 137, { align: "right" });
       
-      // Pie de página
+      // Pie de página institucional
       doc.setFontSize(8);
       doc.setTextColor(150);
-      doc.text("Este documento es un comprobante digital generado automáticamente por la plataforma PartnerVerse.", 105, 160, { align: "center" });
+      doc.text("Documento generado automáticamente por el sistema PartnerVerse.", 105, 160, { align: "center" });
+      doc.text("Este recibo tiene validez como soporte contable digital.", 105, 165, { align: "center" });
 
-      // Generación de Blob binario PDF
-      const pdfBlob = doc.output('blob');
-      const url = URL.createObjectURL(pdfBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `recibo-partnerverse-${selectedPayment.id}.pdf`;
-      link.click();
-      URL.revokeObjectURL(url);
+      // Ejecutar descarga física del archivo
+      doc.save(`recibo-partnerverse-${selectedPayment.id}.pdf`);
       
       toast({
-        title: "PDF Generado",
-        description: "El recibo oficial se ha descargado correctamente.",
+        title: "Exportación Exitosa",
+        description: "El recibo PDF ha sido generado y descargado.",
       });
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Error de Exportación",
-        description: "No se pudo generar el archivo PDF en este momento.",
+        title: "Error de Generación",
+        description: "No se pudo procesar el documento PDF.",
       });
     }
   };
@@ -184,7 +182,12 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
-        <Dialog open={!!selectedPayment} onOpenChange={(open) => !open && setSelectedPayment(null)}>
+        <Dialog 
+          open={!!selectedPayment} 
+          onOpenChange={(open) => {
+            if (!open) setSelectedPayment(null);
+          }}
+        >
           <DialogContent className="sm:max-w-[450px]">
             <DialogHeader className="space-y-3 pb-4 border-b">
               <div className="flex items-center gap-2 text-primary">

@@ -151,7 +151,6 @@ function SuperAdminPartnersView() {
   };
 
   const closeDetails = () => {
-    // Limpieza atómica del estado para evitar UI Freeze al cerrar
     setSelectedPartner(null);
   };
 
@@ -216,14 +215,18 @@ function SuperAdminPartnersView() {
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuContent 
+                          align="end" 
+                          className="w-56"
+                          onCloseAutoFocus={(e) => e.preventDefault()} // Fix para prevenir UI Freeze al cerrar
+                        >
                           <DropdownMenuLabel>Gestión de Socio</DropdownMenuLabel>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem 
                             className="gap-2 cursor-pointer"
                             onSelect={(e) => {
                               e.preventDefault();
-                              // Desacoplamiento de eventos para evitar UI Freeze entre Dropdown y Dialog
+                              // Desacoplar apertura del menú para evitar parálisis de foco
                               setTimeout(() => setSelectedPartner(partner), 150);
                             }}
                           >

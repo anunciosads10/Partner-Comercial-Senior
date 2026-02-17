@@ -108,15 +108,20 @@ export default function PaymentsPage() {
       doc.setTextColor(150);
       doc.text("Este documento es un comprobante digital generado automáticamente por la plataforma PartnerVerse.", 105, 160, { align: "center" });
 
-      // Disparo de descarga real
-      doc.save(`recibo-${selectedPayment.id}.pdf`);
+      // Generación de Blob binario PDF
+      const pdfBlob = doc.output('blob');
+      const url = URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `recibo-partnerverse-${selectedPayment.id}.pdf`;
+      link.click();
+      URL.revokeObjectURL(url);
       
       toast({
         title: "PDF Generado",
         description: "El recibo oficial se ha descargado correctamente.",
       });
     } catch (error) {
-      console.error("Error al generar PDF:", error);
       toast({
         variant: "destructive",
         title: "Error de Exportación",
@@ -211,7 +216,7 @@ export default function PaymentsPage() {
             <DialogFooter className="gap-2">
               <Button variant="outline" className="gap-2" onClick={() => window.print()}><Printer className="h-4 w-4" /> Imprimir</Button>
               <Button variant="outline" className="gap-2 text-primary border-primary/20" onClick={handleDownloadPDF}><FileDown className="h-4 w-4" /> PDF</Button>
-              <Button onClick={() => setSelectedPayment(null)}>Cerrar</Button>
+              <Button onClick={() => setSelectedPayment(null)}>Cerrar Ventana</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>

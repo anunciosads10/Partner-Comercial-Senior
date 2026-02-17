@@ -18,6 +18,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
 import { Button } from '../../../components/ui/button';
+import { Badge } from '../../../components/ui/badge';
 import { 
   Dialog, 
   DialogContent, 
@@ -30,6 +31,10 @@ import { Separator } from '../../../components/ui/separator';
 import { useToast } from '../../../hooks/use-toast';
 import { jsPDF } from 'jspdf';
 
+/**
+ * @fileOverview Gestión de Pagos y Liquidaciones.
+ * Implementa exportación profesional a PDF y visualización de transacciones.
+ */
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -54,7 +59,7 @@ export default function PaymentsPage() {
   const { data: payments, isLoading } = useCollection(paymentsRef);
 
   /**
-   * Genera y descarga un recibo PDF profesional utilizando jsPDF.
+   * Genera y descarga un recibo PDF profesional.
    */
   const handleDownloadPDF = () => {
     if (!selectedPayment) return;

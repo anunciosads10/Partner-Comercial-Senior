@@ -35,10 +35,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useToast } from '@/hooks/use-toast';
 
-/**
- * @fileOverview Gestión de Partners con motor de limpieza de UI y creación de nuevos socios.
- */
-
 function PartnerDetailsModal({ partner, open, onClose }) {
   if (!open || !partner) return null;
 
@@ -193,7 +189,7 @@ function CreatePartnerModal({ open, onClose, firestore }) {
               <Label>Nivel (Tier)</Label>
               <Select value={formData.tier} onValueChange={(val) => setFormData({...formData, tier: val})}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectContent className="z-[150]">
                   <SelectItem value="Silver">Silver</SelectItem>
                   <SelectItem value="Gold">Gold</SelectItem>
                   <SelectItem value="Platinum">Platinum</SelectItem>

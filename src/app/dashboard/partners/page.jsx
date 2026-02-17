@@ -1,8 +1,8 @@
 'use client';
 
 import * as React from 'react';
-import { AuthenticatedLayout } from '../../../components/authenticated-layout';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '../../../firebase';
+import { AuthenticatedLayout } from '@/components/authenticated-layout';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { 
   Loader2, 
@@ -13,10 +13,10 @@ import {
   ShieldAlert,
   X
 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
-import { Button } from '../../../components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../../components/ui/table';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -24,11 +24,11 @@ import {
   DropdownMenuLabel, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
-} from '../../../components/ui/dropdown-menu';
-import { Switch } from '../../../components/ui/switch';
-import { Separator } from '../../../components/ui/separator';
-import { updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
-import { useToast } from '../../../hooks/use-toast';
+} from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
+import { Separator } from '@/components/ui/separator';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useToast } from '@/hooks/use-toast';
 
 /**
  * @fileOverview Gestión de Partners con motor de limpieza de UI para prevenir bloqueos de interacción.

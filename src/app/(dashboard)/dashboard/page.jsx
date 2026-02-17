@@ -1,6 +1,7 @@
-'use client';
 /**
- * ARCHIVO NEUTRALIZADO PARA RESOLVER CONFLICTO DE PARALLEL PAGES.
- * La ruta /dashboard se resuelve ahora únicamente desde src/app/dashboard/page.jsx.
- * Se ha eliminado la exportación por defecto para que Next.js ignore este archivo como ruta.
+ * Neutralized to resolve Next.js 15 Parallel Pages conflict.
+ * The primary dashboard route is located at src/app/dashboard/page.jsx.
  */
+export default function NeutralizedPage() {
+  return null;
+}

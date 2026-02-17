@@ -108,7 +108,7 @@ export default function PaymentsPage() {
               <TableBody>
                 {payments && payments.length > 0 ? (
                   payments.map((payment) => (
-                    <TableRow key={payment.id} className="hover:bg-muted/30">
+                    <TableRow key={payment.id} className="hover:bg-muted/30 transition-colors">
                       <TableCell className="font-medium text-xs">
                         {payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('es-CO') : 'N/A'}
                       </TableCell>

@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // -------------------------------------------------------------------------
-    // Funciones de Ayuda (Optimizadas para evitar exceder límites de lectura)
+    // Funciones de Ayuda (Corregidas: Sin 'let', más robustas)
     // -------------------------------------------------------------------------
 
     function isSignedIn() {
@@ -14,18 +14,21 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Obtiene el rol de forma segura
+    // Obtiene el rol de forma segura comprobando existencia
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
 
     function isSuperAdmin() {
-      return isSignedIn() && getUserRole() == 'superadmin';
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             getUserRole() == 'superadmin';
     }
 
     function isAdmin() {
-      let role = getUserRole();
-      return isSignedIn() && (role == 'admin' || role == 'superadmin');
+      return isSignedIn() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+             (getUserRole() == 'admin' || getUserRole() == 'superadmin');
     }
     
     // -------------------------------------------------------------------------
@@ -55,10 +58,14 @@ service cloud.firestore {
     }
     
     // -------------------------------------------------------------------------
-    // Colección Global de Pagos (Optimizada para consultas estáticas de filtros)
+    // Colección Global de Pagos
     // -------------------------------------------------------------------------
     match /payments/{paymentId} {
-      allow read: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
+      // Permite listar si el usuario filtra por su propio partnerId o es SuperAdmin
+      allow read: if isSignedIn() && (
+        (resource.data.partnerId == request.auth.uid) || 
+        isSuperAdmin()
+      );
       allow write: if isSuperAdmin();
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;
     }

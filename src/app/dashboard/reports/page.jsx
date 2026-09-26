@@ -50,17 +50,19 @@ export default function ReportsPage() {
 
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
+  // PROTECCIÓN: Solo inicializa la consulta si el usuario es SuperAdmin
   const paymentsQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid || !userData || userData.role !== 'superadmin') return null;
     return query(collection(firestore, 'payments'), orderBy('paymentDate', 'desc'), limit(100));
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, userData]);
 
   const { data: payments, isLoading: isPaymentsLoading } = useCollection(paymentsQuery);
 
+  // PROTECCIÓN: Solo inicializa la consulta si el usuario es SuperAdmin
   const partnersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !user?.uid || !userData || userData.role !== 'superadmin') return null;
     return collection(firestore, 'partners');
-  }, [firestore, user?.uid]);
+  }, [firestore, user?.uid, userData]);
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 
@@ -83,7 +85,7 @@ export default function ReportsPage() {
     { month: 'Jun', total: 85000 },
   ], []);
 
-  if (isUserLoading || isPaymentsLoading || isPartnersLoading) {
+  if (isUserLoading || (userData?.role === 'superadmin' && (isPaymentsLoading || isPartnersLoading))) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">

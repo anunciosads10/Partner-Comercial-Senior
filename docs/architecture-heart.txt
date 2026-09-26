@@ -1,0 +1,54 @@
+===============================================================================
+               PARTNERVERSE - EL CORAZÓN DE LA ARQUITECTURA SAAS
+===============================================================================
+
+Este documento detalla el núcleo operativo, técnico y de seguridad de la 
+plataforma PartnerVerse, sirviendo como guía de ingeniería para producción.
+
+1. EL NÚCLEO DE LA APLICACIÓN (THE CORE)
+-------------------------------------------------------------------------------
+El "corazón" de PartnerVerse es el SISTEMA DE LIQUIDACIÓN Y RASTREO MULTINIVEL.
+Su objetivo principal es permitir el escalamiento de ventas de múltiples
+plataformas SaaS mediante una red jerárquica de socios comerciales senior,
+garantizando que cada transacción calcule, asigne y pague comisiones de forma
+precisa y segura.
+
+2. ARQUITECTURA DE DATOS (FIRESTORE DE ALTA DISPONIBILILIDAD)
+-------------------------------------------------------------------------------
+La base de datos está diseñada bajo el principio de "Seguridad e Independencia
+de Autorización", estructurada en colecciones globales y subcolecciones:
+
+* /users/{userId}: Guarda las credenciales de perfil e identidad de acceso.
+  Contiene el campo crítico 'role' ('superadmin' o 'admin').
+* /partners/{partnerId}: El perfil comercial del socio. Incluye su Tier
+  (Silver, Gold, Platinum), territorio y configuración de cobro (Nequi, etc.).
+* /saasPlatforms/{platformId}: El catálogo de productos de software. Define
+  las comisiones base y recurrentes del modelo de negocio.
+* /payments/{paymentId}: Historial financiero. Es el libro contable de la app.
+
+3. EL MOTOR DE SEGURIDAD (FIRESTORE SECURITY RULES)
+-------------------------------------------------------------------------------
+El perímetro de seguridad es granular y no depende de filtros en el cliente:
+* Aislamiento por Fila: Los Partners (rol admin) tienen prohibido realizar
+  listados o lecturas globales. Firestore Security Rules valida estáticamente
+  que cada petición incluya la restricción (where('partnerId', '==', auth.uid)).
+* Cortocircuito CEL: Las reglas validan la propiedad del recurso antes de 
+  disparar lecturas externas (get), optimizando la cuota de lectura y evitando
+  errores de denegación en cascada.
+
+4. FLUJO OPERATIVO MULTINIVEL
+-------------------------------------------------------------------------------
+A. Registro e Identidad: El usuario se registra. Si su correo es el máster,
+   obtiene rol 'superadmin'; de lo contrario, inicia como 'admin' (Partner).
+B. Prospección (Rastreo Único): El Partner accede a "Plataformas Disponibles"
+   y genera un enlace dinámico inyectado con su UID.
+C. Liquidación No Bloqueante: Las mutaciones de datos en la interfaz utilizan
+   'non-blocking updates'. La caché local se actualiza al instante para dar
+   una UI ultra-fluida, mientras las operaciones se encolan en segundo plano.
+D. Inteligencia Artificial (GenAI): Integración nativa con Genkit para analizar
+   el rendimiento histórico y alertar proactivamente al SuperAdmin sobre
+   socios en riesgo de abandono (Churn Risk).
+
+===============================================================================
+Desarrollado con Next.js 15 App Router, Genkit, TailwindCSS y Firebase Client SDK.
+===============================================================================

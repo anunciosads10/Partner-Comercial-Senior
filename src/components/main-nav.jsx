@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  UserCheck,
   Percent,
   GitFork,
   CreditCard,
@@ -34,6 +35,7 @@ import { cn } from '../lib/utils';
 
 const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/users', label: 'Usuarios', icon: UserCheck, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/platforms', label: 'Plataformas SaaS', icon: Puzzle, roles: ['superadmin'] },
   { href: '/dashboard/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },

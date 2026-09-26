@@ -123,7 +123,7 @@ export function useMemoFirebase(factory, deps) {
   const memoized = useMemo(factory, deps);
   
   if(typeof memoized !== 'object' || memoized === null) return memoized;
-  memoized.__memo = true;
+  (memoized as any).__memo = true;
   
   return memoized;
 }

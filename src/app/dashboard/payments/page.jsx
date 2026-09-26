@@ -47,7 +47,7 @@ export default function PaymentsPage() {
     if (!firestore || !userData || !user?.uid) return null;
     
     // El SuperAdmin puede ver todos los pagos de la plataforma
-    if (userData.role === 'superadmin') {
+    if (userData.role === 'superadmin' || userData.role === 'admin') {
       return query(
         collection(firestore, 'payments'), 
         orderBy('paymentDate', 'desc')

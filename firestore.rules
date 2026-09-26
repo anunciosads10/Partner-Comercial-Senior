@@ -61,10 +61,10 @@ service cloud.firestore {
     // Colección Global de Pagos
     // -------------------------------------------------------------------------
     match /payments/{paymentId} {
-      // Permite listar si el usuario filtra por su propio partnerId o es SuperAdmin
+      // Permite listar si el usuario filtra por su propio partnerId o si tiene rol Admin / SuperAdmin
       allow read: if isSignedIn() && (
         (resource.data.partnerId == request.auth.uid) || 
-        isSuperAdmin()
+        isAdmin()
       );
       allow write: if isSuperAdmin();
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;

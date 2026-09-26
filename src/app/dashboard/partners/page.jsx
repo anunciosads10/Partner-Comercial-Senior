@@ -216,13 +216,33 @@ function CreatePartnerModal({ open, onClose, firestore }) {
 function AdminPartnersView({ userData }) {
   const { user } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
   
+  const [selectedPlatform, setSelectedPlatform] = React.useState(null);
+  const [generatedLink, setGeneratedLink] = React.useState('');
+
   const platformsRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'saasPlatforms');
   }, [firestore, user?.uid]);
 
   const { data: platforms, isLoading } = useCollection(platformsRef);
+
+  const handleOpenLinkModal = (platform) => {
+    setSelectedPlatform(platform);
+    const domain = typeof window !== 'undefined' ? window.location.origin : 'https://partnerverse.com';
+    setGeneratedLink(`${domain}/join?ref=${user?.uid || 'partner'}&platform=${platform.id || 'saas'}`);
+  };
+
+  const handleCopyLink = () => {
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(generatedLink);
+      toast({
+        title: "¡Enlace Copiado!",
+        description: "El enlace promocional único ha sido guardado en el portapapeles.",
+      });
+    }
+  };
 
   if (isLoading) {
     return (
@@ -270,7 +290,14 @@ function AdminPartnersView({ userData }) {
                     <TableCell className="font-black text-sm">{platform.name}</TableCell>
                     <TableCell className="text-primary font-bold">{platform.baseCommission}%</TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="font-bold">Ver Enlace</Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="font-bold text-primary hover:bg-primary/5"
+                        onClick={() => handleOpenLinkModal(platform)}
+                      >
+                        Ver Enlace
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -279,6 +306,61 @@ function AdminPartnersView({ userData }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Modal interactivo de Enlace de Afiliado para Socios */}
+      {selectedPlatform && (
+        <div 
+          className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
+          onClick={() => setSelectedPlatform(null)}
+        >
+          <div 
+            className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <ExternalLink className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-black uppercase tracking-tight text-primary">Tu Enlace de Afiliado</h2>
+              </div>
+              <button 
+                onClick={() => setSelectedPlatform(null)} 
+                className="text-muted-foreground hover:bg-muted rounded-full p-2 transition-colors"
+              >
+                <X className="h-4 w-4"/>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <p className="text-xs text-muted-foreground font-medium">
+                Usa esta URL única para registrar clientes. Las ventas completadas a través de este enlace acumularán automáticamente comisiones del <span className="font-bold text-primary">{selectedPlatform.baseCommission}%</span> en tu billetera.
+              </p>
+              
+              <div className="space-y-1">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase">Ecosistema SaaS seleccionado</span>
+                <p className="text-sm font-black uppercase text-gray-800">{selectedPlatform.name}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Enlace de Seguimiento para Compartir</Label>
+                <div className="flex gap-2">
+                  <Input 
+                    readOnly 
+                    value={generatedLink} 
+                    className="font-mono text-xs bg-muted/30 select-all"
+                  />
+                  <Button onClick={handleCopyLink} className="font-bold shrink-0">
+                    Copiar URL
+                  </Button>
+                </div>
+              </div>
+            </div>
+            <div className="flex justify-end p-4 border-t bg-muted/10">
+              <Button variant="outline" size="sm" onClick={() => setSelectedPlatform(null)}>
+                Cerrar Ventana
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

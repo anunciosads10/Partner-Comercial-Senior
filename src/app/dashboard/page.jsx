@@ -38,9 +38,10 @@ export default function DashboardPage() {
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
   const partnersQuery = useMemoFirebase(() => {
-    if (!firestore || !user?.uid) return null;
+    if (!firestore || !userData || !user?.uid) return null;
+    if (userData.role !== 'admin' && userData.role !== 'superadmin') return null;
     return collection(firestore, 'partners');
-  }, [firestore, user?.uid]);
+  }, [firestore, userData, user?.uid]);
 
   const { data: partners, isLoading: isPartnersLoading } = useCollection(partnersQuery);
 

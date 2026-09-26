@@ -55,19 +55,11 @@ service cloud.firestore {
     }
     
     // -------------------------------------------------------------------------
-    // Colección Global de Pagos (Consolidada para evitar errores de 'list')
+    // Colección Global de Pagos (Optimizada para consultas estáticas de filtros)
     // -------------------------------------------------------------------------
     match /payments/{paymentId} {
-      // Priorizamos la validación de partnerId para evitar lecturas externas en partners
-      allow read: if isSignedIn() && (
-        (resource != null && resource.data.partnerId == request.auth.uid) || 
-        isSuperAdmin()
-      );
-      
-      // Solo SuperAdmin puede crear o modificar el historial global de pagos
+      allow read: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
       allow write: if isSuperAdmin();
-      
-      // Permitir creación si el partnerId coincide (usado en registros iniciales)
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;
     }
     

@@ -130,6 +130,7 @@ export default function RegisterPage() {
             confirmPassword: ''
         });
 
+        await new Promise(resolve => setTimeout(resolve, 800));
         router.push('/dashboard');
       }
     } catch (err) {

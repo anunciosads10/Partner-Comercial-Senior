@@ -31,7 +31,10 @@ export function FirebaseErrorListener() {
 
   // On re-render, if an error exists in state, throw it.
   if (error) {
-    throw error;
+    if (process.env.NODE_ENV === 'development') {
+      throw error;
+    }
+    console.warn('Firestore Permission Notice (suppressed in production):', error);
   }
 
   // This component renders nothing.

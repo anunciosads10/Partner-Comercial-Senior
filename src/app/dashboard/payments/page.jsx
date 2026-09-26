@@ -23,6 +23,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 import { jsPDF } from 'jspdf';
 
+/**
+ * @fileOverview Historial de Pagos y Liquidaciones.
+ * Implementa filtrado de seguridad por partnerId y vista global para SuperAdmin.
+ */
 export default function PaymentsPage() {
   const { user } = useUser();
   const firestore = useFirestore();
@@ -37,14 +41,20 @@ export default function PaymentsPage() {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user?.uid]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
   const paymentsRef = useMemoFirebase(() => {
     if (!firestore || !userData || !user?.uid) return null;
     
+    // El SuperAdmin puede ver todos los pagos de la plataforma
     if (userData.role === 'superadmin') {
-      return query(collection(firestore, 'payments'), orderBy('paymentDate', 'desc'));
+      return query(
+        collection(firestore, 'payments'), 
+        orderBy('paymentDate', 'desc')
+      );
     }
+    
+    // Los partners normales solo pueden listar sus propios pagos (Seguridad Firestore)
     return query(
       collection(firestore, 'payments'), 
       where('partnerId', '==', user.uid),
@@ -52,7 +62,7 @@ export default function PaymentsPage() {
     );
   }, [firestore, userData, user?.uid]);
 
-  const { data: rawPayments, isLoading } = useCollection(paymentsRef);
+  const { data: rawPayments, isLoading: isPaymentsLoading } = useCollection(paymentsRef);
 
   const filteredPayments = React.useMemo(() => {
     if (!rawPayments) return [];
@@ -61,7 +71,8 @@ export default function PaymentsPage() {
         payment.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         payment.id?.toLowerCase().includes(searchQuery.toLowerCase());
       
-      const matchesStatus = statusFilter === 'all' || (payment.status?.toLowerCase() === statusFilter.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || 
+        (payment.status?.toLowerCase() === statusFilter.toLowerCase());
       
       return matchesSearch && matchesStatus;
     });
@@ -109,7 +120,7 @@ export default function PaymentsPage() {
     }
   };
 
-  if (isLoading) {
+  if (isUserLoading || isPaymentsLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">
@@ -134,19 +145,20 @@ export default function PaymentsPage() {
           </Button>
         </div>
 
+        {/* Barra de Búsqueda y Filtros */}
         <div className="flex flex-col md:flex-row gap-4 items-center bg-white p-4 rounded-xl border border-primary/10 shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input 
               placeholder="Buscar por ID o descripción..." 
-              className="pl-10"
+              className="pl-10 shadow-sm border-primary/10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
           <div className="flex gap-2 w-full md:w-auto">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full md:w-[180px]">
+              <SelectTrigger className="w-full md:w-[180px] shadow-sm">
                 <Filter className="w-3 h-3 mr-2 opacity-50" />
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
@@ -212,7 +224,7 @@ export default function PaymentsPage() {
                 ) : (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center py-20 italic text-muted-foreground">
-                      No se encontraron registros que coincidan con los filtros.
+                      No se encontraron registros de pago.
                     </TableCell>
                   </TableRow>
                 )}
@@ -221,6 +233,7 @@ export default function PaymentsPage() {
           </CardContent>
         </Card>
 
+        {/* Modal de Detalle de Recibo */}
         {selectedPayment && (
           <div 
             className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4" 

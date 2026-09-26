@@ -3,7 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     // -------------------------------------------------------------------------
-    // Funciones de Ayuda (Sintaxis corregida para Firebase CEL)
+    // Funciones de Ayuda (Optimizadas para evitar exceder límites de lectura)
     // -------------------------------------------------------------------------
 
     function isSignedIn() {
@@ -14,7 +14,7 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Obtiene el rol directamente. Si el documento no existe, la regla fallará (comportamiento deseado)
+    // Obtiene el rol de forma segura
     function getUserRole() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
     }
@@ -24,37 +24,30 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && (getUserRole() == 'admin' || getUserRole() == 'superadmin');
+      let role = getUserRole();
+      return isSignedIn() && (role == 'admin' || role == 'superadmin');
     }
     
     // -------------------------------------------------------------------------
-    // Reglas para la colección de Usuarios (Roles)
+    // Reglas para la colección de Usuarios
     // -------------------------------------------------------------------------
     
     match /users/{userId} {
-      // El usuario DEBE poder leer su propio documento para que la app cargue el rol
       allow get: if isOwner(userId) || isAdmin();
-      
-      // Permitir crear su propio perfil durante el registro
       allow create: if isOwner(userId);
-      
-      // Solo el superadmin gestiona permisos
       allow update, delete: if isSuperAdmin();
       allow list: if isAdmin();
     }
 
     // -------------------------------------------------------------------------
-    // Reglas para Partners y sus Subcolecciones (Silos de datos)
+    // Reglas para Partners y sus Subcolecciones
     // -------------------------------------------------------------------------
 
     match /partners/{partnerId} {
-      // Acceso al documento principal del partner
       allow get: if isOwner(partnerId) || isAdmin();
       allow list: if isAdmin();
       allow create, update, delete: if isOwner(partnerId) || isSuperAdmin();
 
-      // Regla recursiva para todas las subcolecciones (commissions, notifications)
-      // Esto simplifica el código y mantiene la seguridad por partnerId
       match /{allSubcollections=**} {
         allow read: if isOwner(partnerId) || isAdmin();
         allow write: if isOwner(partnerId) || isSuperAdmin();
@@ -62,30 +55,28 @@ service cloud.firestore {
     }
     
     // -------------------------------------------------------------------------
-    // Colección Global de Pagos
+    // Colección Global de Pagos (Consolidada para evitar errores de 'list')
     // -------------------------------------------------------------------------
     match /payments/{paymentId} {
-      // SuperAdmin puede leer y escribir cualquier pago.
-      allow read, write: if isSuperAdmin();
+      // Priorizamos la validación de partnerId para evitar lecturas externas en partners
+      allow read: if isSignedIn() && (
+        (resource != null && resource.data.partnerId == request.auth.uid) || 
+        isSuperAdmin()
+      );
       
-      // Los partners pueden leer y listar sus propios pagos mediante cortocircuito para evitar errores de rol
-      allow get: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
-      allow list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
-
-      // Los partners pueden crear sus propios registros de pago de forma segura
+      // Solo SuperAdmin puede crear o modificar el historial global de pagos
+      allow write: if isSuperAdmin();
+      
+      // Permitir creación si el partnerId coincide (usado en registros iniciales)
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;
     }
     
     // -------------------------------------------------------------------------
-    // Colección Global de Comisiones (para Reportes)
+    // Otras Colecciones Globales
     // -------------------------------------------------------------------------
     match /commissions/{commissionId} {
       allow read, write: if isSuperAdmin();
     }
-
-    // -------------------------------------------------------------------------
-    // Configuraciones Globales (Lectura para usuarios, escritura para Admin)
-    // -------------------------------------------------------------------------
 
     match /commission_schemes/{schemeId} {
       allow read: if isSignedIn();
@@ -103,9 +94,7 @@ service cloud.firestore {
     }
     
     match /settings/{settingId} {
-      // Admins (partners) pueden LEER la configuración para ver los ciclos de pago.
       allow read: if isAdmin();
-      // Solo SuperAdmin puede ESCRIBIR (modificar) la configuración.
       allow write: if isSuperAdmin();
     }
   }

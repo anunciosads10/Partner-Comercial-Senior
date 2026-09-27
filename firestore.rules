@@ -7,24 +7,27 @@ service cloud.firestore {
     function isSuperAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == 'superadmin'; }
     function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserRole() == 'admin' || getUserRole() == 'superadmin'); }
 
+    // Usuarios: lectura pública para resolución del código de afiliados; escrituras blindadas
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      allow get, list: if true;
       allow create: if isOwner(userId);
       allow update, delete: if isSuperAdmin();
-      allow list: if isAdmin();
     }
 
     match /partners/{partnerId} {
-      allow get: if true;
-      allow read: if isOwner(partnerId) || isSuperAdmin();
-      allow list: if isSuperAdmin();
-      allow create: if isOwner(partnerId) || isSuperAdmin();
-      allow update: if isOwner(partnerId) || isSuperAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink']);
+      allow get, list: if true;
+      allow create: if true;
+      allow update: if isOwner(partnerId) || isSuperAdmin() || 
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['signupsFromLink']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCode']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink', 'referralCode']);
       allow delete: if isSuperAdmin();
 
       match /notifications/{notificationId} {
         allow read: if isOwner(partnerId) || isSuperAdmin();
-        allow create: if isSignedIn();
+        allow create: if true;
         allow update, delete: if isOwner(partnerId) || isSuperAdmin();
       }
 
@@ -34,17 +37,11 @@ service cloud.firestore {
       }
     }
 
-    // Reglas estrictas: Admin NO puede poner status 'activo' ni fijar fechas de activación
     match /referrals/{referralId} {
       allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
-      allow create: if isSignedIn() && (
-        isSuperAdmin() || (
-          request.resource.data.partnerId == request.auth.uid &&
-          (request.resource.data.status == 'registrado' || request.resource.data.status == 'pendiente_activacion') &&
-          !('activatedAt' in request.resource.data) &&
-          !('recurringEndsAt' in request.resource.data)
-        )
-      );
+      allow create: if isSuperAdmin() || 
+                       (isSignedIn() && request.resource.data.partnerId == request.auth.uid && (request.resource.data.status == 'registrado' || request.resource.data.status == 'pendiente_activacion') && !('activatedAt' in request.resource.data) && !('recurringEndsAt' in request.resource.data)) ||
+                       (request.resource.data.externalUserId != null && request.resource.data.status == 'registrado');
       allow update: if isSignedIn() && (
         isSuperAdmin() || (
           resource.data.partnerId == request.auth.uid &&
@@ -57,13 +54,11 @@ service cloud.firestore {
       allow delete: if isSuperAdmin();
     }
 
-    // Transacciones: SOLO SuperAdmin puede crear, escribir o aprobar
     match /transactions/{transactionId} {
       allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
       allow write, create, update, delete: if isSuperAdmin();
     }
 
-    // Activaciones: Admin solo puede crear con status 'enviado'. NO puede verificar ni rechazar.
     match /activations/{activationId} {
       allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
       allow create: if isSignedIn() && (

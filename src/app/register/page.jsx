@@ -132,6 +132,16 @@ export default function RegisterPage() {
         if (referredByCode) newUserData.referredByCode = referredByCode;
 
         await setDoc(userRef, newUserData);
+        await setDoc(doc(firestore, 'partners', user.uid), {
+          name: formData.name,
+          email: user.email,
+          referralCode: user.uid.substring(0, 8).toUpperCase(),
+          status: 'Active',
+          tier: 'Silver',
+          clicks: 0,
+          signupsFromLink: 0,
+          joinDate: new Date().toISOString()
+        }, { merge: true });
 
         if (referredByCode && firestore) {
           try {

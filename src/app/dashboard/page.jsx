@@ -39,7 +39,7 @@ export default function DashboardPage() {
 
   const partnersQuery = useMemoFirebase(() => {
     if (!firestore || !userData || !user?.uid) return null;
-    if (userData.role !== 'admin' && userData.role !== 'superadmin') return null;
+    if (userData.role !== 'superadmin') return null;
     return collection(firestore, 'partners');
   }, [firestore, userData, user?.uid]);
 
@@ -110,9 +110,11 @@ export default function DashboardPage() {
           {isSuperAdmin && partners && <AtRiskPartners partners={partners} />}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-1">
-          <PartnerRankings partners={partners || []} />
-        </div>
+        {isSuperAdmin && (
+          <div className="grid gap-6 lg:grid-cols-1">
+            <PartnerRankings partners={partners || []} />
+          </div>
+        )}
       </div>
     </AuthenticatedLayout>
   );

@@ -1,40 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() { return request.auth != null; }
+    function isOwner(userId) { return isSignedIn() && request.auth.uid == userId; }
+    function getUserRole() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role; }
+    function isSuperAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == 'superadmin'; }
+    function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserRole() == 'admin' || getUserRole() == 'superadmin'); }
 
-    // -------------------------------------------------------------------------
-    // Funciones de Ayuda (Corregidas: Sin 'let', más robustas)
-    // -------------------------------------------------------------------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Obtiene el rol de forma segura comprobando existencia
-    function getUserRole() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
-    }
-
-    function isSuperAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             getUserRole() == 'superadmin';
-    }
-
-    function isAdmin() {
-      return isSignedIn() && 
-             exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-             (getUserRole() == 'admin' || getUserRole() == 'superadmin');
-    }
-    
-    // -------------------------------------------------------------------------
-    // Reglas para la colección de Usuarios
-    // -------------------------------------------------------------------------
-    
     match /users/{userId} {
       allow get: if isOwner(userId) || isAdmin();
       allow create: if isOwner(userId);
@@ -42,59 +14,76 @@ service cloud.firestore {
       allow list: if isAdmin();
     }
 
-    // -------------------------------------------------------------------------
-    // Reglas para Partners y sus Subcolecciones
-    // -------------------------------------------------------------------------
-
     match /partners/{partnerId} {
-      allow get: if isOwner(partnerId) || isAdmin();
-      allow list: if isAdmin();
-      allow create, update, delete: if isOwner(partnerId) || isSuperAdmin();
+      allow get: if true;
+      allow read: if isOwner(partnerId) || isSuperAdmin();
+      allow list: if isSuperAdmin();
+      allow create: if isOwner(partnerId) || isSuperAdmin();
+      allow update: if isOwner(partnerId) || isSuperAdmin() || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink']);
+      allow delete: if isSuperAdmin();
+
+      match /notifications/{notificationId} {
+        allow read: if isOwner(partnerId) || isSuperAdmin();
+        allow create: if isSignedIn();
+        allow update, delete: if isOwner(partnerId) || isSuperAdmin();
+      }
 
       match /{allSubcollections=**} {
-        allow read: if isOwner(partnerId) || isAdmin();
+        allow read: if isOwner(partnerId) || isSuperAdmin();
         allow write: if isOwner(partnerId) || isSuperAdmin();
       }
     }
-    
-    // -------------------------------------------------------------------------
-    // Colección Global de Pagos
-    // -------------------------------------------------------------------------
-    match /payments/{paymentId} {
-      // Permite listar si el usuario filtra por su propio partnerId o si tiene rol Admin / SuperAdmin
-      allow read: if isSignedIn() && (
-        (resource.data.partnerId == request.auth.uid) || 
-        isAdmin()
+
+    // Reglas estrictas: Admin NO puede poner status 'activo' ni fijar fechas de activación
+    match /referrals/{referralId} {
+      allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || (
+          request.resource.data.partnerId == request.auth.uid &&
+          (request.resource.data.status == 'registrado' || request.resource.data.status == 'pendiente_activacion') &&
+          !('activatedAt' in request.resource.data) &&
+          !('recurringEndsAt' in request.resource.data)
+        )
       );
+      allow update: if isSignedIn() && (
+        isSuperAdmin() || (
+          resource.data.partnerId == request.auth.uid &&
+          request.resource.data.partnerId == request.auth.uid &&
+          request.resource.data.status != 'activo' &&
+          (!('activatedAt' in request.resource.data) || request.resource.data.activatedAt == resource.data.activatedAt) &&
+          (!('recurringEndsAt' in request.resource.data) || request.resource.data.recurringEndsAt == resource.data.recurringEndsAt)
+        )
+      );
+      allow delete: if isSuperAdmin();
+    }
+
+    // Transacciones: SOLO SuperAdmin puede crear, escribir o aprobar
+    match /transactions/{transactionId} {
+      allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
+      allow write, create, update, delete: if isSuperAdmin();
+    }
+
+    // Activaciones: Admin solo puede crear con status 'enviado'. NO puede verificar ni rechazar.
+    match /activations/{activationId} {
+      allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
+      allow create: if isSignedIn() && (
+        isSuperAdmin() || (
+          request.resource.data.partnerId == request.auth.uid &&
+          request.resource.data.status == 'enviado'
+        )
+      );
+      allow update, delete: if isSuperAdmin();
+    }
+
+    match /payments/{paymentId} {
+      allow read: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
       allow write: if isSuperAdmin();
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;
     }
-    
-    // -------------------------------------------------------------------------
-    // Otras Colecciones Globales
-    // -------------------------------------------------------------------------
-    match /commissions/{commissionId} {
-      allow read, write: if isSuperAdmin();
-    }
-
-    match /commission_schemes/{schemeId} {
-      allow read: if isSignedIn();
-      allow write: if isSuperAdmin();
-    }
-
-    match /rules/{ruleId} {
-      allow read: if isSignedIn();
-      allow write: if isSuperAdmin();
-    }
-    
-    match /saasPlatforms/{saasPlatformId} {
-      allow read: if isSignedIn();
-      allow write: if isSuperAdmin();
-    }
-    
-    match /settings/{settingId} {
-      allow read: if isAdmin();
-      allow write: if isSuperAdmin();
-    }
+    match /commissions/{id} { allow read, write: if isSuperAdmin(); }
+    match /commission_schemes/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
+    match /rules/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
+    match /saasPlatforms/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
+    match /settings/{id} { allow read, write: if isSuperAdmin(); }
   }
 }

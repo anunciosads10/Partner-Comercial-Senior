@@ -114,12 +114,36 @@ export default function RegisterPage() {
         const role = formData.email === 'alexsuperadmin@gmail.com' ? 'superadmin' : 'admin';
         
         const userRef = doc(firestore, 'users', user.uid);
-        await setDoc(userRef, {
+        let referredByCode = null;
+        try {
+          const affStored = localStorage.getItem('partnerverse_aff_code');
+          if (affStored) {
+            const parsed = JSON.parse(affStored);
+            if (parsed.expiresAt && Date.now() < parsed.expiresAt) referredByCode = parsed.code;
+          }
+        } catch {}
+
+        const newUserData = {
           uid: user.uid,
           name: formData.name,
           email: user.email,
           role: role,
-        });
+        };
+        if (referredByCode) newUserData.referredByCode = referredByCode;
+
+        await setDoc(userRef, newUserData);
+
+        if (referredByCode && firestore) {
+          try {
+            const { query, where, getDocs, updateDoc, increment } = await import('firebase/firestore');
+            const snap = await getDocs(query(collection(firestore, 'partners'), where('referralCode', '==', referredByCode)));
+            if (!snap.empty) {
+              await updateDoc(doc(firestore, 'partners', snap.docs[0].id), {
+                signupsFromLink: increment(1)
+              });
+            }
+          } catch {}
+        }
         
         toast({ title: "Cuenta creada", description: "Bienvenido a PartnerVerse." });
         

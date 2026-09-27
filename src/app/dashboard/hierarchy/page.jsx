@@ -1,19 +1,18 @@
 'use client';
 
 import * as React from 'react';
+import { useRouter } from 'next/navigation';
 import { AuthenticatedLayout } from '../../../components/authenticated-layout';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '../../../firebase';
-import { collection } from 'firebase/firestore';
-import { GitFork, Users, Loader2, AlertCircle, Search, Filter, Globe } from 'lucide-react';
+import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '../../../firebase';
+import { collection, doc } from 'firebase/firestore';
+import { GitFork, Users, Loader2, AlertCircle, Search, Filter, Globe, ShieldAlert } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../../../components/ui/card';
 import { Badge } from '../../../components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '../../../components/ui/alert';
 import { Input } from '../../../components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
+import { Button } from '../../../components/ui/button';
 
-/**
- * Componente funcional para renderizar un nodo de partner en la jerarquía.
- */
 function PartnerNode({ partner, depth = 0 }) {
   if (!partner) return null;
 
@@ -50,26 +49,40 @@ function PartnerNode({ partner, depth = 0 }) {
   );
 }
 
-/**
- * @fileOverview Visualización de la red jerárquica de Partners con búsqueda y filtros.
- */
 export default function HierarchyPage() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
-  // Estados de búsqueda y filtrado
   const [searchQuery, setSearchQuery] = React.useState('');
   const [tierFilter, setTierFilter] = React.useState('all');
   const [countryFilter, setCountryFilter] = React.useState('all');
 
-  const partnersRef = useMemoFirebase(() => {
+  const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return collection(firestore, 'partners');
+    return doc(firestore, 'users', user.uid);
   }, [firestore, user?.uid]);
 
-  const { data: partners, isLoading, error } = useCollection(partnersRef);
+  const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // Obtener países únicos para el filtro
+  const isSuperAdmin = userData?.role === 'superadmin';
+
+  const partnersRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid || !isSuperAdmin) return null;
+    return collection(firestore, 'partners');
+  }, [firestore, user?.uid, isSuperAdmin]);
+
+  const { data: partners, isLoading: isPartnersLoading, error } = useCollection(partnersRef);
+
+  React.useEffect(() => {
+    if (!isUserLoading && userData && !isSuperAdmin) {
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [isUserLoading, userData, isSuperAdmin, router]);
+
   const countries = React.useMemo(() => {
     if (!partners) return [];
     return Array.from(new Set(partners.map(p => p.pais).filter(Boolean))).sort();
@@ -78,7 +91,6 @@ export default function HierarchyPage() {
   const hierarchy = React.useMemo(() => {
     if (!partners || partners.length === 0) return [];
     
-    // Primero filtramos la lista plana
     const filteredList = partners.filter(p => {
       const matchesSearch = !searchQuery || 
         p.name?.toLowerCase().includes(searchQuery.toLowerCase()) || 
@@ -107,11 +119,46 @@ export default function HierarchyPage() {
     return roots;
   }, [partners, searchQuery, tierFilter, countryFilter]);
 
+  const isLoading = isUserLoading || (isSuperAdmin && isPartnersLoading);
+
   if (isLoading) {
     return (
       <AuthenticatedLayout>
         <div className="flex items-center justify-center h-64">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </AuthenticatedLayout>
+    );
+  }
+
+  if (!isSuperAdmin) {
+    return (
+      <AuthenticatedLayout>
+        <div className="flex items-center justify-center min-h-[55vh]">
+          <Card className="max-w-md w-full border-primary/20 shadow-lg text-center p-6">
+            <CardHeader className="flex flex-col items-center gap-3 pb-2">
+              <div className="p-3 bg-rose-50 text-rose-600 rounded-full border border-rose-200">
+                <ShieldAlert className="h-8 w-8" />
+              </div>
+              <CardTitle className="text-xl font-black uppercase text-slate-800">
+                Acceso Restringido
+              </CardTitle>
+              <CardDescription className="text-xs">
+                La vista de red jerárquica multinivel está reservada exclusivamente para Super Administradores.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-4">
+              <p className="text-[11px] text-muted-foreground">
+                Serás redirigido al Panel Principal en unos momentos...
+              </p>
+              <Button 
+                onClick={() => router.push('/dashboard')} 
+                className="font-bold w-full"
+              >
+                Volver al Panel Principal
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </AuthenticatedLayout>
     );
@@ -131,7 +178,6 @@ export default function HierarchyPage() {
           </div>
         </div>
 
-        {/* Barra de Búsqueda y Filtros */}
         <div className="flex flex-col md:flex-row gap-4 bg-white p-4 rounded-xl border border-primary/10 shadow-sm">
           <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />

@@ -220,7 +220,18 @@ function AdminPartnersView({ userData }) {
   
   const [selectedPlatform, setSelectedPlatform] = React.useState(null);
   const [generatedLink, setGeneratedLink] = React.useState('');
+  const [copied, setCopied] = React.useState(false);
 
+  // Obtener datos del socio (referralCode y plataformas afiliadas)
+  const partnerDocRef = useMemoFirebase(() => {
+    if (!firestore || !user?.uid) return null;
+    return doc(firestore, 'partners', user.uid);
+  }, [firestore, user?.uid]);
+
+  const { data: partnerData } = useDoc(partnerDocRef);
+  const partnerCode = partnerData?.referralCode || user?.uid?.substring(0, 8).toUpperCase() || 'PARTNER';
+
+  // Catálogo de plataformas SaaS
   const platformsRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
     return collection(firestore, 'saasPlatforms');
@@ -228,21 +239,69 @@ function AdminPartnersView({ userData }) {
 
   const { data: platforms, isLoading } = useCollection(platformsRef);
 
+  // Gestión de múltiples plataformas afiliadas por socio
+  const affiliatedPlatforms = React.useMemo(() => {
+    if (partnerData?.affiliatedPlatforms && Array.isArray(partnerData.affiliatedPlatforms)) {
+      return partnerData.affiliatedPlatforms;
+    }
+    return platforms?.map(p => p.id) || [];
+  }, [partnerData, platforms]);
+
+  const handleToggleAffiliation = (platformId, platformName) => {
+    if (!partnerDocRef) return;
+    const isAffiliated = affiliatedPlatforms.includes(platformId);
+    const updated = isAffiliated 
+      ? affiliatedPlatforms.filter(id => id !== platformId)
+      : [...affiliatedPlatforms, platformId];
+
+    updateDocumentNonBlocking(partnerDocRef, {
+      affiliatedPlatforms: updated
+    });
+
+    toast({
+      title: isAffiliated ? "Afiliación Pausada" : "¡Plataforma Afiliada!",
+      description: isAffiliated 
+        ? `Has pausado tu afiliación a ${platformName}.` 
+        : `Ya estás afiliado a ${platformName}. Tus comisiones recurrentes están activas.`,
+    });
+  };
+
+  // Abrir modal "Tu Enlace de Afiliado" con URL única dinámica
   const handleOpenLinkModal = (platform) => {
     setSelectedPlatform(platform);
-    const domain = typeof window !== 'undefined' ? window.location.origin : 'https://partnerverse.com';
-    setGeneratedLink(`${domain}/join?ref=${user?.uid || 'partner'}&platform=${platform.id || 'saas'}`);
+    setCopied(false);
+    const cleanDomain = platform.domain
+      ? platform.domain.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '')
+      : '';
+    const host = cleanDomain || (platform.slug ? `${platform.slug}.app` : `${platform.name?.toLowerCase().replace(/[^a-z0-9]/g, '')}.app`) || 'menfy.app';
+    const dynamicUrl = `https://${host}/aff/${partnerCode}`;
+    setGeneratedLink(dynamicUrl);
   };
 
   const handleCopyLink = () => {
     if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(generatedLink);
+      setCopied(true);
       toast({
         title: "¡Enlace Copiado!",
-        description: "El enlace promocional único ha sido guardado en el portapapeles.",
+        description: "El enlace de seguimiento único ha sido guardado en el portapapeles.",
       });
+      setTimeout(() => setCopied(false), 2000);
     }
   };
+
+    // Métricas reactivas y específicas según el SaaS seleccionado en el modal
+  const platformClicks = selectedPlatform 
+    ? (partnerData?.platformMetrics?.[selectedPlatform.id]?.clicks ?? (selectedPlatform.id === 'menfy' || selectedPlatform.name?.toLowerCase().includes('menfy') ? (partnerData?.clicks || 0) : 0))
+    : 0;
+
+  const platformSignups = selectedPlatform 
+    ? (partnerData?.platformMetrics?.[selectedPlatform.id]?.signups ?? (selectedPlatform.id === 'menfy' || selectedPlatform.name?.toLowerCase().includes('menfy') ? (partnerData?.signupsFromLink || 0) : 0))
+    : 0;
+
+  const platformConversion = platformClicks > 0 
+    ? ((platformSignups / platformClicks) * 100).toFixed(1) 
+    : '0.0';
 
   if (isLoading) {
     return (
@@ -255,6 +314,7 @@ function AdminPartnersView({ userData }) {
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="grid gap-6 md:grid-cols-3">
+        {/* Tarjeta Mi Estatus */}
         <Card className="md:col-span-1 border-primary/10 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Mi Estatus</CardTitle>
@@ -262,65 +322,100 @@ function AdminPartnersView({ userData }) {
           <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Nivel:</span>
-              <Badge variant="secondary" className="font-bold">{userData?.tier || 'Silver'}</Badge>
+              <Badge variant="secondary" className="font-bold">{partnerData?.tier || userData?.tier || 'Silver'}</Badge>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Territorio:</span>
-              <span className="text-sm font-bold">{userData?.pais || 'Global'}</span>
+              <span className="text-sm font-bold">{partnerData?.pais || userData?.pais || 'Global'}</span>
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t text-xs">
+              <span className="text-muted-foreground font-semibold">Código de Afiliado:</span>
+              <span className="font-mono font-bold text-primary">{partnerCode}</span>
             </div>
           </CardContent>
         </Card>
 
+        {/* Tarjeta Plataformas Disponibles y Múltiple Afiliación */}
         <Card className="md:col-span-2 border-primary/10 shadow-sm">
           <CardHeader>
             <CardTitle className="text-lg">Plataformas Disponibles</CardTitle>
+            <CardDescription>
+              Selecciona y gestiona tus aplicaciones SaaS asociadas. Cada una cuenta con su propio porcentaje de comisión recurrente y enlace de seguimiento.
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead>SaaS</TableHead>
-                  <TableHead>Comisión</TableHead>
+                  <TableHead>Comisión Recurrente</TableHead>
+                  <TableHead>Afiliación</TableHead>
                   <TableHead className="text-right">Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {platforms?.map((platform) => (
-                  <TableRow key={platform.id} className="hover:bg-muted/20">
-                    <TableCell className="font-black text-sm">{platform.name}</TableCell>
-                    <TableCell className="text-primary font-bold">{platform.baseCommission}%</TableCell>
-                    <TableCell className="text-right">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="font-bold text-primary hover:bg-primary/5"
-                        onClick={() => handleOpenLinkModal(platform)}
-                      >
-                        Ver Enlace
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {platforms?.map((platform) => {
+                  const isAffiliated = affiliatedPlatforms.includes(platform.id);
+                  return (
+                    <TableRow key={platform.id} className="hover:bg-muted/20">
+                      <TableCell>
+                        <div className="flex flex-col">
+                          <span className="font-black text-sm uppercase">{platform.name}</span>
+                          <span className="text-[10px] text-muted-foreground font-mono">{platform.slug || platform.id}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-primary font-bold text-sm">
+                        {platform.baseCommission || 30}%
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Switch 
+                            checked={isAffiliated}
+                            onCheckedChange={() => handleToggleAffiliation(platform.id, platform.name)}
+                          />
+                          <Badge 
+                            variant={isAffiliated ? "default" : "outline"} 
+                            className="text-[9px] uppercase font-bold"
+                          >
+                            {isAffiliated ? "Afiliado" : "Pausado"}
+                          </Badge>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="font-bold text-primary hover:bg-primary/5 gap-1.5"
+                          onClick={() => handleOpenLinkModal(platform)}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" /> Ver Enlace
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
         </Card>
       </div>
 
-      {/* Modal interactivo de Enlace de Afiliado para Socios */}
+      {/* Modal: Tu Enlace de Afiliado */}
       {selectedPlatform && (
         <div 
           className="fixed inset-0 bg-black/60 flex items-center justify-center z-[100] backdrop-blur-sm p-4"
           onClick={() => setSelectedPlatform(null)}
         >
           <div 
-            className="bg-white rounded-xl shadow-2xl max-w-md w-full overflow-hidden animate-in zoom-in duration-200"
+            className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden animate-in zoom-in duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-6 border-b bg-muted/10 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <ExternalLink className="h-5 w-5 text-primary" />
-                <h2 className="text-base font-black uppercase tracking-tight text-primary">Tu Enlace de Afiliado</h2>
+                <div className="p-2 bg-primary/10 rounded-lg text-primary">
+                  <ExternalLink className="h-5 w-5" />
+                </div>
+                <h2 className="text-lg font-black uppercase tracking-tight text-primary">Tu Enlace de Afiliado</h2>
               </div>
               <button 
                 onClick={() => setSelectedPlatform(null)} 
@@ -329,18 +424,35 @@ function AdminPartnersView({ userData }) {
                 <X className="h-4 w-4"/>
               </button>
             </div>
+            
             <div className="p-6 space-y-4">
-              <p className="text-xs text-muted-foreground font-medium">
-                Usa esta URL única para registrar clientes. Las ventas completadas a través de este enlace acumularán automáticamente comisiones del <span className="font-bold text-primary">{selectedPlatform.baseCommission}%</span> en tu billetera.
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                Usa esta URL única para registrar clientes. Las ventas completadas a través de este enlace acumularán automáticamente comisiones del <span className="font-bold text-primary text-sm">{selectedPlatform.baseCommission || 30}%</span> en tu billetera.
               </p>
+
+              {/* Métricas específicas del SaaS seleccionado */}
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="bg-muted/20 p-2.5 rounded-xl border border-primary/10 text-center">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight block">Total Clics</span>
+                  <span className="text-xl font-black text-primary mt-0.5 block">{platformClicks}</span>
+                </div>
+                <div className="bg-muted/20 p-2.5 rounded-xl border border-primary/10 text-center">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight block">Registros</span>
+                  <span className="text-xl font-black text-emerald-600 mt-0.5 block">{platformSignups}</span>
+                </div>
+                <div className="bg-muted/20 p-2.5 rounded-xl border border-primary/10 text-center">
+                  <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-tight block">Conversión</span>
+                  <span className="text-xl font-black text-purple-600 mt-0.5 block">{platformConversion}%</span>
+                </div>
+              </div>
               
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-muted-foreground uppercase">Ecosistema SaaS seleccionado</span>
-                <p className="text-sm font-black uppercase text-gray-800">{selectedPlatform.name}</p>
+              <div className="p-3.5 bg-muted/20 rounded-xl border border-primary/10 space-y-1">
+                <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Ecosistema SaaS Seleccionado</span>
+                <p className="text-base font-black uppercase text-slate-800">{selectedPlatform.name}</p>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-[10px] font-bold text-muted-foreground uppercase">Enlace de Seguimiento para Compartir</Label>
+                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Enlace de Seguimiento para Compartir</Label>
                 <div className="flex gap-2">
                   <Input 
                     readOnly 
@@ -348,13 +460,14 @@ function AdminPartnersView({ userData }) {
                     className="font-mono text-xs bg-muted/30 select-all"
                   />
                   <Button onClick={handleCopyLink} className="font-bold shrink-0">
-                    Copiar URL
+                    {copied ? "¡Copiado!" : "Copiar URL"}
                   </Button>
                 </div>
               </div>
             </div>
+
             <div className="flex justify-end p-4 border-t bg-muted/10">
-              <Button variant="outline" size="sm" onClick={() => setSelectedPlatform(null)}>
+              <Button variant="outline" onClick={() => setSelectedPlatform(null)}>
                 Cerrar Ventana
               </Button>
             </div>

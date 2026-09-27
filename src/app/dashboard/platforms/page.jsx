@@ -87,7 +87,8 @@ export default function PlatformsPage() {
     description: '',
     status: 'Active',
     baseCommission: 0,
-    recurringCommission: 0
+    recurringCommission: 0,
+    domain: ''
   });
 
   const handleEdit = (platform) => {
@@ -98,7 +99,8 @@ export default function PlatformsPage() {
       description: platform.description || '',
       status: platform.status || 'Active',
       baseCommission: platform.baseCommission || 0,
-      recurringCommission: platform.recurringCommission || 0
+      recurringCommission: platform.recurringCommission || 0,
+      domain: platform.domain || ''
     });
     setIsDialogOpen(true);
   };
@@ -122,13 +124,18 @@ export default function PlatformsPage() {
     setIsSaving(true);
     try {
       const platformsCol = collection(firestore, 'saasPlatforms');
-      
+      const cleanDomain = (formData.domain || '').trim().toLowerCase()
+        .replace(/^https?:\/\//, '')
+        .replace(/^www\./, '')
+        .replace(/\/.*$/, '');
+      const dataToSave = { ...formData, domain: cleanDomain };
+
       if (editingPlatform) {
         const docRef = doc(firestore, 'saasPlatforms', editingPlatform.id);
-        updateDocumentNonBlocking(docRef, formData);
+        updateDocumentNonBlocking(docRef, dataToSave);
         toast({ title: "Plataforma Actualizada", description: `${formData.name} se ha guardado correctamente.` });
       } else {
-        addDocumentNonBlocking(platformsCol, formData);
+        addDocumentNonBlocking(platformsCol, dataToSave);
         toast({ title: "Plataforma Creada", description: "El nuevo SaaS ha sido añadido al catálogo." });
       }
       
@@ -179,7 +186,7 @@ export default function PlatformsPage() {
             setEditingPlatform(null);
             setFormData({
               name: '', category: '', description: '', status: 'Active',
-              baseCommission: 0, recurringCommission: 0
+              baseCommission: 0, recurringCommission: 0, domain: ''
             });
             setIsDialogOpen(true);
           }}>
@@ -312,6 +319,14 @@ export default function PlatformsPage() {
                       placeholder="Ej. Gastronomía"
                     />
                   </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Dominio Oficial (sin https:// ni barras)</Label>
+                  <Input 
+                    value={formData.domain || ''} 
+                    onChange={(e) => setFormData({...formData, domain: e.target.value})} 
+                    placeholder="menfy.app"
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label>Descripción Comercial</Label>

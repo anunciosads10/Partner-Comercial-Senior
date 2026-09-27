@@ -47,7 +47,7 @@ export default function PaymentsPage() {
     if (!firestore || !userData || !user?.uid) return null;
     
     // El SuperAdmin puede ver todos los pagos de la plataforma
-    if (userData.role === 'superadmin' || userData.role === 'admin') {
+    if (userData.role === 'superadmin') {
       return query(
         collection(firestore, 'payments'), 
         orderBy('paymentDate', 'desc')
@@ -55,11 +55,7 @@ export default function PaymentsPage() {
     }
     
     // Los partners normales solo pueden listar sus propios pagos (Seguridad Firestore)
-    return query(
-      collection(firestore, 'payments'), 
-      where('partnerId', '==', user.uid),
-      orderBy('paymentDate', 'desc')
-    );
+    return query(collection(firestore, 'payments'), where('partnerId', '==', user.uid));
   }, [firestore, userData, user?.uid]);
 
   const { data: rawPayments, isLoading: isPaymentsLoading } = useCollection(paymentsRef);
@@ -75,7 +71,8 @@ export default function PaymentsPage() {
         (payment.status?.toLowerCase() === statusFilter.toLowerCase());
       
       return matchesSearch && matchesStatus;
-    });
+    })
+    .sort((a, b) => new Date(b.paymentDate || 0) - new Date(a.paymentDate || 0));
   }, [rawPayments, searchQuery, statusFilter]);
 
   const handleDownloadPDF = () => {

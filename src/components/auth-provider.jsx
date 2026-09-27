@@ -19,7 +19,7 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     if (isUserLoading) return;
     
-    const isPublicRoute = PUBLIC_ROUTES.includes(pathname);
+    const isPublicRoute = (PUBLIC_ROUTES.includes(pathname) || (pathname && pathname.startsWith('/aff')));
 
     // Si el usuario está logueado e intenta ir a rutas de acceso, lo mandamos al dashboard
     if (user && (pathname === '/login' || pathname === '/register' || pathname === '/')) {

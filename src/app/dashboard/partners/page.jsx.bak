@@ -1,6 +1,5 @@
 'use client';
 
-import Link from 'next/link';
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
@@ -657,18 +656,6 @@ function SuperAdminPartnersView() {
                             <DropdownMenuItem className="gap-2 cursor-pointer font-bold" onSelect={() => router.push(`/partners/${partner.id}/public`)}>
                               <ExternalLink className="h-4 w-4 text-accent" /> Perfil Público
                             </DropdownMenuItem>
-
-                <DropdownMenuItem asChild>
-                  <Link
-                    href={`/dashboard/affiliation?partner=${encodeURIComponent(partner?.email || partner?.id || '')}`}
-                    className="flex items-center gap-2 cursor-pointer w-full text-slate-700 hover:text-blue-600 px-2 py-1.5 text-sm outline-none"
-                  >
-                    <svg className="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                    </svg>
-                    <span>Ver rendimiento de afiliación</span>
-                  </Link>
-                </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="gap-2 text-destructive font-black uppercase text-[10px]" onSelect={() => handleSuspend(partner.id)}>
                               <ShieldAlert className="h-4 w-4" /> Suspender

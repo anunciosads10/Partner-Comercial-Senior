@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
+  Network,
   Link2,
   DollarSign,
   Zap,
@@ -42,13 +43,13 @@ const allMenuItems = [
   { href: '/dashboard/referrals', label: 'Mis Referidos', icon: UserPlus, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/activations', label: 'Activar Negocio', icon: Zap, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/earnings', label: 'Mis Ingresos', icon: DollarSign, roles: ['admin', 'superadmin'] },
+  { href: '/dashboard/affiliation', label: 'Afiliación SaaS', icon: Network, roles: ['superadmin'] },
   { href: '/dashboard/users', label: 'Usuarios', icon: UserCheck, roles: ['superadmin'] },
   { href: '/dashboard/partners', label: 'Partners', icon: Users, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/platforms', label: 'Plataformas SaaS', icon: Puzzle, roles: ['superadmin'] },
   { href: '/dashboard/commissions', label: 'Comisiones', icon: Percent, roles: ['superadmin'] },
   { href: '/dashboard/hierarchy', label: 'Jerarquía', icon: GitFork, roles: ['superadmin'] },
   { href: '/dashboard/payments', label: 'Pagos', icon: CreditCard, roles: ['admin', 'superadmin'] },
-  { href: '/dashboard/reports', label: 'Reportes', icon: BarChart3, roles: ['superadmin'] },
   { href: '/dashboard/rules', label: 'Reglas', icon: Gavel, roles: ['superadmin'] },
   { href: '/dashboard/notifications', label: 'Notificaciones', icon: Bell, roles: ['admin', 'superadmin'] },
 ];

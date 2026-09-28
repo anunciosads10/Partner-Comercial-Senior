@@ -7,7 +7,6 @@ service cloud.firestore {
     function isSuperAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && getUserRole() == 'superadmin'; }
     function isAdmin() { return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (getUserRole() == 'admin' || getUserRole() == 'superadmin'); }
 
-    // Usuarios: lectura pública para resolución del código de afiliados; escrituras blindadas
     match /users/{userId} {
       allow get, list: if true;
       allow create: if isOwner(userId);
@@ -21,8 +20,10 @@ service cloud.firestore {
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks']) ||
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['signupsFromLink']) ||
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['referralCode']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['platformMetrics']) ||
                        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink']) ||
-                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink', 'referralCode']);
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink', 'platformMetrics']) ||
+                       request.resource.data.diff(resource.data).affectedKeys().hasOnly(['clicks', 'signupsFromLink', 'referralCode', 'platformMetrics']);
       allow delete: if isSuperAdmin();
 
       match /notifications/{notificationId} {
@@ -41,7 +42,7 @@ service cloud.firestore {
       allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
       allow create: if isSuperAdmin() || 
                        (isSignedIn() && request.resource.data.partnerId == request.auth.uid && (request.resource.data.status == 'registrado' || request.resource.data.status == 'pendiente_activacion') && !('activatedAt' in request.resource.data) && !('recurringEndsAt' in request.resource.data)) ||
-                       (request.resource.data.externalUserId != null && request.resource.data.status == 'registrado');
+                       (request.resource.data.externalUserId != null);
       allow update: if isSignedIn() && (
         isSuperAdmin() || (
           resource.data.partnerId == request.auth.uid &&
@@ -76,10 +77,12 @@ service cloud.firestore {
       allow write: if isSuperAdmin();
       allow create: if isSignedIn() && request.resource.data.partnerId == request.auth.uid;
     }
+
     match /commissions/{id} { allow read, write: if isSuperAdmin(); }
     match /commission_schemes/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
     match /rules/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
-    match /saasPlatforms/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
+    // Catalogo de plataformas SaaS: lectura publica para que el endpoint consulte los planes oficiales
+    match /saasPlatforms/{id} { allow read, list: if true; allow write: if isSuperAdmin(); }
     match /settings/{id} { allow read, write: if isSuperAdmin(); }
   }
 }

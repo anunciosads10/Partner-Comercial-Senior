@@ -10,6 +10,7 @@ import {
   Edit3, 
   Loader2, 
   XCircle,
+  Trash2,
   Search,
   Filter
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Label } from '../../../components/ui/label';
 import { Input } from '../../../components/ui/input';
 import { Textarea } from '../../../components/ui/textarea';
+import { Switch } from '../../../components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../../components/ui/select';
 import { useToast } from '../../../hooks/use-toast';
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '../../../firebase/non-blocking-updates';
@@ -88,7 +90,8 @@ export default function PlatformsPage() {
     status: 'Active',
     baseCommission: 0,
     recurringCommission: 0,
-    domain: ''
+    domain: '',
+    planes: []
   });
 
   const handleEdit = (platform) => {
@@ -100,9 +103,39 @@ export default function PlatformsPage() {
       status: platform.status || 'Active',
       baseCommission: platform.baseCommission || 0,
       recurringCommission: platform.recurringCommission || 0,
-      domain: platform.domain || ''
+      domain: platform.domain || '',
+      planes: Array.isArray(platform.planes) ? platform.planes : []
     });
     setIsDialogOpen(true);
+  };
+
+    const handleAddPlan = () => {
+    const slugPrefix = (formData.name || 'plan').toLowerCase().replace(/[^a-z0-9]/g, '_');
+    const newId = `${slugPrefix}_${Date.now()}`;
+    setFormData(prev => ({
+      ...prev,
+      planes: [...(prev.planes || []), { id: newId, nombre: '', precio: 99000, moneda: 'COP', recurrente: true }]
+    }));
+  };
+
+  const handleUpdatePlan = (index, field, value) => {
+    setFormData(prev => {
+      const updated = [...(prev.planes || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      if (field === 'nombre') {
+        const cleanName = value.toLowerCase().replace(/[^a-z0-9]/g, '_');
+        const prefix = (prev.name || 'plan').toLowerCase().replace(/[^a-z0-9]/g, '_');
+        updated[index].id = `${prefix}_${cleanName}`;
+      }
+      return { ...prev, planes: updated };
+    });
+  };
+
+  const handleRemovePlan = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      planes: (prev.planes || []).filter((_, i) => i !== index)
+    }));
   };
 
   const closeDialog = React.useCallback(() => {
@@ -128,7 +161,28 @@ export default function PlatformsPage() {
         .replace(/^https?:\/\//, '')
         .replace(/^www\./, '')
         .replace(/\/.*$/, '');
-      const dataToSave = { ...formData, domain: cleanDomain };
+      if (formData.planes && formData.planes.length > 0) {
+        for (const p of formData.planes) {
+          if (!p.nombre || !p.nombre.trim()) {
+            toast({ variant: "destructive", title: "Plan incompleto", description: "Todos los planes deben tener un nombre." });
+            setIsSaving(false);
+            return;
+          }
+          if (!p.precio || Number(p.precio) <= 0) {
+            toast({ variant: "destructive", title: "Precio inválido", description: `El plan "${p.nombre}" debe tener un precio mayor a 0.` });
+            setIsSaving(false);
+            return;
+          }
+        }
+      }
+      const cleanPlanes = (formData.planes || []).map(p => ({
+        id: p.id || p.nombre.toLowerCase().replace(/[^a-z0-9]/g, '_'),
+        nombre: p.nombre.trim(),
+        precio: Number(p.precio),
+        moneda: p.moneda || 'COP',
+        recurrente: p.recurrente !== false
+      }));
+      const dataToSave = { ...formData, domain: cleanDomain, planes: cleanPlanes };
 
       if (editingPlatform) {
         const docRef = doc(firestore, 'saasPlatforms', editingPlatform.id);
@@ -186,7 +240,7 @@ export default function PlatformsPage() {
             setEditingPlatform(null);
             setFormData({
               name: '', category: '', description: '', status: 'Active',
-              baseCommission: 0, recurringCommission: 0, domain: ''
+              baseCommission: 0, recurringCommission: 0, domain: '', planes: []
             });
             setIsDialogOpen(true);
           }}>
@@ -363,6 +417,76 @@ export default function PlatformsPage() {
                       onChange={(e) => setFormData({...formData, recurringCommission: Number(e.target.value)})} 
                     />
                   </div>
+                </div>
+                              {/* Sección Planes de Suscripción */}
+                <div className="space-y-3 pt-3 border-t">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <Label className="text-xs font-black uppercase text-primary">Planes de Suscripción</Label>
+                      <p className="text-[11px] text-muted-foreground">Catálogo de precios oficiales para el cobro y comisiones.</p>
+                    </div>
+                    <Button type="button" size="sm" variant="outline" onClick={handleAddPlan} className="font-bold text-xs gap-1 h-7">
+                      <Plus className="h-3 w-3" /> Agregar Plan
+                    </Button>
+                  </div>
+
+                  {formData.planes && formData.planes.length > 0 ? (
+                    <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                      {formData.planes.map((plan, idx) => (
+                        <div key={idx} className="p-2.5 rounded-lg border bg-muted/20 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Input 
+                              placeholder="Nombre (ej. MENFY Básico)"
+                              className="text-xs font-bold flex-1 h-8"
+                              value={plan.nombre}
+                              onChange={(e) => handleUpdatePlan(idx, 'nombre', e.target.value)}
+                            />
+                            <Input 
+                              type="number"
+                              placeholder="Precio"
+                              className="text-xs w-24 h-8 font-mono"
+                              value={plan.precio}
+                              onChange={(e) => handleUpdatePlan(idx, 'precio', Number(e.target.value))}
+                            />
+                            <Select 
+                              value={plan.moneda || 'COP'} 
+                              onValueChange={(val) => handleUpdatePlan(idx, 'moneda', val)}
+                            >
+                              <SelectTrigger className="w-20 text-xs h-8"><SelectValue /></SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="COP">COP</SelectItem>
+                                <SelectItem value="USD">USD</SelectItem>
+                                <SelectItem value="MXN">MXN</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <Button 
+                              type="button" 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 text-rose-500 hover:bg-rose-50"
+                              onClick={() => handleRemovePlan(idx)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-between text-[10px] text-muted-foreground px-1">
+                            <span className="font-mono">ID: {plan.id}</span>
+                            <div className="flex items-center gap-1.5">
+                              <span>Recurrente</span>
+                              <Switch 
+                                checked={plan.recurrente !== false} 
+                                onCheckedChange={(val) => handleUpdatePlan(idx, 'recurrente', val)}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-3 border border-dashed rounded-lg text-xs text-muted-foreground italic">
+                      No hay planes configurados. Se permite monto libre de transición.
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex justify-end gap-3 p-6 border-t bg-muted/10">

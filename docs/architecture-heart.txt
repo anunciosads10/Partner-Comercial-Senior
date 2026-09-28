@@ -5,50 +5,62 @@
 Este documento detalla el núcleo operativo, técnico y de seguridad de la 
 plataforma PartnerVerse, sirviendo como guía de ingeniería para producción.
 
-1. EL NÚCLEO DE LA APLICACIÓN (THE CORE)
+1. EL NÚCLEO DE LA APLICACIÓN (EL MOTOR DE ATRIBUCIÓN)
 -------------------------------------------------------------------------------
-El "corazón" de PartnerVerse es el SISTEMA DE LIQUIDACIÓN Y RASTREO MULTINIVEL.
-Su objetivo principal es permitir el escalamiento de ventas de múltiples
-plataformas SaaS mediante una red jerárquica de socios comerciales senior,
-garantizando que cada transacción calcule, asigne y pague comisiones de forma
-precisa y segura.
+El "corazón" de PartnerVerse es el SISTEMA DE RASTREO Y LIQUIDACIÓN AUTOMATIZADA.
+Su función principal es vincular la identidad de un Partner con la actividad 
+de un cliente final en plataformas externas mediante tres pilares:
 
-2. ARQUITECTURA DE DATOS (FIRESTORE DE ALTA DISPONIBILILIDAD)
+A. El Enlace de Seguimiento (/aff/[code]):
+   Captura el tráfico, registra el 'click' en el perfil del Partner y deposita 
+   una cookie/localStorage de persistencia (30 días) en el navegador del cliente.
+
+B. Los Endpoints de Conversión (API Affiliate):
+   Permiten que cualquier SaaS externo (ej. Menfy) reporte una venta enviando 
+   el 'code' del socio. El sistema valida al socio, calcula la comisión según 
+   el plan oficial en 'saasPlatforms' y genera una transacción aprobada.
+
+C. Jerarquía Multinivel:
+   Cada socio puede tener un 'parentId'. El sistema está diseñado para que en 
+   futuras versiones, una venta genere comisiones en cascada para la línea 
+   ascendente de liderazgo.
+
+2. ARQUITECTURA DE DATOS (FIRESTORE DE ALTA DISPONIBILIDAD)
 -------------------------------------------------------------------------------
-La base de datos está diseñada bajo el principio de "Seguridad e Independencia
-de Autorización", estructurada en colecciones globales y subcolecciones:
+La base de datos está diseñada bajo el principio de "Aislamiento por Rol":
 
-* /users/{userId}: Guarda las credenciales de perfil e identidad de acceso.
-  Contiene el campo crítico 'role' ('superadmin' o 'admin').
-* /partners/{partnerId}: El perfil comercial del socio. Incluye su Tier
-  (Silver, Gold, Platinum), territorio y configuración de cobro (Nequi, etc.).
-* /saasPlatforms/{platformId}: El catálogo de productos de software. Define
-  las comisiones base y recurrentes del modelo de negocio.
-* /payments/{paymentId}: Historial financiero. Es el libro contable de la app.
+* /users/{userId}: Identidad y permisos (superadmin vs admin).
+* /partners/{partnerId}: Perfil comercial, métricas de clics/registros y 
+  configuración de Tiers (Silver, Gold, Platinum).
+* /saasPlatforms/{platformId}: El cerebro del negocio. Define los dominios, 
+  precios oficiales de planes y porcentajes de comisión.
+* /transactions/{txId}: El libro contable. Registros inmutables de cada dólar 
+  generado, vinculando al socio con el referido.
+* /referrals/{refId}: Registro de clientes (ej. restaurantes) y sus estados 
+  (registrado, pendiente, activo).
 
-3. EL MOTOR DE SEGURIDAD (FIRESTORE SECURITY RULES)
+3. EL MOTOR DE SEGURIDAD (FIRESTORE RULES)
 -------------------------------------------------------------------------------
-El perímetro de seguridad es granular y no depende de filtros en el cliente:
-* Aislamiento por Fila: Los Partners (rol admin) tienen prohibido realizar
-  listados o lecturas globales. Firestore Security Rules valida estáticamente
-  que cada petición incluya la restricción (where('partnerId', '==', auth.uid)).
-* Cortocircuito CEL: Las reglas validan la propiedad del recurso antes de 
-  disparar lecturas externas (get), optimizando la cuota de lectura y evitando
-  errores de denegación en cascada.
+El perímetro de seguridad no confía en el cliente:
+* Validación de Propiedad: Un Partner solo puede ver documentos donde 
+  'partnerId == auth.uid'.
+* Cortocircuito CEL: Las reglas validan primero la autoría del recurso antes 
+  de consultar roles, optimizando costos de lectura (get).
+* Restricción de Escritura: Los Partners tienen prohibido alterar montos de 
+  comisiones o estados de pago; estas son operaciones exclusivas del SuperAdmin 
+  o del sistema vía API protegida.
 
 4. FLUJO OPERATIVO MULTINIVEL
 -------------------------------------------------------------------------------
-A. Registro e Identidad: El usuario se registra. Si su correo es el máster,
-   obtiene rol 'superadmin'; de lo contrario, inicia como 'admin' (Partner).
-B. Prospección (Rastreo Único): El Partner accede a "Plataformas Disponibles"
-   y genera un enlace dinámico inyectado con su UID.
-C. Liquidación No Bloqueante: Las mutaciones de datos en la interfaz utilizan
-   'non-blocking updates'. La caché local se actualiza al instante para dar
-   una UI ultra-fluida, mientras las operaciones se encolan en segundo plano.
-D. Inteligencia Artificial (GenAI): Integración nativa con Genkit para analizar
-   el rendimiento histórico y alertar proactivamente al SuperAdmin sobre
-   socios en riesgo de abandono (Churn Risk).
+1. Registro: El socio obtiene su 'referralCode' único (UID-8).
+2. Prospección: El socio comparte su URL única generada dinámicamente.
+3. Conversión: El cliente se registra. El sistema crea un 'referral' y una 
+   'transaction' vinculada.
+4. Auditoría: El SuperAdmin verifica activaciones manuales en el panel de 
+   'Activaciones' para aprobar comisiones de alta cuantía.
+5. Liquidación: El sistema consolida las transacciones en 'payments' para el 
+   desembolso final.
 
 ===============================================================================
-Desarrollado con Next.js 15 App Router, Genkit, TailwindCSS y Firebase Client SDK.
+Tecnologías: Next.js 15, Firebase SDK, Genkit AI, TailwindCSS.
 ===============================================================================

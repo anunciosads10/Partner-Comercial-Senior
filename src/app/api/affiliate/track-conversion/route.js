@@ -1,5 +1,5 @@
 import { getServerFirestore } from '../../../../lib/server-firebase.js';
-import { collection, query, where, getDocs, doc, updateDoc, addDoc, increment, getDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, addDoc, increment, getDoc, setDoc } from 'firebase/firestore';
 import { getCorsHeaders, handleOptions, validateApiKey } from '../../../../lib/affiliate-auth.js';
 
 export async function OPTIONS() { return handleOptions(); }
@@ -10,7 +10,7 @@ export async function POST(request) {
 
   try {
     const body = await request.json().catch(() => ({}));
-    const { code: rawCode, usuario_id, email, restaurante, platform, monto, comision_pct, plan_id } = body;
+    const { code: rawCode, usuario_id, email, restaurante, platform, monto, comision_pct, plan_id, plan } = body;
     if (!rawCode) return Response.json({ error: 'Campo code requerido' }, { status: 400, headers: getCorsHeaders() });
 
     const code = String(rawCode).trim().toUpperCase();
@@ -18,7 +18,7 @@ export async function POST(request) {
     const firestore = getServerFirestore();
     const partnersCol = collection(firestore, 'partners');
 
-    // 1. Localizar socio
+    // 1. Localizar socio por referralCode, ID directo o prefijo
     let partnerDocId = null;
     let snap = await getDocs(query(partnersCol, where('referralCode', '==', code)));
     if (!snap.empty) {
@@ -38,11 +38,28 @@ export async function POST(request) {
       }
     }
 
+    // Fallback a /users
+    if (!partnerDocId) {
+      const allU = await getDocs(collection(firestore, 'users'));
+      for (const d of allU.docs) {
+        if (d.id.toUpperCase().startsWith(code)) {
+          partnerDocId = d.id;
+          await setDoc(doc(firestore, 'partners', d.id), {
+            name: d.data().name || 'Socio',
+            email: d.data().email || '',
+            referralCode: code,
+            status: 'Active',
+          }, { merge: true });
+          break;
+        }
+      }
+    }
+
     if (!partnerDocId) {
       return Response.json({ ok: false, error: 'Codigo no encontrado' }, { status: 200, headers: getCorsHeaders() });
     }
 
-    // 2. Localizar catálogo de la plataforma para verificar planes
+    // 2. Localizar plataforma en saasPlatforms
     const platformsSnap = await getDocs(collection(firestore, 'saasPlatforms'));
     let matchedPlatform = null;
     for (const pDoc of platformsSnap.docs) {
@@ -57,38 +74,30 @@ export async function POST(request) {
       }
     }
 
-    const platformPlanes = matchedPlatform?.planes;
-    const hasPlanes = Array.isArray(platformPlanes) && platformPlanes.length > 0;
-
+    const platformPlanes = matchedPlatform?.planes || [];
     let baseAmount = Number(monto || 150000);
-    let planNombre = null;
-    let selectedPlanId = plan_id || null;
+    let planNombre = plan || 'MENFY Estándar';
+    let selectedPlanId = plan_id || 'menfy_plan';
     const montoReportado = monto !== undefined ? Number(monto) : null;
 
-    if (hasPlanes) {
-      // Si la plataforma tiene planes oficiales:
-      if (!plan_id) {
-        return Response.json({
-          error: 'La plataforma cuenta con planes oficiales. Debe especificar plan_id válido.'
-        }, { status: 400, headers: getCorsHeaders() });
-      }
-
-      const foundPlan = platformPlanes.find(p => p.id === plan_id || p.id === String(plan_id).trim());
-      if (!foundPlan) {
-        return Response.json({
-          error: 'Plan no válido para esta plataforma'
-        }, { status: 400, headers: getCorsHeaders() });
-      }
-
-      // Usar obligatoriamente el precio oficial del plan
-      baseAmount = Number(foundPlan.precio);
-      planNombre = foundPlan.nombre;
-    } else {
-      // Retrocompatibilidad para plataformas sin planes
+    // Resolución inteligente: si existen planes, buscar por ID, nombre o precio
+    if (platformPlanes.length > 0) {
+      let foundPlan = null;
       if (plan_id) {
-        return Response.json({
-          error: 'Plan no válido para esta plataforma'
-        }, { status: 400, headers: getCorsHeaders() });
+        foundPlan = platformPlanes.find(p => p.id === plan_id || p.id === String(plan_id).trim() || p.nombre?.toLowerCase() === String(plan_id).toLowerCase());
+      }
+      if (!foundPlan && monto) {
+        foundPlan = platformPlanes.find(p => Number(p.precio) === Number(monto));
+      }
+      if (!foundPlan) {
+        // Fallback al primer plan del catálogo oficial
+        foundPlan = platformPlanes[0];
+      }
+
+      if (foundPlan) {
+        baseAmount = Number(foundPlan.precio);
+        planNombre = foundPlan.nombre;
+        selectedPlanId = foundPlan.id;
       }
     }
 
@@ -109,7 +118,7 @@ export async function POST(request) {
       restaurantName: restaurante || email || ('Restaurante ' + (usuario_id || '').substring(0, 6)),
       restaurantEmail: email || '',
       restaurantPhone: '',
-      plan: planNombre || (platName + ' SaaS'),
+      plan: planNombre,
       planId: selectedPlanId,
       planValue: baseAmount,
       monto_oficial: baseAmount,
@@ -120,7 +129,7 @@ export async function POST(request) {
       createdAt: now,
       activatedAt: now,
       recurringEndsAt: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
-      notes: 'Suscripción ' + platName + (planNombre ? ' [' + planNombre + ']' : ''),
+      notes: 'Suscripción ' + platName + ' [' + planNombre + ']',
     });
 
     // 5. Crear transacción aprobada en /transactions
@@ -140,7 +149,7 @@ export async function POST(request) {
       approvedBy: 'Sistema ' + platName + ' (API)',
       approvedAt: now,
       createdAt: now,
-      description: `Comisión recurrente ${commissionPct}% suscripción ${platName}${planNombre ? ' (' + planNombre + ')' : ''}`
+      description: `Comisión recurrente ${commissionPct}% suscripción ${platName} (${planNombre})`
     });
 
     return Response.json({

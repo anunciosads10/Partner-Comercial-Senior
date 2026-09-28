@@ -63,8 +63,11 @@ export default function AffiliationAdminPage() {
           const url = `https://${cleanDomain}/aff/${code}`;
 
           // Metricas específicas o repartidas
-          const clicks = partner.platformMetrics?.[platform.id]?.clicks ?? (platforms.length === 1 ? pClicks : Math.floor(pClicks / platforms.length));
-          const signups = partner.platformMetrics?.[platform.id]?.signups ?? (platforms.length === 1 ? pSignups : Math.floor(pSignups / platforms.length));
+          const pPlat = platform.name?.toUpperCase() || '';
+          const pMetrics = partner.platformMetrics?.[platform.id] || partner.platformMetrics?.[pPlat];
+          const isMenfy = pPlat.includes('MENFY');
+          const clicks = pMetrics?.clicks ?? (isMenfy ? pClicks : 0);
+          const signups = pMetrics?.signups ?? (isMenfy ? pSignups : 0);
           const conversion = clicks > 0 ? ((signups / clicks) * 100).toFixed(1) : '0.0';
 
           list.push({

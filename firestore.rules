@@ -56,7 +56,8 @@ service cloud.firestore {
 
     match /transactions/{transactionId} {
       allow read, list: if isSignedIn() && (resource.data.partnerId == request.auth.uid || isSuperAdmin());
-      allow write, create, update, delete: if isSuperAdmin();
+      allow create: if isSuperAdmin() || (request.resource.data.type in ['activacion', 'recurrente'] && request.resource.data.status in ['aprobado', 'pendiente']);
+      allow update, delete: if isSuperAdmin();
     }
 
     match /activations/{activationId} {

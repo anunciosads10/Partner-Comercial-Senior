@@ -1,5 +1,5 @@
 import { getServerFirestore } from '../../../../lib/server-firebase.js';
-import { collection, query, where, getDocs, doc, updateDoc, increment, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { getCorsHeaders, handleOptions, validateApiKey } from '../../../../lib/affiliate-auth.js';
 
 export async function OPTIONS() { return handleOptions(); }
@@ -13,6 +13,7 @@ export async function POST(request) {
     if (!body.code) return Response.json({ error: 'Campo code requerido' }, { status: 400, headers: getCorsHeaders() });
 
     const code = String(body.code).trim().toUpperCase();
+    const platform = (body.platform || 'MENFY').toUpperCase();
     const firestore = getServerFirestore();
     const partnersCol = collection(firestore, 'partners');
 
@@ -22,35 +23,27 @@ export async function POST(request) {
     if (!snap.empty) {
       partnerDocId = snap.docs[0].id;
     } else {
-      const allP = await getDocs(partnersCol);
-      for (const d of allP.docs) {
-        if (d.id.toUpperCase().startsWith(code) || d.data().referralCode === code) {
-          partnerDocId = d.id;
-          break;
-        }
-      }
-    }
-
-    // Fallback a /users
-    if (!partnerDocId) {
-      const allU = await getDocs(collection(firestore, 'users'));
-      for (const d of allU.docs) {
-        if (d.id.toUpperCase().startsWith(code)) {
-          partnerDocId = d.id;
-          await setDoc(doc(firestore, 'partners', d.id), {
-            name: d.data().name || 'Socio',
-            email: d.data().email || '',
-            referralCode: code,
-            status: 'Active',
-          }, { merge: true });
-          break;
+      const direct = await getDoc(doc(firestore, 'partners', code));
+      if (direct.exists()) {
+        partnerDocId = direct.id;
+      } else {
+        const allSnap = await getDocs(partnersCol);
+        for (const d of allSnap.docs) {
+          if (d.id.toUpperCase().startsWith(code) || (d.data().uid && d.data().uid.toUpperCase().startsWith(code))) {
+            partnerDocId = d.id;
+            break;
+          }
         }
       }
     }
 
     if (partnerDocId) {
-      await updateDoc(doc(firestore, 'partners', partnerDocId), { clicks: increment(1) });
-      return Response.json({ ok: true }, { status: 200, headers: getCorsHeaders() });
+      const updateData = {
+        clicks: increment(1),
+        [`platformMetrics.${platform}.clicks`]: increment(1)
+      };
+      await updateDoc(doc(firestore, 'partners', partnerDocId), updateData);
+      return Response.json({ ok: true, partner_id: partnerDocId, platform }, { status: 200, headers: getCorsHeaders() });
     }
 
     return Response.json({ ok: false, error: 'Codigo no encontrado' }, { status: 200, headers: getCorsHeaders() });

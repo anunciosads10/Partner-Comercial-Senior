@@ -5,7 +5,7 @@ import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, useFirebase } from '@/firebase';
 import { collection, query, where, addDoc, doc, updateDoc, writeBatch, getDocs } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { Zap, Upload, Loader2, FileText, Check, X, Clock, ShieldCheck } from 'lucide-react';
+import { Search, Zap, Upload, Loader2, FileText, Check, X, Clock, ShieldCheck } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -21,14 +21,50 @@ export default function ActivationsPage() {
   const { toast } = useToast();
 
   const [chargedAmount, setChargedAmount] = React.useState(150000);
+
+  // Consultar plataformas SaaS activas para split dinámico
+  const platformsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'saasPlatforms');
+  }, [firestore]);
+  const { data: rawPlatforms } = useCollection(platformsQuery);
+  const activePlatforms = React.useMemo(() => {
+    if (!rawPlatforms || rawPlatforms.length === 0) {
+      return [{ id: 'menfy', name: 'MENFY', baseCommission: 60, status: 'Active' }];
+    }
+    return rawPlatforms.filter(p => p.status === 'Active' || !p.status);
+  }, [rawPlatforms]);
+
+  const [selectedPlatformId, setSelectedPlatformId] = React.useState('');
+  const [platformFilter, setPlatformFilter] = React.useState('all');
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  // Preseleccionar plataforma por defecto
+  React.useEffect(() => {
+    if (activePlatforms.length > 0 && !selectedPlatformId) {
+      const menfy = activePlatforms.find(p => p.name?.toLowerCase().includes('menfy'));
+      setSelectedPlatformId(menfy ? menfy.id : activePlatforms[0].id);
+    }
+  }, [activePlatforms, selectedPlatformId]);
+
+  const currentPlatform = React.useMemo(() => {
+    return activePlatforms.find(p => p.id === selectedPlatformId) || activePlatforms[0] || { name: 'MENFY', baseCommission: 60 };
+  }, [activePlatforms, selectedPlatformId]);
+
+  const partnerRate = Number(currentPlatform.baseCommission || 60) / 100;
+  const platformRate = Math.max(0, 1 - partnerRate);
+  const partnerPct = Math.round(partnerRate * 100);
+  const platformPct = Math.round(platformRate * 100);
+
   const [selectedReferralId, setSelectedReferralId] = React.useState('');
   const [paymentMethod, setPaymentMethod] = React.useState('Transferencia Bancaria');
   const [receiptFile, setReceiptFile] = React.useState(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [actionLoadingId, setActionLoadingId] = React.useState(null);
 
-  const partnerKeep = Math.round(Number(chargedAmount || 0) * 0.60);
-  const menfyAmount = Math.round(Number(chargedAmount || 0) * 0.40);
+  const partnerKeep = Math.round(Number(chargedAmount || 0) * partnerRate);
+  const platformAmount = Math.round(Number(chargedAmount || 0) * platformRate);
+  const menfyAmount = platformAmount; // Retrocompatibilidad
 
   const userDocRef = useMemoFirebase(() => (!firestore || !user?.uid ? null : doc(firestore, 'users', user.uid)), [firestore, user?.uid]);
   const { data: userData } = useDoc(userDocRef);
@@ -84,6 +120,11 @@ export default function ActivationsPage() {
         chargedAmount: Number(chargedAmount),
         partnerKeep,
         menfyAmount,
+        platformId: currentPlatform.id || 'menfy',
+        platformName: currentPlatform.name || 'MENFY',
+        partnerPercentage: partnerPct,
+        platformPercentage: platformPct,
+        platformAmount,
         paymentMethod,
         receiptUrl,
         status: 'enviado',
@@ -230,12 +271,25 @@ export default function ActivationsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-xs font-bold uppercase text-muted-foreground">Restaurante Referido</label>
-                    <Select value={selectedReferralId} onValueChange={setSelectedReferralId}>
+                    <Select value={selectedReferralId} onValueChange={(val) => {
+                      if (val === 'redirect') {
+                        window.location.href = '/dashboard/referrals';
+                        return;
+                      }
+                      setSelectedReferralId(val);
+                    }}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona un restaurante..." /></SelectTrigger>
                       <SelectContent>
                         {availableReferrals.length > 0 ? availableReferrals.map(r => (
                           <SelectItem key={r.id} value={r.id}>{r.restaurantName} ({r.plan})</SelectItem>
-                        )) : <SelectItem value="none" disabled>No tienes restaurantes en estado 'Registrado'</SelectItem>}
+                        )) : (
+                        <>
+                          <SelectItem value="none" disabled>No tienes restaurantes en estado 'Registrado'</SelectItem>
+                          <SelectItem value="redirect" className="text-primary font-bold cursor-pointer">
+                            👉 Ir a Mis Referidos a registrar uno
+                          </SelectItem>
+                        </>
+                      )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -247,11 +301,11 @@ export default function ActivationsPage() {
 
                 <div className="grid grid-cols-2 gap-4 p-4 rounded-xl bg-muted/30 border">
                   <div className="text-center p-3 bg-white rounded-lg border">
-                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Tu Comisión (60%)</div>
+                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Tu Comisión ({partnerPct}%)</div>
                     <div className="text-2xl font-black text-emerald-600 mt-0.5">+${partnerKeep.toLocaleString()}</div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg border">
-                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a Menfy (40%)</div>
+                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a {currentPlatform.name || 'Plataforma'} ({platformPct}%)</div>
                     <div className="text-2xl font-black text-primary mt-0.5">${menfyAmount.toLocaleString()}</div>
                   </div>
                 </div>
@@ -295,14 +349,47 @@ export default function ActivationsPage() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
+
+          {/* Barra superior de Filtros y Búsqueda */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 bg-slate-50 border-b">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por restaurante, socio..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 text-xs bg-white"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Plataforma:</span>
+              <Select value={platformFilter} onValueChange={setPlatformFilter}>
+                <SelectTrigger className="w-[180px] h-9 text-xs bg-white">
+                  <SelectValue placeholder="Todas las plataformas" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las plataformas</SelectItem>
+                  {activePlatforms.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
             {isLoading ? <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : (
-              <Table>
+              
+                
+                <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Fecha</TableHead>
                     <TableHead>Cobrado</TableHead>
-                    <TableHead>Comisión 60%</TableHead>
-                    <TableHead>Menfy 40%</TableHead>
+                    <TableHead>Plataforma</TableHead>
+              <TableHead>Comisión Partner</TableHead>
+              <TableHead>Comisión Plataforma</TableHead>
                     <TableHead>Método</TableHead>
                     <TableHead>Comprobante</TableHead>
                     <TableHead>Estado</TableHead>

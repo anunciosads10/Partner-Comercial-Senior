@@ -83,6 +83,18 @@ service cloud.firestore {
     match /rules/{id} { allow read: if isSignedIn(); allow write: if isSuperAdmin(); }
     // Catalogo de plataformas SaaS: lectura publica para que el endpoint consulte los planes oficiales
     match /saasPlatforms/{id} { allow read, list: if true; allow write: if isSuperAdmin(); }
+    // Colección Recursos de Marketing
+    match /marketingAssets/{assetId} {
+      allow read, list: if isSignedIn();
+      allow write, create, update, delete: if isSuperAdmin();
+    }
+
+    // Configuración de Opciones de Marketing (Tipos y Canales dinámicos)
+    match /marketingSettings/{docId} {
+      allow read, get: if isSignedIn();
+      allow write, create, update, delete: if isSuperAdmin();
+    }
+
     match /settings/{id} { allow read, write: if isSuperAdmin(); }
   }
 }

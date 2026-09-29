@@ -248,7 +248,7 @@ export default function ActivationsPage() {
       <div className="space-y-6">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-primary uppercase flex items-center gap-3">
-            <Zap className="h-8 w-8 text-amber-500" /> Activar Negocio
+            <Zap className="h-8 w-8 text-amber-500" /> {isSuperAdmin ? 'Verificación de Activaciones' : 'Solicitar Activación'}
           </h1>
           <p className="text-muted-foreground text-sm font-medium">
             {isSuperAdmin 
@@ -268,15 +268,39 @@ export default function ActivationsPage() {
             </CardHeader>
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase text-muted-foreground">Plataforma SaaS</label>
+                    <Select value={selectedPlatformId || (activePlatforms.find(p => p.name?.toLowerCase().includes('menfy'))?.id || activePlatforms[0]?.id)} onValueChange={setSelectedPlatformId}>
+                      <SelectTrigger className="mt-1"><SelectValue placeholder="MENFY" /></SelectTrigger>
+                      <SelectContent>
+                        {activePlatforms.map(p => (
+                          <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div>
                     <label className="text-xs font-bold uppercase text-muted-foreground">Restaurante Referido</label>
-                    <Select value={selectedReferralId} onValueChange={setSelectedReferralId}>
+                    <Select value={selectedReferralId} onValueChange={(val) => {
+                      if (val === 'redirect') {
+                        window.location.href = '/dashboard/referrals';
+                        return;
+                      }
+                      setSelectedReferralId(val);
+                    }}>
                       <SelectTrigger className="mt-1"><SelectValue placeholder="Selecciona un restaurante..." /></SelectTrigger>
                       <SelectContent>
                         {availableReferrals.length > 0 ? availableReferrals.map(r => (
                           <SelectItem key={r.id} value={r.id}>{r.restaurantName} ({r.plan})</SelectItem>
-                        )) : <SelectItem value="none" disabled>No tienes restaurantes en estado 'Registrado'</SelectItem>}
+                        )) : (
+                        <>
+                          <SelectItem value="none" disabled>No tienes restaurantes en estado 'Registrado'</SelectItem>
+                          <SelectItem value="redirect" className="text-primary font-bold cursor-pointer">
+                            👉 Ir a Mis Referidos a registrar uno
+                          </SelectItem>
+                        </>
+                      )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -292,7 +316,7 @@ export default function ActivationsPage() {
                     <div className="text-2xl font-black text-emerald-600 mt-0.5">+${partnerKeep.toLocaleString()}</div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg border">
-                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a {currentPlatform.name || 'Plataforma'} ({platformPct}%)</div>
+                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a MENFY (40%)</div>
                     <div className="text-2xl font-black text-primary mt-0.5">${menfyAmount.toLocaleString()}</div>
                   </div>
                 </div>

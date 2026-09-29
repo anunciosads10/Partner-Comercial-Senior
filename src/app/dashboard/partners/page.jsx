@@ -1,5 +1,6 @@
 'use client';
 
+import { PlatformDetailsDialog } from '@/components/dashboard/platform-details-dialog';
 import Link from 'next/link';
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
@@ -222,6 +223,7 @@ function AdminPartnersView({ userData }) {
   const [selectedPlatform, setSelectedPlatform] = React.useState(null);
   const [generatedLink, setGeneratedLink] = React.useState('');
   const [copied, setCopied] = React.useState(false);
+  const [detailPlatform, setDetailPlatform] = React.useState(null);
 
   // Obtener datos del socio (referralCode y plataformas afiliadas)
   const partnerDocRef = useMemoFirebase(() => {
@@ -383,14 +385,24 @@ function AdminPartnersView({ userData }) {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="font-bold text-primary hover:bg-primary/5 gap-1.5"
-                          onClick={() => handleOpenLinkModal(platform)}
-                        >
-                          <ExternalLink className="h-3.5 w-3.5" /> Ver Enlace
-                        </Button>
+                        <div className="inline-flex items-center justify-end gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="font-bold text-muted-foreground hover:text-primary hover:bg-primary/5 gap-1 text-xs"
+                            onClick={() => setDetailPlatform(platform)}
+                          >
+                            <Info className="h-3.5 w-3.5" /> Ver detalles
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            className="font-bold text-primary hover:bg-primary/5 gap-1 text-xs"
+                            onClick={() => handleOpenLinkModal(platform)}
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" /> Ver Enlace
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -400,6 +412,8 @@ function AdminPartnersView({ userData }) {
           </CardContent>
         </Card>
       </div>
+
+      <PlatformDetailsDialog platform={detailPlatform} open={!!detailPlatform} onOpenChange={(v) => !v && setDetailPlatform(null)} />
 
       {/* Modal: Tu Enlace de Afiliado */}
       {selectedPlatform && (

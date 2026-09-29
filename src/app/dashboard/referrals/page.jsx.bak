@@ -22,15 +22,6 @@ export default function ReferralsPage() {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [formData, setFormData] = React.useState({ restaurantName: '', restaurantPhone: '', restaurantEmail: '', plan: 'Pro Mensual', planValue: 150000, notes: '' });
 
-    const getStatusLabel = (status) => {
-    if (status === 'pendiente_activacion') return 'Pendiente de activación';
-    if (status === 'registrado') return 'Registrado';
-    if (status === 'activo') return 'Activo';
-    if (status === 'pagado') return 'Pagado';
-    if (status === 'cancelado') return 'Cancelado';
-    return status || 'Registrado';
-  };
-
   const userDocRef = useMemoFirebase(() => (!firestore || !user?.uid ? null : doc(firestore, 'users', user.uid)), [firestore, user?.uid]);
   const { data: userData } = useDoc(userDocRef);
   const isSuperAdmin = userData?.role === 'superadmin';
@@ -118,7 +109,7 @@ export default function ReferralsPage() {
                       <TableCell className="font-bold flex items-center gap-2"><Store className="h-4 w-4 text-primary" />{r.restaurantName}</TableCell>
                       <TableCell className="text-xs text-muted-foreground"><div>{r.restaurantEmail}</div><div>{r.restaurantPhone}</div></TableCell>
                       <TableCell><div className="font-bold text-xs">{r.plan}</div><div className="text-xs text-primary font-bold">${r.planValue?.toLocaleString()}</div></TableCell>
-                      <TableCell><Badge variant="outline" className={`text-[10px] font-bold ${r.status === 'pendiente_activacion' ? 'bg-amber-50 text-amber-700 border-amber-300' : 'uppercase'}`}>{getStatusLabel(r.status)}</Badge></TableCell>
+                      <TableCell><Badge variant="outline" className="uppercase text-[10px] font-bold">{r.status || 'registrado'}</Badge></TableCell>
                       <TableCell className="text-xs">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell className="text-right text-xs font-mono font-bold text-primary">{r.recurringEndsAt ? new Date(r.recurringEndsAt).toLocaleDateString() : 'Pendiente'}</TableCell>
                       {isSuperAdmin && (

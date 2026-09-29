@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard,
   Users,
-  Megaphone,
   Network,
   Link2,
   DollarSign,
@@ -43,7 +42,6 @@ const allMenuItems = [
   { href: '/dashboard', label: 'Panel Principal', icon: LayoutDashboard, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/referrals', label: 'Mis Referidos', icon: UserPlus, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/activations', label: 'Activar Negocio', icon: Zap, roles: ['admin', 'superadmin'] },
-  { href: '/dashboard/marketing', label: 'Marketing', icon: Megaphone, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/earnings', label: 'Mis Ingresos', icon: DollarSign, roles: ['admin', 'superadmin'] },
   { href: '/dashboard/affiliation', label: 'Afiliación SaaS', icon: Network, roles: ['superadmin'] },
   { href: '/dashboard/users', label: 'Usuarios', icon: UserCheck, roles: ['superadmin'] },

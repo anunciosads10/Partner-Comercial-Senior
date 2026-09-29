@@ -2,8 +2,8 @@
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc } from '@/firebase';
-import { collection, query, where, addDoc, doc } from 'firebase/firestore';
-import { UserPlus, Search, Filter, Loader2, Store, Plus, X } from 'lucide-react';
+import { collection, query, where, addDoc, doc, deleteDoc } from 'firebase/firestore';
+import { UserPlus, Search, Filter, Loader2, Store, Plus, X, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +40,17 @@ export default function ReferralsPage() {
       return matchSearch && matchStatus;
     }).sort((a,b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
   }, [rawData, searchQuery, statusFilter]);
+
+    const handleDeleteReferral = async (r) => {
+    if (!firestore || !isSuperAdmin) return;
+    if (!window.confirm(`¿Estás seguro de que deseas eliminar permanentemente a "${r.restaurantName}"?`)) return;
+    try {
+      await deleteDoc(doc(firestore, 'referrals', r.id));
+      toast({ title: "Referido Eliminado", description: `"${r.restaurantName}" ha sido eliminado con éxito.` });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "No se pudo eliminar el referido." });
+    }
+  };
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -91,7 +102,7 @@ export default function ReferralsPage() {
           <CardContent className="p-0">
             {isLoading ? <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div> : (
               <Table>
-                <TableHeader><TableRow className="bg-muted/50"><TableHead>Restaurante</TableHead><TableHead>Contacto</TableHead><TableHead>Plan</TableHead><TableHead>Estado</TableHead><TableHead>Fecha</TableHead><TableHead className="text-right">Fin Recurrente</TableHead></TableRow></TableHeader>
+                <TableHeader><TableRow className="bg-muted/50"><TableHead>Restaurante</TableHead><TableHead>Contacto</TableHead><TableHead>Plan</TableHead><TableHead>Estado</TableHead><TableHead>Fecha</TableHead><TableHead className="text-right">Fin Recurrente</TableHead>{isSuperAdmin && <TableHead className="text-right pr-6">Acción</TableHead>}</TableRow></TableHeader>
                 <TableBody>
                   {referrals.length > 0 ? referrals.map((r) => (
                     <TableRow key={r.id} className="hover:bg-muted/30">
@@ -101,6 +112,19 @@ export default function ReferralsPage() {
                       <TableCell><Badge variant="outline" className="uppercase text-[10px] font-bold">{r.status || 'registrado'}</Badge></TableCell>
                       <TableCell className="text-xs">{r.createdAt ? new Date(r.createdAt).toLocaleDateString() : 'N/A'}</TableCell>
                       <TableCell className="text-right text-xs font-mono font-bold text-primary">{r.recurringEndsAt ? new Date(r.recurringEndsAt).toLocaleDateString() : 'Pendiente'}</TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="text-right pr-6">
+                          <Button 
+                            size="icon" 
+                            variant="ghost" 
+                            className="h-8 w-8 text-rose-500 hover:bg-rose-50 hover:text-rose-700" 
+                            onClick={() => handleDeleteReferral(r)}
+                            title="Eliminar Referido"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   )) : <TableRow><TableCell colSpan={6} className="text-center py-12 italic text-muted-foreground">Sin referidos aún.</TableCell></TableRow>}
                 </TableBody>

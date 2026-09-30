@@ -30,7 +30,7 @@ export default function ActivationsPage() {
   const { data: rawPlatforms } = useCollection(platformsQuery);
   const activePlatforms = React.useMemo(() => {
     if (!rawPlatforms || rawPlatforms.length === 0) {
-      return [{ id: 'menfy', name: 'MENFY', baseCommission: 60, status: 'Active' }];
+      return [{ id: 'menfy', name: 'MENFY', baseCommission: 30, status: 'Active' }];
     }
     return rawPlatforms.filter(p => p.status === 'Active' || !p.status);
   }, [rawPlatforms]);
@@ -48,10 +48,10 @@ export default function ActivationsPage() {
   }, [activePlatforms, selectedPlatformId]);
 
   const currentPlatform = React.useMemo(() => {
-    return activePlatforms.find(p => p.id === selectedPlatformId) || activePlatforms[0] || { name: 'MENFY', baseCommission: 60 };
+    return activePlatforms.find(p => p.id === selectedPlatformId) || activePlatforms[0] || { name: 'MENFY', baseCommission: 30 };
   }, [activePlatforms, selectedPlatformId]);
 
-  const partnerRate = Number(currentPlatform.baseCommission || 60) / 100;
+  const partnerRate = Number(currentPlatform.baseCommission || 30) / 100;
   const platformRate = Math.max(0, 1 - partnerRate);
   const partnerPct = Math.round(partnerRate * 100);
   const platformPct = Math.round(platformRate * 100);
@@ -166,7 +166,16 @@ export default function ActivationsPage() {
     try {
       const batch = writeBatch(firestore);
       const now = new Date().toISOString();
-      const threeMonths = new Date(Date.now() + 90*24*60*60*1000).toISOString();
+      let calculatedEndsAt = null;
+        if (typeof a.recurringMonths === 'number' && a.recurringMonths > 0) {
+          const d = new Date();
+          d.setMonth(d.getMonth() + a.recurringMonths);
+          calculatedEndsAt = d.toISOString();
+        } else if (a.recurringMonths === 0) {
+          calculatedEndsAt = null;
+        } else {
+          calculatedEndsAt = new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString();
+        }
 
       // a) Activación verificada
       batch.update(doc(firestore, 'activations', a.id), { status: 'verificado', verifiedAt: now });
@@ -176,7 +185,7 @@ export default function ActivationsPage() {
         batch.update(doc(firestore, 'referrals', a.referralId), {
           status: 'activo',
           activatedAt: now,
-          recurringEndsAt: threeMonths,
+          recurringEndsAt: calculatedEndsAt,
         });
       }
 
@@ -263,7 +272,7 @@ export default function ActivationsPage() {
             <CardHeader>
               <CardTitle className="text-lg font-black uppercase text-primary">Registrar Cobro de Activación</CardTitle>
               <CardDescription>
-                El sistema calcula tu 60% de ganancia. Al enviar, el restaurante pasará a "Pendiente de Activación" hasta la confirmación de SuperAdmin.
+                El sistema calcula tu 30% de ganancia. Al enviar, el restaurante pasará a "Pendiente de Activación" hasta la confirmación de SuperAdmin.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -316,7 +325,7 @@ export default function ActivationsPage() {
                     <div className="text-2xl font-black text-emerald-600 mt-0.5">+${partnerKeep.toLocaleString()}</div>
                   </div>
                   <div className="text-center p-3 bg-white rounded-lg border">
-                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a MENFY (40%)</div>
+                    <div className="text-[11px] font-bold text-muted-foreground uppercase">Pago a MENFY ({platformPct}%)</div>
                     <div className="text-2xl font-black text-primary mt-0.5">${menfyAmount.toLocaleString()}</div>
                   </div>
                 </div>

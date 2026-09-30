@@ -91,8 +91,7 @@ export default function PlatformsPage() {
     baseCommission: 0,
     recurringCommission: 0,
     domain: '',
-    planes: [],
-    recurringMonths: ''
+    planes: []
   });
 
   const handleEdit = (platform) => {
@@ -105,8 +104,7 @@ export default function PlatformsPage() {
       baseCommission: platform.baseCommission || 0,
       recurringCommission: platform.recurringCommission || 0,
       domain: platform.domain || '',
-      planes: Array.isArray(platform.planes) ? platform.planes : [],
-      recurringMonths: platform.recurringMonths !== undefined && platform.recurringMonths !== null ? platform.recurringMonths : ''
+      planes: Array.isArray(platform.planes) ? platform.planes : []
     });
     setIsDialogOpen(true);
   };
@@ -184,22 +182,7 @@ export default function PlatformsPage() {
         moneda: p.moneda || 'COP',
         recurrente: p.recurrente !== false
       }));
-      // Validación de Meses de recurrencia (0 a 120)
-      if (formData.recurringMonths !== '' && formData.recurringMonths !== null && formData.recurringMonths !== undefined) {
-        const mNum = Number(formData.recurringMonths);
-        if (!Number.isInteger(mNum) || mNum < 0 || mNum > 120) {
-          toast({ variant: "destructive", title: "Meses inválidos", description: "Los meses de recurrencia deben ser un entero entre 0 y 120." });
-          setIsSaving(false);
-          return;
-        }
-      }
-
       const dataToSave = { ...formData, domain: cleanDomain, planes: cleanPlanes };
-      if (formData.recurringMonths !== '' && formData.recurringMonths !== null && Number(formData.recurringCommission || 0) > 0) {
-        dataToSave.recurringMonths = Number(formData.recurringMonths);
-      } else {
-        delete dataToSave.recurringMonths;
-      }
 
       if (editingPlatform) {
         const docRef = doc(firestore, 'saasPlatforms', editingPlatform.id);
@@ -257,7 +240,7 @@ export default function PlatformsPage() {
             setEditingPlatform(null);
             setFormData({
               name: '', category: '', description: '', status: 'Active',
-              baseCommission: 0, recurringCommission: 0, domain: '', planes: [], recurringMonths: ''
+              baseCommission: 0, recurringCommission: 0, domain: '', planes: []
             });
             setIsDialogOpen(true);
           }}>
@@ -407,7 +390,7 @@ export default function PlatformsPage() {
                     className="h-24"
                   />
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="grid grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Estado</Label>
                     <Select value={formData.status} onValueChange={(val) => setFormData({...formData, status: val})}>
@@ -433,22 +416,6 @@ export default function PlatformsPage() {
                       value={formData.recurringCommission} 
                       onChange={(e) => setFormData({...formData, recurringCommission: Number(e.target.value)})} 
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Meses</Label>
-                    <Input 
-                      type="number" 
-                      min={0} 
-                      max={120} 
-                      step={1} 
-                      placeholder="Ej: 3"
-                      disabled={!formData.recurringCommission || Number(formData.recurringCommission) <= 0}
-                      value={formData.recurringMonths} 
-                      onChange={(e) => setFormData({...formData, recurringMonths: e.target.value === '' ? '' : Number(e.target.value)})} 
-                    />
-                    <p className="text-[10px] text-muted-foreground leading-tight">
-                      0 = sin límite. Vacío = sin configurar.
-                    </p>
                   </div>
                 </div>
                               {/* Sección Planes de Suscripción */}

@@ -172,6 +172,17 @@ export async function POST(request) {
     const refDocRef = doc(firestore, 'referrals', referralDocId);
 
     if (event === 'created') {
+      // Incrementar contadores en /partners para la plataforma específica
+      try {
+        const platUpper = platIdClean.toUpperCase();
+        await updateDoc(doc(firestore, 'partners', partnerDocId), {
+          signupsFromLink: increment(1),
+          [`platformMetrics.${platUpper}.signups`]: increment(1)
+        });
+      } catch (e) {
+        console.warn('[Track-Subscription] Error incrementando contador de partner:', e);
+      }
+
       const updatePayload = {
         plan: finalPlanName,
         planId: plan_id || null,

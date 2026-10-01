@@ -226,13 +226,12 @@ function AdminPartnersView({ userData }) {
   const [detailPlatform, setDetailPlatform] = React.useState(null);
 
   // Obtener datos del socio (referralCode y plataformas afiliadas)
-  const partnerQuery = useMemoFirebase(() => {
+  const partnerDocRef = useMemoFirebase(() => {
     if (!firestore || !user?.uid) return null;
-    return query(collection(firestore, 'partners'), where('__name__', '==', user.uid));
+    return doc(firestore, 'partners', user.uid);
   }, [firestore, user?.uid]);
 
-  const { data: partnerList } = useCollection(partnerQuery);
-  const partnerData = partnerList?.[0] || null;
+  const { data: partnerData } = useDoc(partnerDocRef);
   const partnerCode = partnerData?.referralCode || user?.uid?.substring(0, 8).toUpperCase() || 'PARTNER';
 
   // Catálogo de plataformas SaaS

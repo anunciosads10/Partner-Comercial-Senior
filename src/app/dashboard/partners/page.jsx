@@ -5,7 +5,7 @@ import Link from 'next/link';
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection } from 'firebase/firestore';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { 
   Loader2, 
   ExternalLink, 

@@ -294,13 +294,22 @@ function AdminPartnersView({ userData }) {
   };
 
     // Métricas reactivas y específicas según el SaaS seleccionado en el modal
-  const platformClicks = selectedPlatform 
-    ? (partnerData?.platformMetrics?.[selectedPlatform.id]?.clicks ?? (selectedPlatform.id === 'menfy' || selectedPlatform.name?.toLowerCase().includes('menfy') ? (partnerData?.clicks || 0) : 0))
-    : 0;
+  const pPlat = selectedPlatform?.name?.toUpperCase() || '';
+  const pSlug = selectedPlatform?.slug?.toUpperCase() || '';
+  const pId = selectedPlatform?.id || '';
 
-  const platformSignups = selectedPlatform 
-    ? (partnerData?.platformMetrics?.[selectedPlatform.id]?.signups ?? (selectedPlatform.id === 'menfy' || selectedPlatform.name?.toLowerCase().includes('menfy') ? (partnerData?.signupsFromLink || 0) : 0))
-    : 0;
+  const pMetrics = selectedPlatform 
+    ? (partnerData?.platformMetrics?.[pPlat] || 
+       partnerData?.platformMetrics?.[pId] || 
+       partnerData?.platformMetrics?.[pSlug] || 
+       partnerData?.platformMetrics?.[selectedPlatform?.name] || 
+       null)
+    : null;
+
+  const isMenfy = pId === 'menfy' || pPlat.includes('MENFY');
+
+  const platformClicks = pMetrics?.clicks ?? (isMenfy ? (partnerData?.clicks || 0) : 0);
+  const platformSignups = pMetrics?.signups ?? (isMenfy ? (partnerData?.signupsFromLink || 0) : 0);
 
   const platformConversion = platformClicks > 0 
     ? ((platformSignups / platformClicks) * 100).toFixed(1) 

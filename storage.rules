@@ -14,5 +14,13 @@ service firebase.storage {
       // Esta condición asegura que un partner solo pueda subir un QR a su propia carpeta.
       allow write: if request.auth != null && request.auth.uid == userId;
     }
+
+    // Regla para recursos de marketing (lectura autenticada, escritura solo superadmin)
+    match /marketing/{allPaths=**} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+        && firestore.exists(/databases/(default)/documents/users/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data.role == 'superadmin';
+    }
   }
 }

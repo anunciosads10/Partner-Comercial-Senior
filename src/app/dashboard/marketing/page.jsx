@@ -4,7 +4,8 @@ import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, useFirebase } from '@/firebase';
 import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { convertImageToWebP, sanitizeFileSlug } from '@/lib/image-to-webp';
 import { 
   Megaphone, Plus, Copy, Check, ExternalLink, Trash2, Edit3, Loader2, 
   Sparkles, AlertCircle, Tag, Radio 
@@ -17,6 +18,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
@@ -52,6 +63,9 @@ export default function MarketingPage() {
   const [editingAsset, setEditingAsset] = React.useState(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [uploadFile, setUploadFile] = React.useState(null);
+  const [uploadProgress, setUploadProgress] = React.useState(null);
+  const [filePreviewUrl, setFilePreviewUrl] = React.useState(null);
+  const [convertedInfo, setConvertedInfo] = React.useState(null);
 
   // Estados de SuperAdmin: Mini-diálogos "+"
   const [isAddTypeOpen, setIsAddTypeOpen] = React.useState(false);
@@ -62,6 +76,10 @@ export default function MarketingPage() {
   const [isAddChannelOpen, setIsAddChannelOpen] = React.useState(false);
   const [newChannelName, setNewChannelName] = React.useState('');
   const [isSavingChannel, setIsSavingChannel] = React.useState(false);
+  const [typeSelectOpen, setTypeSelectOpen] = React.useState(false);
+  const [channelSelectOpen, setChannelSelectOpen] = React.useState(false);
+  const [deleteOptionTarget, setDeleteOptionTarget] = React.useState(null);
+  const [isDeletingOption, setIsDeletingOption] = React.useState(false);
 
   const [formData, setFormData] = React.useState({
     type: 'texto',
@@ -190,6 +208,45 @@ export default function MarketingPage() {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
+  const resetUploadStates = React.useCallback(() => {
+    setUploadFile(null);
+    setUploadProgress(null);
+    setConvertedInfo(null);
+    setFilePreviewUrl((prev) => {
+      if (prev) { try { URL.revokeObjectURL(prev); } catch {} }
+      return null;
+    });
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      if (filePreviewUrl) { try { URL.revokeObjectURL(filePreviewUrl); } catch {} }
+    };
+  }, [filePreviewUrl]);
+
+  const handleFileChange = async (e) => {
+    const selected = e.target.files?.[0] || null;
+    resetUploadStates();
+    if (!selected) return;
+    setUploadFile(selected);
+
+    if (selected.type?.startsWith('image/')) {
+      try {
+        const converted = await convertImageToWebP(selected);
+        const previewUrl = URL.createObjectURL(converted);
+        setFilePreviewUrl(previewUrl);
+        setConvertedInfo({
+          sourceFile: selected,
+          file: converted,
+          isWebP: converted.type === 'image/webp',
+          sizeKB: Math.max(1, Math.round(converted.size / 1024))
+        });
+      } catch {
+        // Fallback silencioso: la conversión se intentará al publicar
+      }
+    }
+  };
+
   // SuperAdmin: Abrir Diálogo Crear
   const handleOpenCreate = () => {
     setEditingAsset(null);
@@ -202,7 +259,7 @@ export default function MarketingPage() {
       order: filteredAssets.length + 1,
       active: true
     });
-    setUploadFile(null);
+    resetUploadStates();
     setIsDialogOpen(true);
   };
 
@@ -218,7 +275,7 @@ export default function MarketingPage() {
       order: asset.order ?? 0,
       active: asset.active !== false
     });
-    setUploadFile(null);
+    resetUploadStates();
     setIsDialogOpen(true);
   };
 
@@ -229,22 +286,79 @@ export default function MarketingPage() {
       return;
     }
 
+    if (!firestore || !currentPlatform) {
+      toast({ variant: "destructive", title: "Error de contexto", description: "No hay plataforma seleccionada o conexión con Firestore." });
+      return;
+    }
+
     setIsSaving(true);
     try {
       let finalUrl = formData.url || '';
 
       if (uploadFile) {
-        if (uploadFile.size > 10 * 1024 * 1024) {
+        if (!storage) {
+          throw new Error('El servicio de Firebase Storage no está disponible.');
+        }
+
+        const finalFile =
+          convertedInfo?.sourceFile === uploadFile && convertedInfo?.file
+            ? convertedInfo.file
+            : await convertImageToWebP(uploadFile);
+
+        if (finalFile.size > 10 * 1024 * 1024) {
           toast({ variant: "destructive", title: "Archivo muy pesado", description: "El archivo no puede exceder los 10 MB." });
-          setIsSaving(false);
           return;
         }
 
-        if (storage && currentPlatform) {
-          const fileRef = ref(storage, 'marketing/' + currentPlatform.id + '/' + Date.now() + '_' + uploadFile.name);
-          const snap = await uploadBytes(fileRef, uploadFile);
-          finalUrl = await getDownloadURL(snap.ref);
-        }
+        const slug = sanitizeFileSlug(finalFile.name || uploadFile.name);
+        const rawExt = ((finalFile.name || uploadFile.name).split('.').pop() || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const finalExt = finalFile.type === 'image/webp' ? 'webp' : (rawExt || 'bin');
+        const safeStoragePath = `marketing/${currentPlatform.id}/${Date.now()}-${slug}.${finalExt}`;
+        const fileRef = ref(storage, safeStoragePath);
+        const metadata = finalFile.type === 'image/webp'
+          ? { contentType: 'image/webp' }
+          : (finalFile.type ? { contentType: finalFile.type } : undefined);
+
+        setUploadProgress(0);
+        finalUrl = await new Promise((resolve, reject) => {
+          const uploadTask = uploadBytesResumable(fileRef, finalFile, metadata);
+          let settled = false;
+
+          const timeoutId = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            try { uploadTask.cancel(); } catch {}
+            reject(new Error('Tiempo de espera agotado (60s) al subir el archivo. Verifica tu conexión y las reglas de Storage.'));
+          }, 60000);
+
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              if (snapshot.totalBytes > 0) {
+                setUploadProgress(Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100));
+              }
+            },
+            (uploadErr) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timeoutId);
+              reject(uploadErr);
+            },
+            async () => {
+              if (settled) return;
+              try {
+                const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                settled = true;
+                clearTimeout(timeoutId);
+                resolve(downloadUrl);
+              } catch (urlErr) {
+                settled = true;
+                clearTimeout(timeoutId);
+                reject(urlErr);
+              }
+            }
+          );
+        });
       }
 
       const payload = {
@@ -267,11 +381,17 @@ export default function MarketingPage() {
         toast({ title: "Recurso Creado", description: "El material ya está disponible para los socios." });
       }
 
+      resetUploadStates();
       setIsDialogOpen(false);
     } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el recurso." });
+      console.warn('Error al guardar recurso de marketing:', err);
+      const errorMsg = err?.code
+        ? `${err.code}: ${err.message || 'Error al guardar el recurso.'}`
+        : (err?.message || 'No se pudo guardar el recurso.');
+      toast({ variant: "destructive", title: "Error", description: errorMsg });
     } finally {
       setIsSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -397,6 +517,99 @@ export default function MarketingPage() {
       }
     } finally {
       setIsSavingChannel(false);
+    }
+  };
+
+  const PROTECTED_TYPE_KEYS = React.useMemo(
+    () => new Set(['texto', 'guion', 'archivo', 'video', 'argumento', 'imagen']),
+    []
+  );
+  const PROTECTED_CHANNEL_KEYS = React.useMemo(
+    () => new Set(['general', 'whatsapp', 'instagram', 'correo', 'llamada', 'tiktok', 'facebook']),
+    []
+  );
+
+  const isProtectedTypeOption = React.useCallback((item) => {
+    if (!item) return true;
+    const normLabel = normalizeText(item.label);
+    const normId = createIdFromText(item.id || item.label);
+    const isFixed = FIXED_TYPES.some(f => f.id === item.id || normalizeText(f.label) === normLabel);
+    return isFixed || PROTECTED_TYPE_KEYS.has(normId) || PROTECTED_TYPE_KEYS.has(normLabel);
+  }, [PROTECTED_TYPE_KEYS]);
+
+  const isProtectedChannelOption = React.useCallback((item) => {
+    if (!item) return true;
+    const normLabel = normalizeText(item.label);
+    const normId = createIdFromText(item.id || item.label);
+    const isFixed = FIXED_CHANNELS.some(f => f.id === item.id || normalizeText(f.label) === normLabel);
+    return isFixed || PROTECTED_CHANNEL_KEYS.has(normId) || PROTECTED_CHANNEL_KEYS.has(normLabel);
+  }, [PROTECTED_CHANNEL_KEYS]);
+
+  const getOptionUsageCount = React.useCallback((kind, optionId) => {
+    if (!Array.isArray(rawAssets) || !optionId) return 0;
+    if (kind === 'type') {
+      return rawAssets.filter(a => a.type === optionId).length;
+    }
+    return rawAssets.filter(a => (a.channel || 'general') === optionId).length;
+  }, [rawAssets]);
+
+  const handleRequestDeleteOption = (kind, option) => {
+    if (!isSuperAdmin || !option) return;
+    if (kind === 'type') setTypeSelectOpen(false);
+    else setChannelSelectOpen(false);
+    const usageCount = getOptionUsageCount(kind, option.id);
+    setDeleteOptionTarget({ kind, option, usageCount });
+  };
+
+  const handleConfirmDeleteOption = async () => {
+    if (!deleteOptionTarget || !firestore || !isSuperAdmin) return;
+    const { kind, option, usageCount } = deleteOptionTarget;
+
+    if (usageCount > 0) {
+      toast({
+        variant: "destructive",
+        title: "Opción en uso",
+        description: `Esta opción está en uso por ${usageCount} ${usageCount === 1 ? 'recurso' : 'recursos'}. Cámbialos antes de eliminarla.`
+      });
+      setDeleteOptionTarget(null);
+      return;
+    }
+
+    setIsDeletingOption(true);
+    try {
+      if (kind === 'type') {
+        const updated = customTypes.filter(t => t.id !== option.id);
+        await setDoc(doc(firestore, 'marketingSettings', 'options'), {
+          customTypes: updated
+        }, { merge: true });
+
+        if (formData.type === option.id) {
+          setFormData(prev => ({ ...prev, type: 'texto' }));
+        }
+        if (activeTab === option.id) {
+          setActiveTab('texto');
+        }
+      } else {
+        const updated = customChannels.filter(c => c.id !== option.id);
+        await setDoc(doc(firestore, 'marketingSettings', 'options'), {
+          customChannels: updated
+        }, { merge: true });
+
+        if (formData.channel === option.id) {
+          setFormData(prev => ({ ...prev, channel: 'general' }));
+        }
+      }
+
+      toast({ title: "Opción eliminada", description: `"${option.label}" fue eliminada correctamente.` });
+      setDeleteOptionTarget(null);
+    } catch (err) {
+      toast({
+        variant: "destructive",
+        title: "Error al eliminar",
+        description: err?.message || "No se pudo eliminar la opción."
+      });
+    } finally {
+      setIsDeletingOption(false);
     }
   };
 
@@ -613,12 +826,46 @@ export default function MarketingPage() {
                   <div>
                     <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Tipo de Recurso</label>
                     <div className="flex items-center gap-1.5">
-                      <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
+                      <Select
+                        open={typeSelectOpen}
+                        onOpenChange={setTypeSelectOpen}
+                        value={formData.type}
+                        onValueChange={(val) => setFormData({ ...formData, type: val })}
+                      >
                         <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {effectiveTypes.map(t => (
-                            <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
-                          ))}
+                          {effectiveTypes.map(t => {
+                            const canDelete = isSuperAdmin && !isProtectedTypeOption(t);
+                            if (!canDelete) {
+                              return <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>;
+                            }
+                            return (
+                              <div key={t.id} className="relative flex items-center group">
+                                <SelectItem value={t.id} className="pr-8 flex-1">{t.label}</SelectItem>
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleRequestDeleteOption('type', t);
+                                  }}
+                                  aria-label={`Eliminar ${t.label}`}
+                                  title={`Eliminar ${t.label}`}
+                                  className="absolute right-1.5 z-10 p-1 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       {isSuperAdmin && (
@@ -640,12 +887,46 @@ export default function MarketingPage() {
                   <div>
                     <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Canal Sugerido</label>
                     <div className="flex items-center gap-1.5">
-                      <Select value={formData.channel} onValueChange={(val) => setFormData({ ...formData, channel: val })}>
+                      <Select
+                        open={channelSelectOpen}
+                        onOpenChange={setChannelSelectOpen}
+                        value={formData.channel}
+                        onValueChange={(val) => setFormData({ ...formData, channel: val })}
+                      >
                         <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
                         <SelectContent>
-                          {effectiveChannels.map(c => (
-                            <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                          ))}
+                          {effectiveChannels.map(c => {
+                            const canDelete = isSuperAdmin && !isProtectedChannelOption(c);
+                            if (!canDelete) {
+                              return <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>;
+                            }
+                            return (
+                              <div key={c.id} className="relative flex items-center group">
+                                <SelectItem value={c.id} className="pr-8 flex-1">{c.label}</SelectItem>
+                                <button
+                                  type="button"
+                                  onPointerDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                  }}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleRequestDeleteOption('channel', c);
+                                  }}
+                                  aria-label={`Eliminar ${c.label}`}
+                                  title={`Eliminar ${c.label}`}
+                                  className="absolute right-1.5 z-10 p-1 rounded text-muted-foreground hover:text-rose-600 hover:bg-rose-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 focus:opacity-100 transition-opacity"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            );
+                          })}
                         </SelectContent>
                       </Select>
                       {isSuperAdmin && (
@@ -695,8 +976,29 @@ export default function MarketingPage() {
                       <Input 
                         type="file" 
                         className="text-xs h-9 cursor-pointer"
-                        onChange={(e) => setUploadFile(e.target.files?.[0] || null)} 
+                        onChange={handleFileChange} 
                       />
+                      {convertedInfo && (
+                        <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+                          {filePreviewUrl && (
+                            <img
+                              src={filePreviewUrl}
+                              alt="Vista previa"
+                              className="h-10 w-10 rounded border object-cover shrink-0"
+                            />
+                          )}
+                          <span>
+                            {convertedInfo.isWebP
+                              ? `Convertida a WebP (${convertedInfo.sizeKB} KB)`
+                              : `Archivo listo (${convertedInfo.sizeKB} KB)`}
+                          </span>
+                        </div>
+                      )}
+                      {uploadProgress !== null && (
+                        <p className="mt-1 text-[11px] font-medium text-primary">
+                          Subiendo archivo... {uploadProgress}%
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">O Enlace Externo (URL de Video / Web)</label>
@@ -824,6 +1126,51 @@ export default function MarketingPage() {
             </DialogContent>
           </Dialog>
         )}
+
+        {/* Confirmación para eliminar opción personalizada */}
+        <AlertDialog
+          open={!!deleteOptionTarget}
+          onOpenChange={(open) => {
+            if (!open && !isDeletingOption) setDeleteOptionTarget(null);
+          }}
+        >
+          <AlertDialogContent className="max-w-sm z-[60]">
+            <AlertDialogHeader>
+              <AlertDialogTitle className="text-base font-black uppercase text-primary">
+                Eliminar opción
+              </AlertDialogTitle>
+              <AlertDialogDescription className="text-xs">
+                {deleteOptionTarget?.usageCount > 0 ? (
+                  <>
+                    Esta opción está en uso por <strong>{deleteOptionTarget.usageCount}</strong>{' '}
+                    {deleteOptionTarget.usageCount === 1 ? 'recurso' : 'recursos'}. Cámbialos antes de eliminarla.
+                  </>
+                ) : (
+                  <>
+                    ¿Eliminar la opción <strong>&quot;{deleteOptionTarget?.option?.label}&quot;</strong> de{' '}
+                    {deleteOptionTarget?.kind === 'type' ? 'Tipo de Recurso' : 'Canal Sugerido'}?
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={isDeletingOption}>Cancelar</AlertDialogCancel>
+              {deleteOptionTarget?.usageCount === 0 && (
+                <AlertDialogAction
+                  onClick={(e) => {
+                    e.preventDefault();
+                    handleConfirmDeleteOption();
+                  }}
+                  disabled={isDeletingOption}
+                  className="bg-rose-600 hover:bg-rose-700 text-white"
+                >
+                  {isDeletingOption ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Eliminar
+                </AlertDialogAction>
+              )}
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AuthenticatedLayout>
   );

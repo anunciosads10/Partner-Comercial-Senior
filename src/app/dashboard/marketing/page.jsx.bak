@@ -3,11 +3,11 @@
 import * as React from 'react';
 import { AuthenticatedLayout } from '@/components/authenticated-layout';
 import { useFirestore, useCollection, useMemoFirebase, useUser, useDoc, useFirebase } from '@/firebase';
-import { collection, doc, addDoc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, addDoc, updateDoc, deleteDoc, setDoc } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { 
   Megaphone, Plus, Copy, Check, ExternalLink, Trash2, Edit3, Loader2, 
-  FileText, Video, MessageSquare, Phone, Mail, Instagram, Share2, Sparkles, AlertCircle 
+  Sparkles, AlertCircle, Tag, Radio 
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,23 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 
+// 1. Opciones fijas base inmutables
+const FIXED_TYPES = [
+  { id: 'texto', label: 'Texto Listo', behavior: 'texto' },
+  { id: 'guion', label: 'Guion', behavior: 'texto' },
+  { id: 'archivo', label: 'Presentación / Archivo', behavior: 'enlace' },
+  { id: 'video', label: 'Video / Demo', behavior: 'enlace' },
+  { id: 'argumento', label: 'Argumento de Venta', behavior: 'texto' },
+];
+
+const FIXED_CHANNELS = [
+  { id: 'general', label: 'General' },
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'instagram', label: 'Instagram' },
+  { id: 'correo', label: 'Correo Electrónico' },
+  { id: 'llamada', label: 'Llamada' },
+];
+
 export default function MarketingPage() {
   const { user } = useUser();
   const { storage } = useFirebase();
@@ -30,11 +47,21 @@ export default function MarketingPage() {
   const [activeTab, setActiveTab] = React.useState('texto');
   const [copiedId, setCopiedId] = React.useState(null);
 
-  // Estados de SuperAdmin
+  // Estados de SuperAdmin: Diálogo Principal
   const [isDialogOpen, setIsDialogOpen] = React.useState(false);
   const [editingAsset, setEditingAsset] = React.useState(null);
   const [isSaving, setIsSaving] = React.useState(false);
   const [uploadFile, setUploadFile] = React.useState(null);
+
+  // Estados de SuperAdmin: Mini-diálogos "+"
+  const [isAddTypeOpen, setIsAddTypeOpen] = React.useState(false);
+  const [newTypeName, setNewTypeName] = React.useState('');
+  const [newTypeBehavior, setNewTypeBehavior] = React.useState('texto');
+  const [isSavingType, setIsSavingType] = React.useState(false);
+
+  const [isAddChannelOpen, setIsAddChannelOpen] = React.useState(false);
+  const [newChannelName, setNewChannelName] = React.useState('');
+  const [isSavingChannel, setIsSavingChannel] = React.useState(false);
 
   const [formData, setFormData] = React.useState({
     type: 'texto',
@@ -66,7 +93,6 @@ export default function MarketingPage() {
     return rawPlatforms.filter(p => p.status === 'Active' || !p.status);
   }, [rawPlatforms]);
 
-  // Preseleccionar primera plataforma
   React.useEffect(() => {
     if (activePlatforms.length > 0 && !selectedPlatformId) {
       const menfy = activePlatforms.find(p => p.name?.toLowerCase().includes('menfy'));
@@ -78,24 +104,68 @@ export default function MarketingPage() {
     return activePlatforms.find(p => p.id === selectedPlatformId) || activePlatforms[0] || null;
   }, [activePlatforms, selectedPlatformId]);
 
+  // Lectura de opciones personalizadas desde marketingSettings/options
+  const settingsDocRef = useMemoFirebase(() => (!firestore ? null : doc(firestore, 'marketingSettings', 'options')), [firestore]);
+  const { data: settingsData } = useDoc(settingsDocRef);
+
+  const customTypes = React.useMemo(() => {
+    return Array.isArray(settingsData?.customTypes) ? settingsData.customTypes : [];
+  }, [settingsData]);
+
+  const customChannels = React.useMemo(() => {
+    return Array.isArray(settingsData?.customChannels) ? settingsData.customChannels : [];
+  }, [settingsData]);
+
+  // Listas efectivas (Fijas primero, personalizadas al final)
+  const effectiveTypes = React.useMemo(() => {
+    return [...FIXED_TYPES, ...customTypes];
+  }, [customTypes]);
+
+  const effectiveChannels = React.useMemo(() => {
+    return [...FIXED_CHANNELS, ...customChannels];
+  }, [customChannels]);
+
+  const getBehaviorForType = React.useCallback((typeId) => {
+    const found = effectiveTypes.find(t => t.id === typeId);
+    return found?.behavior || 'texto';
+  }, [effectiveTypes]);
+
+  const getChannelLabel = React.useCallback((channelId) => {
+    const found = effectiveChannels.find(c => c.id === channelId);
+    return found?.label || channelId;
+  }, [effectiveChannels]);
+
+  // Normalizadores de texto e ID
+  const normalizeText = (str) => {
+    return (str || '')
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .trim();
+  };
+
+  const createIdFromText = (str) => {
+    return normalizeText(str)
+      .replace(/[^a-z0-9]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+  };
+
   // Construcción de enlace de afiliado
   const cleanDomain = currentPlatform?.domain 
     ? currentPlatform.domain.replace(/^https?:\/\//, '').replace(/\/.*$/, '') 
     : (currentPlatform?.slug ? (currentPlatform.slug + '.app') : 'menfy.app');
   const affiliateUrl = partnerCode ? ('https://' + cleanDomain + '/aff/' + partnerCode) : '';
 
-  // Verificar si está afiliado a la plataforma seleccionada
   const isAffiliated = React.useMemo(() => {
     if (!currentPlatform || !partnerData) return true;
     if (!partnerData.affiliatedPlatforms) return true;
     return Array.isArray(partnerData.affiliatedPlatforms) && partnerData.affiliatedPlatforms.includes(currentPlatform.id);
   }, [currentPlatform, partnerData]);
 
-  // Colección de recursos de marketing
+  // Colección de recursos
   const assetsRef = useMemoFirebase(() => (!firestore ? null : collection(firestore, 'marketingAssets')), [firestore]);
   const { data: rawAssets, isLoading: isAssetsLoading } = useCollection(assetsRef);
 
-  // Filtrar recursos por plataforma y orden
   const filteredAssets = React.useMemo(() => {
     if (!rawAssets || !currentPlatform) return [];
     return rawAssets
@@ -103,7 +173,6 @@ export default function MarketingPage() {
       .sort((a, b) => Number(a.order || 0) - Number(b.order || 0));
   }, [rawAssets, currentPlatform, isSuperAdmin]);
 
-  // Reemplazar variables dinámicas {{enlace}}, {{codigo}}, {{nombre_socio}}
   const replaceVariables = (text) => {
     if (!text) return '';
     let result = text;
@@ -121,7 +190,7 @@ export default function MarketingPage() {
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  // Acciones de SuperAdmin
+  // SuperAdmin: Abrir Diálogo Crear
   const handleOpenCreate = () => {
     setEditingAsset(null);
     setFormData({
@@ -137,6 +206,7 @@ export default function MarketingPage() {
     setIsDialogOpen(true);
   };
 
+  // SuperAdmin: Abrir Diálogo Editar
   const handleOpenEdit = (asset) => {
     setEditingAsset(asset);
     setFormData({
@@ -152,6 +222,7 @@ export default function MarketingPage() {
     setIsDialogOpen(true);
   };
 
+  // SuperAdmin: Guardar Recurso
   const handleSaveAsset = async () => {
     if (!formData.title?.trim()) {
       toast({ variant: "destructive", title: "Título obligatorio", description: "Ingresa un título para el recurso." });
@@ -162,7 +233,6 @@ export default function MarketingPage() {
     try {
       let finalUrl = formData.url || '';
 
-      // Subida de archivo a Storage con validación de 10 MB
       if (uploadFile) {
         if (uploadFile.size > 10 * 1024 * 1024) {
           toast({ variant: "destructive", title: "Archivo muy pesado", description: "El archivo no puede exceder los 10 MB." });
@@ -226,6 +296,110 @@ export default function MarketingPage() {
     }
   };
 
+  // Guardar Nuevo Tipo de Recurso (Mini-diálogo)
+  const handleSaveNewType = async () => {
+    const trimmed = newTypeName.trim();
+    if (!trimmed) {
+      toast({ variant: "destructive", title: "Nombre requerido", description: "Ingresa el nombre del tipo de recurso." });
+      return;
+    }
+    if (trimmed.length > 30) {
+      toast({ variant: "destructive", title: "Nombre muy largo", description: "El nombre no puede exceder 30 caracteres." });
+      return;
+    }
+    const norm = normalizeText(trimmed);
+    const isDup = effectiveTypes.some(t => normalizeText(t.label) === norm || t.id === createIdFromText(trimmed));
+    if (isDup) {
+      toast({ variant: "destructive", title: "Tipo duplicado", description: "Ya existe un tipo de recurso con ese nombre." });
+      return;
+    }
+
+    const newId = createIdFromText(trimmed);
+    if (!newId) {
+      toast({ variant: "destructive", title: "Nombre inválido", description: "Usa caracteres alfanuméricos válidos." });
+      return;
+    }
+
+    const newItem = {
+      id: newId,
+      label: trimmed,
+      behavior: newTypeBehavior === 'enlace' ? 'enlace' : 'texto'
+    };
+
+    setIsSavingType(true);
+    try {
+      const updated = [...customTypes, newItem];
+      await setDoc(doc(firestore, 'marketingSettings', 'options'), {
+        customTypes: updated
+      }, { merge: true });
+
+      toast({ title: "Tipo Agregado", description: '"' + trimmed + '" ya está disponible en las opciones y pestañas.' });
+      setFormData(prev => ({ ...prev, type: newId }));
+      setIsAddTypeOpen(false);
+      setNewTypeName('');
+      setNewTypeBehavior('texto');
+    } catch (err) {
+      if (err?.code === 'permission-denied') {
+        toast({ variant: "destructive", title: "Error de permisos", description: "Sin permisos para guardar. Falta publicar la regla de marketingSettings." });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el nuevo tipo." });
+      }
+    } finally {
+      setIsSavingType(false);
+    }
+  };
+
+  // Guardar Nuevo Canal Sugerido (Mini-diálogo)
+  const handleSaveNewChannel = async () => {
+    const trimmed = newChannelName.trim();
+    if (!trimmed) {
+      toast({ variant: "destructive", title: "Nombre requerido", description: "Ingresa el nombre del canal sugerido." });
+      return;
+    }
+    if (trimmed.length > 30) {
+      toast({ variant: "destructive", title: "Nombre muy largo", description: "El nombre no puede exceder 30 caracteres." });
+      return;
+    }
+    const norm = normalizeText(trimmed);
+    const isDup = effectiveChannels.some(c => normalizeText(c.label) === norm || c.id === createIdFromText(trimmed));
+    if (isDup) {
+      toast({ variant: "destructive", title: "Canal duplicado", description: "Ya existe un canal sugerido con ese nombre." });
+      return;
+    }
+
+    const newId = createIdFromText(trimmed);
+    if (!newId) {
+      toast({ variant: "destructive", title: "Nombre inválido", description: "Usa caracteres alfanuméricos válidos." });
+      return;
+    }
+
+    const newItem = {
+      id: newId,
+      label: trimmed
+    };
+
+    setIsSavingChannel(true);
+    try {
+      const updated = [...customChannels, newItem];
+      await setDoc(doc(firestore, 'marketingSettings', 'options'), {
+        customChannels: updated
+      }, { merge: true });
+
+      toast({ title: "Canal Agregado", description: '"' + trimmed + '" ya está disponible en las opciones.' });
+      setFormData(prev => ({ ...prev, channel: newId }));
+      setIsAddChannelOpen(false);
+      setNewChannelName('');
+    } catch (err) {
+      if (err?.code === 'permission-denied') {
+        toast({ variant: "destructive", title: "Error de permisos", description: "Sin permisos para guardar. Falta publicar la regla de marketingSettings." });
+      } else {
+        toast({ variant: "destructive", title: "Error", description: "No se pudo guardar el nuevo canal." });
+      }
+    } finally {
+      setIsSavingChannel(false);
+    }
+  };
+
   if (isUserLoading || isPlatformsLoading) {
     return (
       <AuthenticatedLayout>
@@ -235,6 +409,8 @@ export default function MarketingPage() {
       </AuthenticatedLayout>
     );
   }
+
+  const currentTypeBehavior = getBehaviorForType(formData.type);
 
   return (
     <AuthenticatedLayout>
@@ -278,103 +454,106 @@ export default function MarketingPage() {
           )}
         </div>
 
-        {/* Sistema de Pestañas (Tabs) */}
+        {/* Pestañas (Fijas + Dinámicas por customType) */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="grid grid-cols-2 md:grid-cols-6 h-auto p-1 bg-muted/40 gap-1">
-            <TabsTrigger value="texto" className="text-xs font-bold">Textos listos</TabsTrigger>
-            <TabsTrigger value="guion" className="text-xs font-bold">Guiones</TabsTrigger>
-            <TabsTrigger value="archivo" className="text-xs font-bold">Presentaciones</TabsTrigger>
-            <TabsTrigger value="video" className="text-xs font-bold">Videos y demos</TabsTrigger>
-            <TabsTrigger value="argumento" className="text-xs font-bold">Argumentos</TabsTrigger>
-            <TabsTrigger value="mi_enlace" className="text-xs font-bold">Mi enlace</TabsTrigger>
+          <TabsList className="flex flex-wrap h-auto p-1 bg-muted/40 gap-1">
+            {effectiveTypes.map(t => (
+              <TabsTrigger key={t.id} value={t.id} className="text-xs font-bold px-3 py-1.5">
+                {t.label}
+              </TabsTrigger>
+            ))}
+            <TabsTrigger value="mi_enlace" className="text-xs font-bold px-3 py-1.5">
+              Mi enlace
+            </TabsTrigger>
           </TabsList>
 
-          {/* Renderizado de categorías de contenido */}
-          {['texto', 'guion', 'archivo', 'video', 'argumento'].map(tabType => (
-            <TabsContent key={tabType} value={tabType} className="space-y-4">
-              {isAssetsLoading ? (
-                <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
-              ) : filteredAssets.filter(a => a.type === tabType).length > 0 ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {filteredAssets.filter(a => a.type === tabType).map(asset => (
-                    <Card key={asset.id} className="border-primary/10 shadow-xs flex flex-col justify-between">
-                      <CardHeader className="pb-3">
-                        <div className="flex items-start justify-between gap-2">
-                          <CardTitle className="text-sm font-black uppercase text-slate-800 leading-tight">
-                            {asset.title}
-                          </CardTitle>
-                          {asset.channel && (
-                            <Badge variant="secondary" className="text-[9px] uppercase font-bold shrink-0">
-                              {asset.channel}
-                            </Badge>
-                          )}
-                        </div>
-                        {!asset.active && (
-                          <Badge variant="destructive" className="w-fit text-[9px] uppercase font-bold mt-1">Oculto</Badge>
-                        )}
-                      </CardHeader>
-                      <CardContent className="space-y-3 pt-0 flex-1 flex flex-col justify-between">
-                        {asset.content && (
-                          <div className="p-3 bg-muted/20 rounded-lg border text-xs text-slate-600 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
-                            {replaceVariables(asset.content)}
+          {/* Renderizado de categorías efectivas */}
+          {effectiveTypes.map(typeItem => {
+            const assetsInTab = filteredAssets.filter(a => a.type === typeItem.id);
+            const isTextBehavior = typeItem.behavior === 'texto';
+
+            return (
+              <TabsContent key={typeItem.id} value={typeItem.id} className="space-y-4">
+                {isAssetsLoading ? (
+                  <div className="flex justify-center p-12"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>
+                ) : assetsInTab.length > 0 ? (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {assetsInTab.map(asset => (
+                      <Card key={asset.id} className="border-primary/10 shadow-xs flex flex-col justify-between">
+                        <CardHeader className="pb-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <CardTitle className="text-sm font-black uppercase text-slate-800 leading-tight">
+                              {asset.title}
+                            </CardTitle>
+                            {asset.channel && (
+                              <Badge variant="secondary" className="text-[9px] uppercase font-bold shrink-0">
+                                {getChannelLabel(asset.channel)}
+                              </Badge>
+                            )}
                           </div>
-                        )}
-                        
-                        {/* Acciones principales */}
-                        <div className="space-y-2 pt-2 border-t">
-                          {(asset.type === 'texto' || asset.type === 'guion' || asset.type === 'argumento') && (
-                            <Button 
-                              onClick={() => handleCopyText(asset.id, asset.content)} 
-                              size="sm" 
-                              className="w-full font-bold gap-2 text-xs"
-                            >
-                              {copiedId === asset.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-                              {copiedId === asset.id ? "¡Copiado con tu enlace!" : "Copiar Texto con mi Enlace"}
-                            </Button>
+                          {!asset.active && (
+                            <Badge variant="destructive" className="w-fit text-[9px] uppercase font-bold mt-1">Oculto</Badge>
                           )}
-
-                          {(asset.type === 'archivo' || asset.type === 'video') && asset.url && (
-                            <a href={asset.url} target="_blank" rel="noreferrer" className="block w-full">
-                              <Button size="sm" variant="outline" className="w-full font-bold gap-2 text-xs text-primary border-primary/20">
-                                <ExternalLink className="h-3.5 w-3.5" /> Abrir / Descargar
-                              </Button>
-                            </a>
-                          )}
-
-                          {/* Controles de SuperAdmin */}
-                          {isSuperAdmin && (
-                            <div className="flex items-center justify-between pt-2 border-t text-xs">
-                              <div className="flex items-center gap-1.5">
-                                <Switch checked={asset.active !== false} onCheckedChange={() => handleToggleActive(asset)} />
-                                <span className="text-[10px] text-muted-foreground">{asset.active ? 'Visible' : 'Oculto'}</span>
-                              </div>
-                              <div className="flex gap-1">
-                                <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleOpenEdit(asset)}>
-                                  <Edit3 className="h-3.5 w-3.5" />
-                                </Button>
-                                <Button size="icon" variant="ghost" className="h-7 w-7 text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteAsset(asset)}>
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              </div>
+                        </CardHeader>
+                        <CardContent className="space-y-3 pt-0 flex-1 flex flex-col justify-between">
+                          {asset.content && (
+                            <div className="p-3 bg-muted/20 rounded-lg border text-xs text-slate-600 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto font-sans">
+                              {replaceVariables(asset.content)}
                             </div>
                           )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-16 border border-dashed rounded-xl bg-muted/10 p-6 space-y-2">
-                  <p className="text-sm text-muted-foreground italic">Aún no hay material publicado para esta plataforma.</p>
-                  {isSuperAdmin && (
-                    <Button onClick={handleOpenCreate} size="sm" variant="outline" className="mt-2 font-bold text-xs gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Publicar Primer Recurso
-                    </Button>
-                  )}
-                </div>
-              )}
-            </TabsContent>
-          ))}
+                          
+                          <div className="space-y-2 pt-2 border-t">
+                            {isTextBehavior ? (
+                              <Button 
+                                onClick={() => handleCopyText(asset.id, asset.content)} 
+                                size="sm" 
+                                className="w-full font-bold gap-2 text-xs"
+                              >
+                                {copiedId === asset.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                                {copiedId === asset.id ? "¡Copiado con tu enlace!" : "Copiar Texto con mi Enlace"}
+                              </Button>
+                            ) : asset.url ? (
+                              <a href={asset.url} target="_blank" rel="noreferrer" className="block w-full">
+                                <Button size="sm" variant="outline" className="w-full font-bold gap-2 text-xs text-primary border-primary/20">
+                                  <ExternalLink className="h-3.5 w-3.5" /> Abrir / Descargar
+                                </Button>
+                              </a>
+                            ) : null}
+
+                            {isSuperAdmin && (
+                              <div className="flex items-center justify-between pt-2 border-t text-xs">
+                                <div className="flex items-center gap-1.5">
+                                  <Switch checked={asset.active !== false} onCheckedChange={() => handleToggleActive(asset)} />
+                                  <span className="text-[10px] text-muted-foreground">{asset.active ? 'Visible' : 'Oculto'}</span>
+                                </div>
+                                <div className="flex gap-1">
+                                  <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleOpenEdit(asset)}>
+                                    <Edit3 className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="icon" variant="ghost" className="h-7 w-7 text-rose-600 hover:bg-rose-50" onClick={() => handleDeleteAsset(asset)}>
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-16 border border-dashed rounded-xl bg-muted/10 p-6 space-y-2">
+                    <p className="text-sm text-muted-foreground italic">Aún no hay material publicado para esta plataforma.</p>
+                    {isSuperAdmin && (
+                      <Button onClick={handleOpenCreate} size="sm" variant="outline" className="mt-2 font-bold text-xs gap-1">
+                        <Plus className="h-3.5 w-3.5" /> Publicar Primer Recurso
+                      </Button>
+                    )}
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
 
           {/* Pestaña: Mi Enlace */}
           <TabsContent value="mi_enlace" className="space-y-4">
@@ -415,7 +594,7 @@ export default function MarketingPage() {
           </TabsContent>
         </Tabs>
 
-        {/* Modal Dialog de SuperAdmin: Crear / Editar Recurso */}
+        {/* Modal Principal: Crear / Editar Recurso */}
         {isDialogOpen && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto p-6 space-y-4">
@@ -430,31 +609,58 @@ export default function MarketingPage() {
 
               <div className="space-y-3 text-xs">
                 <div className="grid grid-cols-2 gap-3">
+                  {/* Selector de Tipo con botón "+" */}
                   <div>
                     <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Tipo de Recurso</label>
-                    <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="texto">Texto Listo</SelectItem>
-                        <SelectItem value="guion">Guion</SelectItem>
-                        <SelectItem value="archivo">Presentación / Archivo</SelectItem>
-                        <SelectItem value="video">Video / Demo</SelectItem>
-                        <SelectItem value="argumento">Argumento de Venta</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1.5">
+                      <Select value={formData.type} onValueChange={(val) => setFormData({ ...formData, type: val })}>
+                        <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {effectiveTypes.map(t => (
+                            <SelectItem key={t.id} value={t.id}>{t.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isSuperAdmin && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 shrink-0 text-primary border-primary/20 hover:bg-primary/5"
+                          onClick={() => setIsAddTypeOpen(true)}
+                          title="Agregar nuevo tipo de recurso"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Selector de Canal con botón "+" */}
                   <div>
                     <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Canal Sugerido</label>
-                    <Select value={formData.channel} onValueChange={(val) => setFormData({ ...formData, channel: val })}>
-                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="general">General</SelectItem>
-                        <SelectItem value="whatsapp">WhatsApp</SelectItem>
-                        <SelectItem value="instagram">Instagram</SelectItem>
-                        <SelectItem value="correo">Correo Electrónico</SelectItem>
-                        <SelectItem value="llamada">Llamada</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-1.5">
+                      <Select value={formData.channel} onValueChange={(val) => setFormData({ ...formData, channel: val })}>
+                        <SelectTrigger className="h-8 text-xs flex-1"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {effectiveChannels.map(c => (
+                            <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      {isSuperAdmin && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          className="h-8 w-8 shrink-0 text-primary border-primary/20 hover:bg-primary/5"
+                          onClick={() => setIsAddChannelOpen(true)}
+                          title="Agregar nuevo canal sugerido"
+                        >
+                          <Plus className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
 
@@ -468,7 +674,8 @@ export default function MarketingPage() {
                   />
                 </div>
 
-                {(formData.type === 'texto' || formData.type === 'guion' || formData.type === 'argumento') && (
+                {/* Contenido condicional según behavior */}
+                {currentTypeBehavior === 'texto' ? (
                   <div>
                     <div className="flex justify-between items-center mb-1">
                       <label className="font-bold uppercase text-[10px] text-muted-foreground">Contenido del Texto</label>
@@ -481,9 +688,7 @@ export default function MarketingPage() {
                       onChange={(e) => setFormData({ ...formData, content: e.target.value })} 
                     />
                   </div>
-                )}
-
-                {(formData.type === 'archivo' || formData.type === 'video') && (
+                ) : (
                   <div className="space-y-3">
                     <div>
                       <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Subir Archivo a Storage (Máx 10 MB)</label>
@@ -530,6 +735,90 @@ export default function MarketingPage() {
                 <Button onClick={handleSaveAsset} size="sm" disabled={isSaving} className="font-bold">
                   {isSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
                   {editingAsset ? 'Guardar Cambios' : 'Publicar Recurso'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Mini-diálogo: Agregar Tipo de Recurso */}
+        {isAddTypeOpen && (
+          <Dialog open={isAddTypeOpen} onOpenChange={setIsAddTypeOpen}>
+            <DialogContent className="max-w-sm p-5 space-y-4">
+              <DialogHeader>
+                <DialogTitle className="text-base font-black uppercase text-primary">
+                  Agregar Tipo de Recurso
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Crea una nueva categoría para organizar el material.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Nombre del Tipo (máx. 30 caracteres)</label>
+                  <Input 
+                    placeholder="Ej. Presentación de ventas"
+                    maxLength={30}
+                    value={newTypeName}
+                    onChange={(e) => setNewTypeName(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Comportamiento en Tarjeta</label>
+                  <Select value={newTypeBehavior} onValueChange={setNewTypeBehavior}>
+                    <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="texto">Texto copiable (reemplaza variables)</SelectItem>
+                      <SelectItem value="enlace">Enlace o archivo descargable</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button variant="outline" size="sm" onClick={() => setIsAddTypeOpen(false)}>Cancelar</Button>
+                <Button size="sm" onClick={handleSaveNewType} disabled={isSavingType} className="font-bold">
+                  {isSavingType ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Agregar Tipo
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        )}
+
+        {/* Mini-diálogo: Agregar Canal Sugerido */}
+        {isAddChannelOpen && (
+          <Dialog open={isAddChannelOpen} onOpenChange={setIsAddChannelOpen}>
+            <DialogContent className="max-w-sm p-5 space-y-4">
+              <DialogHeader>
+                <DialogTitle className="text-base font-black uppercase text-primary">
+                  Agregar Canal Sugerido
+                </DialogTitle>
+                <DialogDescription className="text-xs">
+                  Crea una nueva etiqueta de canal de difusión.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-3 text-xs">
+                <div>
+                  <label className="font-bold uppercase text-[10px] text-muted-foreground block mb-1">Nombre del Canal (máx. 30 caracteres)</label>
+                  <Input 
+                    placeholder="Ej. TikTok"
+                    maxLength={30}
+                    value={newChannelName}
+                    onChange={(e) => setNewChannelName(e.target.value)}
+                    className="h-8 text-xs"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="pt-2">
+                <Button variant="outline" size="sm" onClick={() => setIsAddChannelOpen(false)}>Cancelar</Button>
+                <Button size="sm" onClick={handleSaveNewChannel} disabled={isSavingChannel} className="font-bold">
+                  {isSavingChannel ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : null}
+                  Agregar Canal
                 </Button>
               </DialogFooter>
             </DialogContent>
